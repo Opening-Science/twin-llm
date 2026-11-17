@@ -51,3 +51,27 @@ export const MY_DAY_PICK_HINT =
   "Press a beat to turn the twin to it; press it again to let go.";
 /** Before the organ's name where the viewer says what lit it. */
 export const DAY_FOCUS_FROM = "From the day: ";
+
+/** "Worth a look": stretches past a threshold, said in words beside the eye icon. */
+export const WORTH_A_LOOK = "Worth a look";
+export const WORTH_A_LOOK_NOTE = "A moment to look at, not a verdict on the person.";
+export const WORTH_A_LOOK_NONE = "Nothing past the thresholds on this day.";
+
+const MEASURE_NAME = { heart_rate: "Heart rate", glucose: "Blood glucose" } as const;
+
+/** One window: when, which signal, and its furthest value past the threshold, as given. */
+export const worthALookLine = (
+  window: Readonly<{
+    from: string;
+    to: string;
+    measure: "heart_rate" | "glucose";
+    extreme: number;
+    unit: string;
+  }>,
+): string =>
+  `${window.from === window.to ? window.from : `${window.from} to ${window.to}`} · ${
+    MEASURE_NAME[window.measure]
+  } · furthest ${window.extreme} ${window.unit}`;
+
+/** The button that turns the twin to a window's beat. */
+export const worthALookShow = (from: string): string => `Show the ${from} beat`;
