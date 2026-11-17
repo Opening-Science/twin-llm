@@ -3,15 +3,10 @@ import { describe, expect, test } from "bun:test";
 import { dayBeatSchema } from "./day-beat";
 import { DAY_THRESHOLDS, type DayReading, dayBeats, redWindows } from "./day-beats";
 import MOCK_DAY from "./fixtures/mock-day.json";
+import { mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const READINGS: readonly DayReading[] = MOCK_DAY.readings.map((reading) => ({
-  time: reading.time,
-  event: reading.event,
-  heartRatePerMin: reading.heart_rate_per_min,
-  glucoseMgDl: reading.glucose_mg_dl,
-  moving: reading.moving,
-}));
+const READINGS: readonly DayReading[] = mockDayReadings("blood");
 
 const reading = (
   time: string,
