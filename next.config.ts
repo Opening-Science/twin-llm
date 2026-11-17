@@ -3,12 +3,7 @@ import { readFileSync } from "node:fs";
 
 import type { NextConfig } from "next";
 
-import {
-  dirtyFlag,
-  parseCommit,
-  parseOpenTwinPin,
-  parseOpenTwinShaFile,
-} from "./infrastructure/build-stamp";
+import { dirtyFlag, parseCommit } from "./infrastructure/build-stamp";
 
 /**
  * The open-twin provider packages ship TypeScript sources, so Next compiles
@@ -37,24 +32,13 @@ const git = (...args: string[]): string | null => {
   }
 };
 
-const readOrNull = (path: string): string | null => {
-  try {
-    return readFileSync(path, "utf8");
-  } catch {
-    return null;
-  }
-};
-
-const provenanceText = readOrNull("PROVENANCE.md");
-const openTwinShaText = readOrNull(".open-twin/OPEN_TWIN_SHA");
-
 /**
  * What the Lab page's Provenance card reports (`buildInfo()` in
- * infrastructure/env.ts): the version, the commit, whether the tree was clean
- * (or unknown when git could not say), and the open-twin pin and checkout as
- * they were when this build was made. Written in at build time, so a running
- * server reports what it was built from; the card compares it with the
- * checkout on disk now to say when a rebuild is needed.
+ * infrastructure/env.ts): the version, the commit and whether the tree was
+ * clean (or unknown when git could not say), as they were when this build was
+ * made. Written in at build time, so a running server reports what it was
+ * built from; the card compares it with the checkout on disk now to say when
+ * a rebuild is needed.
  */
 const BUILD_ENV = {
   TWINLLM_APP_VERSION: String(
@@ -63,10 +47,6 @@ const BUILD_ENV = {
   ),
   TWINLLM_BUILD_COMMIT: parseCommit(git("rev-parse", "HEAD")) ?? "",
   TWINLLM_BUILD_DIRTY: dirtyFlag(git("status", "--porcelain")),
-  TWINLLM_BUILD_OPEN_TWIN_PIN:
-    (provenanceText === null ? null : parseOpenTwinPin(provenanceText)) ?? "",
-  TWINLLM_BUILD_OPEN_TWIN_CHECKOUT:
-    (openTwinShaText === null ? null : parseOpenTwinShaFile(openTwinShaText)) ?? "",
 };
 
 const config: NextConfig = {

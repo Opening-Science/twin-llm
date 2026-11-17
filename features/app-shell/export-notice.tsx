@@ -13,11 +13,11 @@ import { Button } from "@/infrastructure/ui-kit/button";
  * while open; closing it while the check runs drops the answer.
  */
 
-export type ExportFormat = "markdown" | "print";
+export type ExportFormat = "markdown" | "pdf";
 
 export const EXPORT_TITLE: Readonly<Record<ExportFormat, string>> = {
   markdown: "Download thread",
-  print: "Export as PDF",
+  pdf: "Export as PDF",
 };
 
 export const EXPORT_COPY = {
@@ -30,10 +30,10 @@ type Check =
   | Readonly<{ status: "ready" | "refused" | "failed"; line: string }>;
 
 const checkHref = (threadId: string, format: ExportFormat): string =>
-  threadExportHref(threadId, format === "print" ? "print" : undefined, "check");
+  threadExportHref(threadId, format === "pdf" ? "pdf" : undefined, "check");
 
 const confirmHref = (threadId: string, format: ExportFormat): string =>
-  threadExportHref(threadId, format === "print" ? "print" : undefined, "confirm");
+  threadExportHref(threadId, format === "pdf" ? "pdf" : undefined, "confirm");
 
 export const ExportNotice = ({
   threadId,
@@ -67,15 +67,11 @@ export const ExportNotice = ({
   const close = () => dialog.current?.close();
 
   const download = () => {
-    const href = confirmHref(threadId, format);
-    if (format === "print") {
-      window.open(href, "_blank", "noopener");
-    } else {
-      const link = document.createElement("a");
-      link.href = href;
-      link.download = "";
-      link.click();
-    }
+    // The route answers with the file as an attachment, Markdown or PDF.
+    const link = document.createElement("a");
+    link.href = confirmHref(threadId, format);
+    link.download = "";
+    link.click();
     close();
   };
 

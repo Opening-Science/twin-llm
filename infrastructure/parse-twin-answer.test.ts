@@ -255,6 +255,26 @@ describe("qwen3-style goldens", () => {
     expect(parsed.answerText).toBe("Synthetic answer.");
     expect(parsed.uncertaintyText).toBeNull();
   });
+
+  test("a literature citation under Evidence Used is not a key (#612)", () => {
+    const text = [
+      "## Evidence Used",
+      "- [oura.sleep.score.2026-01-01]",
+      "- [ean-als-2024]",
+      "- [PMC1234567] [unsupported]",
+      "- [lit-sleep-PMC1234567.1]",
+      "- [sleep-2024.made.up]",
+      "",
+      "## Answer",
+      "Synthetic answer.",
+    ].join("\n");
+    const parsed = parseTwinAnswer(text, syntheticOura);
+    expect(parsed.citedKeys).toEqual([
+      "oura.sleep.score.2026-01-01",
+      "sleep-2024.made.up",
+    ]);
+    expect(parsed.hallucinatedKeys).toEqual(["sleep-2024.made.up"]);
+  });
 });
 
 describe("inline labels", () => {

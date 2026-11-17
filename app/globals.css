@@ -1040,6 +1040,24 @@
     color: inherit;
   }
 
+  /* A source id in the answer that a literature search returned (#612): the
+     answer's own link colour, in the mono face of an id, never broken across
+     lines. An id no search returned gets a wavy destructive underline, never
+     a link. */
+  .compare-cite-link {
+    @apply text-primary font-mono text-[0.92em] whitespace-nowrap underline decoration-dotted underline-offset-[3px] hover:decoration-solid;
+  }
+
+  .compare-cite-missing {
+    @apply text-destructive font-mono text-[0.92em] whitespace-nowrap underline decoration-wavy underline-offset-[3px];
+  }
+
+  /* A claim the answer marks [unsupported]: muted, in the id's mono face, so
+     it reads as a flag on the claim rather than part of the sentence. */
+  .compare-cite-unsupported {
+    @apply text-muted-foreground font-mono text-[0.92em] whitespace-nowrap;
+  }
+
   /* The thread's Outputs panel: a block above the answers on narrow screens, a
      sticky column beside them from xl up. */
   .compare-outputs-panel {

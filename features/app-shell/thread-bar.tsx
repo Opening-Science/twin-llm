@@ -39,7 +39,8 @@ import { threadCrumb, threadIdOfPath } from "./thread-crumb";
  */
 
 export const THREAD_BAR_COPY = {
-  pdfTip: "Open a version for printing or saving as PDF, after a check of what it holds",
+  pdfTip:
+    "Download this thread as a PDF (prompts, lookups, answers and their sources), after a check of what it holds",
   downloadTip: "Download the thread as Markdown: prompts, lookups and answers",
   copyTip:
     "Copy this thread's address. Only you can open it: it is a way back, not a share",
@@ -143,7 +144,7 @@ const ThreadBarFor = ({ threadId }: Readonly<{ threadId: string }>) => {
         key="pdf"
         {...style}
         title={THREAD_BAR_COPY.pdfTip}
-        onClick={() => pick("print")}
+        onClick={() => pick("pdf")}
       >
         PDF
       </Button>,
