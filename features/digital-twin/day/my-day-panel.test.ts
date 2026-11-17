@@ -33,6 +33,13 @@ const STATE: MyDayState = {
   onChoice: noop,
   onProfile: noop,
   onBeat: noop,
+  period: {
+    period: "week",
+    available: true,
+    summary: undefined,
+    error: null,
+    onPeriod: noop,
+  },
 };
 
 const html = (state: MyDayState) =>

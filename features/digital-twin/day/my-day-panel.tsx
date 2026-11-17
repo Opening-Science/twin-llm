@@ -29,6 +29,7 @@ import {
   myDayPlaceholder,
 } from "./day-copy";
 import { MOCK_CHOICE } from "./day-view";
+import { PeriodCard } from "./period-card";
 import { type MyDayState } from "./use-my-day";
 
 /**
@@ -192,6 +193,7 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
         <>
           <DayNotes day={state.day} mock={mock} />
           <WorthALook state={state} day={state.day} />
+          <PeriodCard state={state.period} />
           <BeatList state={state} day={state.day} />
         </>
       ) : state.days === undefined ? null : (

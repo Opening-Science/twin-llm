@@ -10,9 +10,13 @@ import { DAY_FAILED } from "./day-copy";
 import {
   type DayListEntry,
   dayUrl,
+  MOCK_CHOICE,
   parseDay,
   parseDayList,
   parseError,
+  parsePeriod,
+  periodUrl,
+  type PeriodView,
   pickChoice,
 } from "./day-view";
 
@@ -41,10 +45,23 @@ export type MyDayState = Readonly<{
   onProfile: (profile: GlucoseProfile) => void;
   /** Picks a beat, or with null lets the twin go. */
   onBeat: (index: number | null) => void;
+  /** The week or month ending on the chosen day; none for the mock. */
+  period: PeriodState;
+}>;
+
+export type PeriodState = Readonly<{
+  period: "week" | "month";
+  /** False for the mock day, which is a single day. */
+  available: boolean;
+  /** Undefined while loading. */
+  summary: PeriodView | undefined;
+  error: string | null;
+  onPeriod: (period: "week" | "month") => void;
 }>;
 
 type Loaded<T> = Readonly<{ key: string; value: T }>;
 type DayOutcome = Readonly<{ day: KioskDay | null; error: string | null }>;
+type PeriodOutcome = Readonly<{ summary: PeriodView | null; error: string | null }>;
 
 const readJson = async (url: string): Promise<{ ok: boolean; body: unknown }> => {
   const response = await fetch(url);
@@ -57,6 +74,14 @@ const loadDay = async (url: string): Promise<DayOutcome> => {
   return day
     ? { day, error: null }
     : { day: null, error: parseError(body) ?? DAY_FAILED };
+};
+
+const loadPeriod = async (url: string): Promise<PeriodOutcome> => {
+  const { ok, body } = await readJson(url);
+  const summary = ok ? parsePeriod(body) : null;
+  return summary
+    ? { summary, error: null }
+    : { summary: null, error: parseError(body) ?? DAY_FAILED };
 };
 
 export const useMyDay = ({
@@ -73,6 +98,8 @@ export const useMyDay = ({
   const [days, setDays] = useState<Loaded<readonly DayListEntry[] | null> | null>(null);
   const [outcome, setOutcome] = useState<Loaded<DayOutcome> | null>(null);
   const [picked, setPicked] = useState<Loaded<number> | null>(null);
+  const [period, setPeriod] = useState<"week" | "month">("week");
+  const [periodOutcome, setPeriodOutcome] = useState<Loaded<PeriodOutcome> | null>(null);
 
   const listed = days?.key === personRef ? days.value : undefined;
   const choice = pickChoice(listed, chosen);
@@ -106,6 +133,23 @@ export const useMyDay = ({
     };
   }, [enabled, url]);
 
+  const summaryUrl =
+    listed === undefined ? null : periodUrl(choice, personRef, period, profile);
+  useEffect(() => {
+    if (!enabled || summaryUrl === null) return;
+    let cancelled = false;
+    void loadPeriod(summaryUrl)
+      .catch((): PeriodOutcome => ({ summary: null, error: DAY_FAILED }))
+      .then((value) => {
+        if (!cancelled) setPeriodOutcome({ key: summaryUrl, value });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, summaryUrl]);
+  const periodNow =
+    periodOutcome && periodOutcome.key === summaryUrl ? periodOutcome.value : undefined;
+
   const current = outcome && outcome.key === url ? outcome.value : undefined;
   const day = current?.day ?? undefined;
   // A pick belongs to one day: another day, profile or person starts with none.
@@ -126,6 +170,13 @@ export const useMyDay = ({
     focus,
     onChoice: setChosen,
     onProfile: setProfile,
+    period: {
+      period,
+      available: choice !== MOCK_CHOICE,
+      summary: periodNow?.summary ?? undefined,
+      error: periodNow?.error ?? null,
+      onPeriod: setPeriod,
+    },
     onBeat: (index) =>
       setPicked(index === null || url === null ? null : { key: url, value: index }),
   };

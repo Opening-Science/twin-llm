@@ -8,6 +8,8 @@ import {
   parseDay,
   parseDayList,
   parseError,
+  parsePeriod,
+  periodUrl,
   pickChoice,
 } from "./day-view";
 
@@ -80,6 +82,29 @@ describe("dayUrl", () => {
   test("a person's day names them, encoded", () => {
     expect(dayUrl("2026-11-16", "syn a", "without_diabetes")).toBe(
       "/api/digital-twin/day/syn%20a?day=2026-11-16&profile=without_diabetes",
+    );
+  });
+});
+
+describe("parsePeriod and periodUrl", () => {
+  const SUMMARY = {
+    period: "week",
+    start: "2026-11-10",
+    end: "2026-11-16",
+    title: "Week",
+    lines: [{ label: "Blood glucose", text: "Average 103 mg/dL." }],
+    notes: [],
+  };
+
+  test("reads a summary and refuses extra fields", () => {
+    expect(parsePeriod({ period: SUMMARY })?.title).toBe("Week");
+    expect(parsePeriod({ period: { ...SUMMARY, raw: [1, 2] } })).toBeNull();
+  });
+
+  test("the mock has no period; a person's ends on the chosen day", () => {
+    expect(periodUrl(MOCK_CHOICE, "syn-a", "week", "without_diabetes")).toBeNull();
+    expect(periodUrl("2026-11-16", "syn a", "month", "with_diabetes")).toBe(
+      "/api/digital-twin/period/syn%20a?period=month&end=2026-11-16&profile=with_diabetes",
     );
   });
 });

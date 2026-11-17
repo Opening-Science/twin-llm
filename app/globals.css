@@ -1405,6 +1405,14 @@
     @apply border-solid;
   }
 
+  .twin-period {
+    @apply border-border flex flex-col gap-1.5 rounded-md border p-2.5;
+  }
+
+  .twin-period-lines {
+    @apply grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
   .twin-worth {
     @apply border-border flex flex-col gap-1 rounded-md border p-2.5;
   }
