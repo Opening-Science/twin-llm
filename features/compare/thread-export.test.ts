@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { RecordDisclosure } from "@/infrastructure/disclosure-ledger";
+import { parseExportNotice } from "@/infrastructure/export-notice";
 import type { FreeTextCheck } from "@/infrastructure/free-text-check";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
 import type { AppendInput } from "@/packages/audit/append";
@@ -12,7 +13,6 @@ import {
   NOT_MADE_SENTENCE,
   NOTHING_FOUND_LINE,
   noticeLine,
-  parseExportNotice,
 } from "./export-notice";
 import { fhirDocument } from "./thread-fhir";
 import { exportFormat, createThreadExportHandler } from "./thread-export-handler";
