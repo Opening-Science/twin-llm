@@ -66,8 +66,15 @@ export type CohortDeps = Readonly<{
   findSubject: (
     ref: string,
   ) => Promise<Readonly<{ isSynthetic: boolean; cohortId: string }> | null>;
-  /** Every numeric row of the person for these LOINC codes. */
-  findValues: (ref: string, loincs: readonly string[]) => Promise<readonly CohortRow[]>;
+  /**
+   * Every numeric row of the person for these LOINC codes; with a span, only
+   * the rows from `from` to `to`, both included.
+   */
+  findValues: (
+    ref: string,
+    loincs: readonly string[],
+    span?: Readonly<{ from: Date; to: Date }>,
+  ) => Promise<readonly CohortRow[]>;
   /**
    * Whether the person's record lists atrial fibrillation on this day
    * (YYYY-MM-DD), read as the `rhythm_irregularity` tool reads it; the heart
