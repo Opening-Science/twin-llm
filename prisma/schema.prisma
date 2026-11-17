@@ -306,6 +306,35 @@ model Answer {
   @@map("answers")
 }
 
+/// A schema move in progress, such as `chat-tables`. Phase is "expanded" or
+/// "backfilled" (CHECK in the migration SQL). The row goes when the move's
+/// contract step drops the old tables.
+model SchemaMove {
+  move      String   @id
+  phase     String
+  startedAt DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  cursors SchemaMoveCursor[]
+
+  @@map("schema_moves")
+}
+
+/// How far a move's backfill got in one table: the last id copied, in
+/// ascending id order, and how many rows it has inserted so far.
+model SchemaMoveCursor {
+  move      String
+  tableName String   @map("table_name")
+  lastId    String?  @map("last_id")
+  copied    Int      @default(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  schemaMove SchemaMove @relation(fields: [move], references: [move], onDelete: Cascade)
+
+  @@id([move, tableName])
+  @@map("schema_move_cursors")
+}
+
 // ─── 3. Personal context ────────────────────────────────────────────────────
 
 /// Linked Oura account. Both tokens are encrypted at rest, and sealed

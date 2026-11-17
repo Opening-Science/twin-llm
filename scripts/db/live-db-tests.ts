@@ -16,7 +16,7 @@ export const LIVE_DB_TESTS: readonly LiveDbTest[] = [
   { file: "features/gbd/gbd-import-routes.live.test.ts", tests: 2 },
   { file: "scripts/gbd/import.live.test.ts", tests: 2 },
   { file: "scripts/synthetic-scans/ingest.live.test.ts", tests: 2 },
-  { file: "scripts/db/chat-move/expand.live.test.ts", tests: 3 },
+  { file: "scripts/db/chat-move/expand.live.test.ts", tests: 4 },
 ];
 
 export const EXPECTED_LIVE_DB_TESTS = LIVE_DB_TESTS.reduce(
