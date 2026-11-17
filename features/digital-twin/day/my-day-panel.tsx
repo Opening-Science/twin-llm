@@ -1,5 +1,7 @@
 "use client";
 
+import { type KeyboardEvent, useEffect, useRef } from "react";
+
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { EyeIcon } from "@/infrastructure/ui-kit/icons";
@@ -21,6 +23,7 @@ import {
   MY_DAY_UTC,
   myDayOption,
   myDayShows,
+  STEP_KEYS,
   STEP_LABEL,
   STEP_NEXT,
   STEP_PREVIOUS,
@@ -32,7 +35,7 @@ import {
   worthALookShow,
   myDayPlaceholder,
 } from "./day-copy";
-import { stepBeat } from "./beat-step";
+import { keyStep, stepBeat } from "./beat-step";
 import { MOCK_CHOICE } from "./day-view";
 import { PeriodCard } from "./period-card";
 import { type MyDayState } from "./use-my-day";
@@ -48,7 +51,7 @@ import { type MyDayState } from "./use-my-day";
 const TITLE_ID = "twin-my-day-title";
 
 /**
- * Above the beats: Previous and Next
+ * Above the beats, which scroll in their own box: Previous and Next
  * step through the day one beat at a time, and a line says where the step is.
  */
 const StepBar = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) => {
@@ -81,16 +84,36 @@ const StepBar = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>)
 
 /**
  * Each beat is a toggle: pressed, the twin turns to the beat's organ at its
- * layer, and a line says what it shows; pressed again, the twin lets go.
+ * layer, and a line says what it shows; pressed again, the twin lets go. On a
+ * beat, the arrow keys, Home and End step and move the focus with it.
  */
 const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) => {
+  const listRef = useRef<HTMLOListElement | null>(null);
+  // The stepped-to beat stays in view in the beats' own box.
+  useEffect(() => {
+    if (state.selected === null) return;
+    listRef.current
+      ?.querySelectorAll<HTMLElement>(".twin-beat")
+      [state.selected]?.scrollIntoView({ block: "nearest" });
+  }, [state.selected]);
+  const onKey = (index: number) => (event: KeyboardEvent<HTMLButtonElement>) => {
+    const step = keyStep(event.key);
+    if (step === null) return;
+    const next = stepBeat(index, day.beats.length, step);
+    if (next === null) return;
+    event.preventDefault();
+    state.onBeat(next);
+    listRef.current
+      ?.querySelectorAll<HTMLButtonElement>(".twin-beat-button")
+      [next]?.focus();
+  };
   if (day.beats.length === 0) {
     return <p className="text-muted-foreground text-sm">{MY_DAY_NO_BEATS}</p>;
   }
   return (
     <>
       <StepBar state={state} day={day} />
-      <ol className="twin-beats" aria-label={MY_DAY_BEATS}>
+      <ol ref={listRef} className="twin-beats" aria-label={MY_DAY_BEATS}>
         {day.beats.map((beat, index) => {
           const pressed = state.selected === index;
           return (
@@ -103,6 +126,7 @@ const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>
                 type="button"
                 aria-pressed={pressed}
                 onClick={() => state.onBeat(pressed ? null : index)}
+                onKeyDown={onKey(index)}
                 className="twin-beat-button"
               >
                 <time className="twin-beat-time">{beat.time}</time>
@@ -126,6 +150,7 @@ const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>
           );
         })}
       </ol>
+      <p className="text-muted-foreground text-xs">{STEP_KEYS}</p>
     </>
   );
 };

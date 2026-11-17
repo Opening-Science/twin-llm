@@ -97,6 +97,7 @@ export const PERIOD_LOADING = "Loading the period…";
 export const STEP_PREVIOUS = "Previous beat";
 export const STEP_NEXT = "Next beat";
 export const STEP_LABEL = "Step through the day";
+export const STEP_KEYS = "On a beat, the arrow keys step to the next or previous one.";
 
 /** Where the step is: "Beat 3 of 26, 08:15." or the hint before any beat is pressed. */
 export const stepStatus = (
