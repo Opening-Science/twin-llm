@@ -54,6 +54,8 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
+import { BEAT_FOCUS_PREFIX } from "./day/beat-focus";
+import { DAY_FOCUS_FROM } from "./day/day-copy";
 import { MyDayPanel } from "./day/my-day-panel";
 import { useMyDay } from "./day/use-my-day";
 import { DayMotionBar } from "./motion/day-motion-bar";
@@ -577,6 +579,30 @@ export const BodyLoopAvatar = ({
       },
     });
   }, [initialFocus, scheme, anatomyDispatch]);
+  // A pressed beat turns the twin to its organ at its layer; letting go clears
+  // only a beat's glow, never a pick or a Biomarkers row.
+  const dayFocus = myDay.focus;
+  const dayLit = anatomy.state.highlightFrom?.id.startsWith(BEAT_FOCUS_PREFIX) === true;
+  const dayApplied = useRef<string | null>(null);
+  useEffect(() => {
+    if (dayFocus === null) {
+      dayApplied.current = null;
+      if (dayLit) anatomyDispatch({ type: "highlight", highlight: null });
+      return;
+    }
+    if (dayApplied.current === dayFocus.id) return;
+    dayApplied.current = dayFocus.id;
+    anatomyDispatch({ type: "depth", depth: dayFocus.depth });
+    anatomyDispatch({
+      type: "highlight",
+      highlight: dayFocus.highlights[scheme],
+      from: {
+        id: dayFocus.id,
+        label: `${DAY_FOCUS_FROM}${dayFocus.label}`,
+        highlights: dayFocus.highlights,
+      },
+    });
+  }, [dayFocus, dayLit, scheme, anatomyDispatch]);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const [viewNode, setViewNode] = useState<HTMLDivElement | null>(null);
   const setView = useCallback((node: HTMLDivElement | null) => {
