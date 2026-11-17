@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ATLAS_GROUP_KEYS, type TwinDonor, target3d } from "./atlas-groups";
+import {
+  ATLAS_GROUP_KEYS,
+  ATLAS_GROUP_KEYS_READ_FROM,
+  type TwinDonor,
+  target3d,
+} from "./atlas-groups";
 import { normaliseGroup, systemForGroup } from "./hra-groups";
 import { ATLASES } from "./manifest";
 
@@ -36,6 +41,13 @@ describe("ATLAS_GROUP_KEYS against the installed atlases", () => {
 });
 
 describe("ATLAS_GROUP_KEYS", () => {
+  test("were read from the atlas files the manifest pins", () => {
+    expect(ATLAS_GROUP_KEYS_READ_FROM).toEqual({
+      male: ATLASES["hra-m"].sha256,
+      female: ATLASES["hra-f"].sha256,
+    });
+  });
+
   test("holds 50 male and 61 female keys, none twice", () => {
     expect(ATLAS_GROUP_KEYS.male.length).toBe(50);
     expect(ATLAS_GROUP_KEYS.female.length).toBe(61);

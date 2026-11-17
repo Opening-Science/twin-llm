@@ -3,14 +3,20 @@ import { isHiddenGroup, normaliseGroup } from "./hra-groups";
 /**
  * The HRA organ-group keys on each donor atlas, exactly as their meshes'
  * `anatomical_structure_of` extra writes them. Read from `hra-m.ao.glb` (male)
- * and `hra.ao.glb` (female) at the sha256 in `manifest.ts`; a new atlas file
- * means reading them again. The group key, not the node name, is the handle a
+ * and `hra.ao.glb` (female) at `ATLAS_GROUP_KEYS_READ_FROM`; a new atlas file
+ * in `manifest.ts` means reading them again, and a test fails until then. The group key, not the node name, is the handle a
  * viewer can rely on: a loader rewrites node names (`.` and `/` go), extras
  * stay as written.
  */
 
 export const TWIN_DONORS = ["male", "female"] as const;
 export type TwinDonor = (typeof TWIN_DONORS)[number];
+
+/** The sha256 of each atlas file the keys below were read from. */
+export const ATLAS_GROUP_KEYS_READ_FROM: Readonly<Record<TwinDonor, string>> = {
+  male: "5d820f289a529ef6ee6d2a1158c867d33f25dceaf269eebbbcd46f85b602addc",
+  female: "37468cf1180b0367a698d40eefd962df0b12a53c1ce74a29d8b70a8af5dc0eb1",
+};
 
 export const ATLAS_GROUP_KEYS: Readonly<Record<TwinDonor, readonly string[]>> = {
   male: [

@@ -14,9 +14,12 @@ const row = (key: string) => ROWS.find((one) => one.key === key);
 
 describe("twinTargetRows", () => {
   test("one row per Anchor marker by LOINC, then one per measurement key", () => {
-    expect(ROWS.length).toBe(anchorLayer.biomarkers.length + 12);
-    expect(ROWS.slice(0, 67).every((one) => one.keyKind === "loinc")).toBe(true);
-    expect(ROWS.slice(67).map((one) => one.key)).toEqual(Object.keys(MEASUREMENT_VITALS));
+    const markers = anchorLayer.biomarkers.length;
+    expect(ROWS.length).toBe(markers + 12);
+    expect(ROWS.slice(0, markers).every((one) => one.keyKind === "loinc")).toBe(true);
+    expect(ROWS.slice(markers).map((one) => one.key)).toEqual(
+      Object.keys(MEASUREMENT_VITALS),
+    );
     expect(new Set(ROWS.map((one) => one.key)).size).toBe(ROWS.length);
   });
 
