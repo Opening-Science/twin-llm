@@ -12,6 +12,8 @@ import {
   useState,
 } from "react";
 
+import type { Translated } from "@/infrastructure/locale/locale";
+import { useCopy } from "@/infrastructure/locale/locale-provider";
 import { mergeRecentThreads, type ShellThread } from "@/infrastructure/recent-threads";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
 import { cn } from "@/infrastructure/ui";
@@ -110,13 +112,16 @@ export const SearchBox = ({
   );
 };
 
+const SEARCH_ROW: Translated<string> = { en: "Search", de: "Suchen" };
+
 /** The sidebar's Search row. `data-closes-panel` lets the phone menu close first. */
 export const SearchRow = () => {
   const openSearch = useOpenSearch();
+  const label = useCopy(SEARCH_ROW);
   return (
     <button type="button" className="nav-link" data-closes-panel="" onClick={openSearch}>
       <SearchIcon />
-      Search
+      {label}
       <kbd className="search-kbd ml-auto">Ctrl K</kbd>
     </button>
   );
