@@ -93,3 +93,23 @@ else `uncited`.
 
 The phrase lists (`HEDGE`, `RULE_REASON`, `NO_READING`, `DIFFERENT_SCORES`)
 are heuristics; P6 validates them with a second rater.
+
+## Running
+
+`bun run attribution:study -- --items <items.json> --model <model>` runs
+every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
+`--counterfactual` for the reruns. A model is `fake:first_listed` (states
+the first listed reading for the day and cites it), `fake:cite_other`
+(states it, cites another source's reading), or `ollama:<tag>` on this
+machine. A failed call is tried three times, then recorded as an error and
+counted as a failure. Each answer is a line of `records.jsonl` with its full
+prompt, answer and score; `report.md` gives every outcome per condition with
+the Wilson 95% interval, citation precision and recall, the verdict counts,
+and the counterfactual tests. Each pairs a C1 answer with its variant (same
+model, item and repeat): the rule swap over citation-correct answers (H3),
+the value tests over answers that stated the expected reading, cited.
+Attribution correct is counted over items whose right answer states a
+number. `--report <records.jsonl>` rewrites the report only.
+
+The fakes are for tests and dry runs. No model run of W1 is reported until
+the registration is filed.
