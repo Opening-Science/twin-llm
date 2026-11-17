@@ -5,6 +5,7 @@ import {
   addConstraintSql,
   batchSql,
   FINISH_CONSTRAINTS,
+  RESET_CURSORS_SQL,
   UNDO_FINISH_SQL,
 } from "./backfill-sql";
 import { ANSWERS, CHAT_MOVES, EXCHANGES } from "./tables";
@@ -42,6 +43,10 @@ describe("chat backfill SQL", () => {
       (constraint) => constraint.name === "exchanges_schedule_id_fkey",
     );
     expect(schedule?.definition).toContain("ON DELETE SET NULL");
+  });
+
+  test("a restart forgets only this move's cursors and touches no copy", () => {
+    expect(RESET_CURSORS_SQL).toBe(`DELETE FROM "schema_move_cursors" WHERE "move" = $1`);
   });
 
   test("the batch size is a whole number from 1 to 10,000", () => {
