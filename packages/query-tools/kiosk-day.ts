@@ -6,6 +6,7 @@ import {
   BEAT_SOURCES,
   type DayBeat,
   DIRECTIONS,
+  GLUCOSE_SPECIMENS,
   signalText,
   VIEW_DEPTHS,
 } from "./day-beat";
@@ -21,6 +22,7 @@ import { GLUCOSE_PROFILES, type RedWindow, WINDOW_EVENT } from "./day-beats";
  * Rules the kiosk relies on, held by the schema:
  * - a narrated beat has `value` and `unit` null, and insulin is always narrated;
  * - `worth_a_look` is true only on a derived beat;
+ * - a glucose value names its specimen, blood or sensor, and nothing else does;
  * - the thresholds say they are placeholders until Robin confirms them.
  */
 
@@ -37,6 +39,8 @@ const kioskBeat = z
     event: z.string().min(1),
     source: z.enum(BEAT_SOURCES),
     measure: z.enum(["heart_rate", "glucose", "insulin"]),
+    /** Blood or sensor on a glucose value; null on heart rate, insulin and a narrated beat. */
+    specimen: z.enum(GLUCOSE_SPECIMENS).nullable(),
     direction: z.enum(DIRECTIONS),
     value: z.number().finite().nullable(),
     unit: z.enum(["/min", "mg/dL"]).nullable(),
@@ -62,6 +66,9 @@ const kioskBeat = z
     if (beat.worth_a_look && beat.source !== "derived") {
       ctx.addIssue({ code: "custom", message: "only a derived beat is worth a look" });
     }
+    if ((beat.measure === "glucose" && !narrated) !== (beat.specimen !== null)) {
+      ctx.addIssue({ code: "custom", message: "only a glucose value names a specimen" });
+    }
   });
 
 const kioskWindow = z
@@ -69,11 +76,16 @@ const kioskWindow = z
     from: z.string().regex(TIME),
     to: z.string().regex(TIME),
     measure: z.enum(["heart_rate", "glucose"]),
+    /** Blood or sensor on a glucose window; null on heart rate. */
+    specimen: z.enum(GLUCOSE_SPECIMENS).nullable(),
     extreme: z.number().finite(),
     unit: z.enum(["/min", "mg/dL"]),
     rule: z.string().min(1),
   })
-  .strict();
+  .strict()
+  .refine((window) => (window.measure === "glucose") === (window.specimen !== null), {
+    message: "only a glucose window names a specimen",
+  });
 
 export const kioskDaySchema = z
   .object({
@@ -113,6 +125,10 @@ const kioskBeatOf = (beat: DayBeat): z.infer<typeof kioskBeat> => ({
   event: beat.event,
   source: beat.source,
   measure: beat.signal.measure,
+  specimen:
+    beat.source !== "narrated" && beat.signal.measure === "glucose"
+      ? beat.signal.specimen
+      : null,
   direction: beat.signal.direction,
   value: beat.signal.value,
   unit: beat.signal.unit,
@@ -135,6 +151,7 @@ export const toKioskDay = (result: KioskDaySource): KioskDay =>
       from: window.from,
       to: window.to,
       measure: window.measure,
+      specimen: window.specimen,
       extreme: window.extreme,
       unit: window.measure === "heart_rate" ? "/min" : "mg/dL",
       rule: window.rule,

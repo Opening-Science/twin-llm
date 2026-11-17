@@ -54,6 +54,7 @@ describe("toKioskDay on the mock day", () => {
         event: "Worth a look",
         source: "derived",
         measure: "glucose",
+        specimen: "blood",
         direction: "up",
         value: 175,
         unit: "mg/dL",
@@ -71,6 +72,7 @@ describe("toKioskDay on the mock day", () => {
         from: "20:30",
         to: "20:30",
         measure: "glucose",
+        specimen: "blood",
         extreme: 175,
         unit: "mg/dL",
         rule: "Blood glucose above 140 mg/dL (placeholder, without diabetes)",
@@ -82,7 +84,12 @@ describe("toKioskDay on the mock day", () => {
     const insulin = kiosk.beats.filter((beat) => beat.measure === "insulin");
     expect(insulin).toHaveLength(3);
     for (const beat of insulin) {
-      expect([beat.source, beat.value, beat.unit]).toEqual(["narrated", null, null]);
+      expect([beat.source, beat.specimen, beat.value, beat.unit]).toEqual([
+        "narrated",
+        null,
+        null,
+        null,
+      ]);
       expect(beat.line).toBe("Insulin up · narrated, not measured");
     }
   });
@@ -106,6 +113,29 @@ describe("kioskDaySchema", () => {
     expect(kioskDaySchema.safeParse(withBeat({ worth_a_look: true })).success).toBe(
       false,
     );
+  });
+
+  test("refuses a glucose value without its specimen, and a specimen on anything else", () => {
+    if (first === undefined) throw new Error("the mock day has beats");
+    const glucose = kiosk.beats.find(
+      (beat) => beat.measure === "glucose" && beat.source === "measured",
+    );
+    if (glucose === undefined) throw new Error("the mock day has glucose beats");
+    const withBeat = (beat: object) => ({ ...kiosk, beats: [beat] });
+    expect(
+      kioskDaySchema.safeParse(withBeat({ ...glucose, specimen: null })).success,
+    ).toBe(false);
+    expect(
+      kioskDaySchema.safeParse(withBeat({ ...first, specimen: "blood" })).success,
+    ).toBe(false);
+    const [window] = kiosk.worth_a_look;
+    if (window === undefined) throw new Error("the mock day has a window");
+    expect(
+      kioskDaySchema.safeParse({
+        ...kiosk,
+        worth_a_look: [{ ...window, specimen: null }],
+      }).success,
+    ).toBe(false);
   });
 
   test("refuses an unknown field and another schema version", () => {
