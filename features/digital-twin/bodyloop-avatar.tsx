@@ -54,7 +54,7 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
-import { BEAT_FOCUS_PREFIX } from "./day/beat-focus";
+import { BEAT_FOCUS_PREFIX, beatFocusMove } from "./day/beat-focus";
 import { DAY_FOCUS_FROM } from "./day/day-copy";
 import { MyDayPanel } from "./day/my-day-panel";
 import { useMyDay } from "./day/use-my-day";
@@ -584,13 +584,14 @@ export const BodyLoopAvatar = ({
   const dayFocus = myDay.focus;
   const dayLit = anatomy.state.highlightFrom?.id.startsWith(BEAT_FOCUS_PREFIX) === true;
   const dayApplied = useRef<string | null>(null);
+  const { onBeat: letBeatGo } = myDay;
   useEffect(() => {
-    if (dayFocus === null) {
-      dayApplied.current = null;
-      if (dayLit) anatomyDispatch({ type: "highlight", highlight: null });
-      return;
-    }
-    if (dayApplied.current === dayFocus.id) return;
+    const move = beatFocusMove(dayFocus?.id ?? null, dayApplied.current, dayLit);
+    if (dayFocus === null) dayApplied.current = null;
+    if (move === "clear") anatomyDispatch({ type: "highlight", highlight: null });
+    // A pick or a Biomarkers row took the twin over: the beat lets go with it.
+    if (move === "let-go") letBeatGo(null);
+    if (move !== "apply" || dayFocus === null) return;
     dayApplied.current = dayFocus.id;
     anatomyDispatch({ type: "depth", depth: dayFocus.depth });
     anatomyDispatch({
@@ -602,7 +603,7 @@ export const BodyLoopAvatar = ({
         highlights: dayFocus.highlights,
       },
     });
-  }, [dayFocus, dayLit, scheme, anatomyDispatch]);
+  }, [dayFocus, dayLit, scheme, anatomyDispatch, letBeatGo]);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const [viewNode, setViewNode] = useState<HTMLDivElement | null>(null);
   const setView = useCallback((node: HTMLDivElement | null) => {

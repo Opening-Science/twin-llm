@@ -32,3 +32,22 @@ export const beatFocus = (beat: KioskBeat): BeatFocus => {
     depth: stop?.depth ?? 0,
   };
 };
+
+/** What the twin does for the pressed beat, from what was last applied and what the viewer lights now. */
+export type BeatFocusMove = "apply" | "clear" | "let-go" | "none";
+
+/**
+ * - a beat pressed that is not yet applied: apply it;
+ * - no beat pressed while a beat's glow is lit: clear it;
+ * - the applied beat's glow replaced by a pick or a Biomarkers row: the beat lets go;
+ * - otherwise nothing.
+ */
+export const beatFocusMove = (
+  focusId: string | null,
+  applied: string | null,
+  lit: boolean,
+): BeatFocusMove => {
+  if (focusId === null) return lit ? "clear" : "none";
+  if (applied !== focusId) return "apply";
+  return lit ? "none" : "let-go";
+};

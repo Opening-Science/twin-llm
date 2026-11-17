@@ -7,6 +7,7 @@ import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import {
   MY_DAY_BEATS,
+  MY_DAY_DAYS_FAILED,
   MY_DAY_LOADING,
   MY_DAY_MOCK_NOTE,
   MY_DAY_MOCK_OPTION,
@@ -106,15 +107,21 @@ const WorthALook = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay 
       <p className="text-muted-foreground text-xs">{WORTH_A_LOOK_NONE}</p>
     ) : (
       <ul className="flex flex-col gap-2">
-        {day.worth_a_look.map((window) => {
-          const index = day.beats.findIndex(
-            (beat) =>
-              beat.worth_a_look &&
-              beat.time === window.from &&
-              beat.measure === window.measure,
+        {day.worth_a_look.map((window, at) => {
+          // Blood and sensor glucose can both pass at the same time; the value tells them apart.
+          const atTime = (beat: KioskDay["beats"][number]) =>
+            beat.worth_a_look &&
+            beat.time === window.from &&
+            beat.measure === window.measure;
+          const exact = day.beats.findIndex(
+            (beat) => atTime(beat) && beat.value === window.extreme,
           );
+          const index = exact >= 0 ? exact : day.beats.findIndex(atTime);
           return (
-            <li key={`${window.measure}-${window.from}`} className="flex flex-col gap-1">
+            <li
+              key={`${window.measure}-${window.from}-${at}`}
+              className="flex flex-col gap-1"
+            >
               <p className="text-sm">{worthALookLine(window)}</p>
               <p className="text-muted-foreground text-xs">{window.rule}</p>
               {index >= 0 ? (
@@ -156,6 +163,9 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
         {MY_DAY_TITLE}
       </h3>
       <p className="text-muted-foreground text-xs">{MY_DAY_NOTE}</p>
+      {state.days === null ? (
+        <p className="text-muted-foreground text-xs">{MY_DAY_DAYS_FAILED}</p>
+      ) : null}
       {state.days === undefined ? (
         <p className="text-muted-foreground text-xs">{MY_DAY_LOADING}</p>
       ) : (

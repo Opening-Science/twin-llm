@@ -111,6 +111,15 @@ fonts licensed to the foundation. Peter and Martin hold the licences. Rules:
   `ui-monospace`. CI (typecheck, lint, tests) runs without them, and
   `bun run build` was checked without them on 23 Oct 2026. CI does not run
   `next build`.
+- The PDF export of a thread (`features/compare/thread-pdf.ts`) embeds
+  Selecta Regular and Medium (and Italic when installed) in the PDF file it
+  makes, which the foundation's licence covers. It reads the WOFF2 files from
+  `public/fonts/` when the PDF is made, unpacks them in memory to the
+  OpenType they hold and embeds them whole: fontkit's subsetter breaks
+  Selecta's CFF outlines. Nothing is written to disk. Code in the PDF stays
+  in the standard Courier, since Diatype's web files have TrueType outlines
+  that cannot be read from WOFF2 for embedding. Without the files the PDF
+  uses the standard PDF fonts.
 
 Install them:
 
