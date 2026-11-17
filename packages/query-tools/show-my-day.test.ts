@@ -122,7 +122,7 @@ describe("show_my_day", () => {
     expect(queries).toEqual([
       {
         subjectRef: SUBJECT,
-        loinc: ["8867-4", "2339-0", "2345-7"],
+        loinc: ["8867-4", "2339-0", "2345-7", "99504-3"],
         start: new Date(`${DAY}T00:00:00.000Z`),
         end: new Date(`${DAY}T23:59:59.999Z`),
         take: 5001,
@@ -133,6 +133,7 @@ describe("show_my_day", () => {
       day: DAY,
       profile: "without_diabetes",
       n: 28,
+      sensor_lag: null,
       beats: 18,
       red_windows: [
         {
@@ -203,6 +204,7 @@ describe("show_my_day", () => {
         day: "2026-11-17",
         profile: "without_diabetes",
         n: 0,
+        sensor_lag: null,
         beats: [],
         red_windows: [],
         thresholds: { status: "placeholder", reviewer: "Robin" },
@@ -249,6 +251,22 @@ describe("show_my_day", () => {
     expect(audits.map((audit) => audit.rowCount)).toEqual([0]);
   });
 
+  test("sensor glucose in mmol/L is refused under its own code", async () => {
+    const { ports } = fakePorts([
+      ...FIXTURE,
+      {
+        subjectRef: SUBJECT,
+        loinc: "99504-3",
+        value: 5.4,
+        unitUcum: "mmol/L",
+        effectiveAt: at("09:00"),
+      },
+    ]);
+    expect(await runShowMyDay(synthetic, INPUT, ports)).toEqual(
+      mixedUnits("99504-3", ["mg/dL", "mmol/L"]),
+    );
+  });
+
   test("heart rate not in /min is refused", async () => {
     const { ports } = fakePorts([
       ...FIXTURE,
@@ -289,6 +307,62 @@ describe("show_my_day", () => {
     );
     expect(audits.map((audit) => [audit.result, audit.rowCount])).toEqual([
       [QUERY_TOOL_FAILED, 0],
+    ]);
+  });
+});
+
+describe("show_my_day with sensor glucose", () => {
+  const sensorRow = (time: string, value: number): FakeRow => ({
+    subjectRef: SUBJECT,
+    loinc: "99504-3",
+    value,
+    unitUcum: "mg/dL",
+    effectiveAt: at(time),
+  });
+
+  test("readingsFromRows keeps sensor and blood glucose apart in one minute", () => {
+    expect(
+      readingsFromRows([
+        { ...FIXTURE[1]!, effectiveAt: at("08:15") },
+        sensorRow("08:15", 121),
+      ]),
+    ).toEqual([
+      {
+        time: "08:15",
+        event: null,
+        heartRatePerMin: null,
+        glucoseMgDl: 85,
+        sensorGlucoseMgDl: 121,
+        moving: null,
+      },
+    ]);
+  });
+
+  test("a day with sensor rows says sensor in its beats and notes the lag", async () => {
+    const { ports } = fakePorts([
+      sensorRow("07:00", 95),
+      sensorRow("07:05", 101),
+      sensorRow("07:10", 118),
+    ]);
+    const result = (await runShowMyDay(synthetic, INPUT, ports)) as ShowMyDayResult;
+    expect(result.n).toBe(3);
+    expect(result.sensor_lag).toBe(
+      "Sensor glucose is read in the fluid between cells and trails blood glucose by several minutes. It is shown on its own and never compared with blood glucose.",
+    );
+    expect(
+      result.beats.map((beat) => [
+        beat.time,
+        beat.signal.measure,
+        beat.source === "narrated"
+          ? null
+          : beat.signal.measure === "glucose" && beat.signal.specimen,
+        beat.signal.direction,
+        beat.signal.value,
+      ]),
+    ).toEqual([
+      ["07:00", "glucose", "sensor", "steady", 95],
+      ["07:05", "glucose", "sensor", "steady", 101],
+      ["07:10", "glucose", "sensor", "up", 118],
     ]);
   });
 });
