@@ -182,6 +182,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
 
   // The browser calling this app.
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
+  "features/digital-twin/day/use-my-day.ts": { exempt: SAME_ORIGIN },
   "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },

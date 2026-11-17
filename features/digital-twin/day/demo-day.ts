@@ -18,6 +18,7 @@ import {
 import { utcDay } from "@/packages/query-tools/stats";
 
 import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type DayListEntry } from "./day-view";
 
 /**
  * One Demo person's day for "Show me my day", built from the rows the Demo
@@ -37,8 +38,6 @@ const UNIT_OF = (loinc: string): string =>
 
 /** The subject_ref the mock day carries; never a warehouse subject. */
 export const MOCK_DAY_REF = "synthetic-mock-day";
-
-export type DayListEntry = Readonly<{ day: string; readings: number }>;
 
 export type DemoDayResult =
   | Readonly<{ kind: "day"; day: KioskDay }>
