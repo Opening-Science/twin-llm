@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { type GlucoseProfile } from "@/packages/query-tools/day-beats";
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
 
+import { type BeatFocus, beatFocus } from "./beat-focus";
 import { DAY_FAILED } from "./day-copy";
 import {
   type DayListEntry,
@@ -32,8 +33,14 @@ export type MyDayState = Readonly<{
   day: KioskDay | undefined;
   /** A sentence from the route, or the panel's own; null with a day. */
   error: string | null;
+  /** The beat the twin shows, by index in `day.beats`; null when none is picked. */
+  selected: number | null;
+  /** Where the twin turns for the selected beat. */
+  focus: BeatFocus | null;
   onChoice: (choice: string) => void;
   onProfile: (profile: GlucoseProfile) => void;
+  /** Picks a beat, or with null lets the twin go. */
+  onBeat: (index: number | null) => void;
 }>;
 
 type Loaded<T> = Readonly<{ key: string; value: T }>;
@@ -65,6 +72,7 @@ export const useMyDay = ({
   const [profile, setProfile] = useState<GlucoseProfile>("without_diabetes");
   const [days, setDays] = useState<Loaded<readonly DayListEntry[] | null> | null>(null);
   const [outcome, setOutcome] = useState<Loaded<DayOutcome> | null>(null);
+  const [picked, setPicked] = useState<Loaded<number> | null>(null);
 
   const listed = days?.key === personRef ? days.value : undefined;
   const choice = pickChoice(listed, chosen);
@@ -99,13 +107,26 @@ export const useMyDay = ({
   }, [enabled, url]);
 
   const current = outcome && outcome.key === url ? outcome.value : undefined;
+  const day = current?.day ?? undefined;
+  // A pick belongs to one day: another day, profile or person starts with none.
+  const selected =
+    picked && picked.key === url && day && picked.value < day.beats.length
+      ? picked.value
+      : null;
+  const beat = selected === null ? undefined : day?.beats[selected];
+  // Stable while the same beat stays picked, so the twin turns once per pick.
+  const focus = useMemo(() => (beat ? beatFocus(beat) : null), [beat]);
   return {
     days: listed,
     choice,
     profile,
-    day: current?.day ?? undefined,
+    day,
     error: current?.error ?? null,
+    selected,
+    focus,
     onChoice: setChosen,
     onProfile: setProfile,
+    onBeat: (index) =>
+      setPicked(index === null || url === null ? null : { key: url, value: index }),
   };
 };

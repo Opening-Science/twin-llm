@@ -12,11 +12,13 @@ import {
   MY_DAY_NOT_RECORDED,
   MY_DAY_NOTE,
   MY_DAY_PICK,
+  MY_DAY_PICK_HINT,
   MY_DAY_PROFILE,
   MY_DAY_PROFILES,
   MY_DAY_TITLE,
   MY_DAY_UTC,
   myDayOption,
+  myDayShows,
   myDayPlaceholder,
 } from "./day-copy";
 import { MOCK_CHOICE } from "./day-view";
@@ -24,30 +26,50 @@ import { type MyDayState } from "./use-my-day";
 
 /**
  * Under the twin: pick a day of the Demo person (or the illustrative mock day)
- * and the glucose thresholds, then read the day's beats in time order. Every
+ * and the glucose thresholds, then read the day's beats in time order; a beat
+ * pressed turns the twin to its organ. Every
  * line is drawn as the route wrote it; the notice and the placeholder note
  * always show with a day.
  */
 
 const TITLE_ID = "twin-my-day-title";
 
-const BeatList = ({ day }: Readonly<{ day: KioskDay }>) =>
+/**
+ * Each beat is a toggle: pressed, the twin turns to the beat's organ at its
+ * layer, and a line says what it shows; pressed again, the twin lets go.
+ */
+const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) =>
   day.beats.length === 0 ? (
     <p className="text-muted-foreground text-sm">{MY_DAY_NO_BEATS}</p>
   ) : (
     <ol className="twin-beats" aria-label={MY_DAY_BEATS}>
-      {day.beats.map((beat, index) => (
-        <li key={`${beat.time}-${index}`} className="twin-beat">
-          <time className="twin-beat-time">{beat.time}</time>
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{beat.event}</p>
-            <p className="text-sm">{beat.line}</p>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {beat.body.text}
-            </p>
-          </div>
-        </li>
-      ))}
+      {day.beats.map((beat, index) => {
+        const pressed = state.selected === index;
+        return (
+          <li key={`${beat.time}-${index}`} className="twin-beat">
+            <button
+              type="button"
+              aria-pressed={pressed}
+              onClick={() => state.onBeat(pressed ? null : index)}
+              className="twin-beat-button"
+            >
+              <time className="twin-beat-time">{beat.time}</time>
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-medium">{beat.event}</span>
+                <span className="text-sm">{beat.line}</span>
+                <span className="text-muted-foreground text-xs leading-relaxed">
+                  {beat.body.text}
+                </span>
+                {pressed && state.focus ? (
+                  <span className="text-xs font-medium">
+                    {myDayShows(state.focus.label)}
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </li>
+        );
+      })}
     </ol>
   );
 
@@ -59,6 +81,7 @@ const DayNotes = ({ day, mock }: Readonly<{ day: KioskDay; mock: boolean }>) => 
       {MY_DAY_UTC} {myDayPlaceholder(day.thresholds.reviewer)}
       {day.activity === "not recorded" ? ` ${MY_DAY_NOT_RECORDED}` : null}
     </p>
+    <p>{MY_DAY_PICK_HINT}</p>
   </div>
 );
 
@@ -106,7 +129,7 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
       ) : state.day ? (
         <>
           <DayNotes day={state.day} mock={mock} />
-          <BeatList day={state.day} />
+          <BeatList state={state} day={state.day} />
         </>
       ) : state.days === undefined ? null : (
         <p className="text-muted-foreground text-xs">{MY_DAY_LOADING}</p>
