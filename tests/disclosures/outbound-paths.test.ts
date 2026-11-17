@@ -204,6 +204,8 @@ const SCRIPTS: Readonly<Record<string, string>> = {
   "scripts/setup/prompt-size.ts":
     "counts tokens of a synthetic prompt on the local Ollama",
   "scripts/local-https-gateway.mjs": "a TLS gateway on loopback in front of the app",
+  "scripts/voice/serve.ts":
+    "the speech sidecar on loopback; whisper.cpp and Piper run on this machine",
   "scripts/oura-oauth-proxy.mjs": "a redirect proxy on localhost for the OAuth return",
   "scripts/whoop-oauth-proxy.mjs": "a redirect proxy on localhost for the OAuth return",
 };

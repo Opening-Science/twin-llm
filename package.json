@@ -72,6 +72,8 @@
     "blender:self-check": "bun scripts/blender/run.ts self-check",
     "anatomy:quantise-fitted": "bun scripts/blender/quantise-fitted.ts",
     "fonts:install": "bun scripts/fonts/install.ts",
+    "voice:setup": "bash scripts/voice/setup.sh",
+    "voice:serve": "bun scripts/voice/serve.ts",
     "synthea:generate": "bash scripts/synthea/generate-local.sh",
     "synthea:s7": "bun scripts/synthea/s7-cohort.ts",
     "synthea:pin": "bun scripts/synthea/write-pin.ts",
