@@ -130,6 +130,8 @@ import {
   SCAN_SET_DEFAULT,
   SCAN_CLEAR_DEFAULT,
   SCAN_DEFAULT_FAILED,
+  SCAN_AUTO_SYNC_STOPPED,
+  scanAutoSyncing,
   BODY_VIEW_LOST,
   BODY_VIEW_RELOAD,
   DEMO_NEEDS_WEBGL,
@@ -154,6 +156,7 @@ import {
 } from "./scan-scene";
 import { scanLabel, isScansPayload, isSnapshotsPayload } from "./body-twin-payloads";
 import { loadSubjects } from "./load-subjects";
+import { autoSyncScans, scansToAutoSync } from "./scan-auto-sync";
 export {
   BODY_TWIN_LOADING,
   BODYLOOP_NO_SCANS,
@@ -165,6 +168,8 @@ export {
   SCAN_CLEAR_DEFAULT,
   SCAN_DEFAULT_TAG,
   SCAN_DEFAULT_FAILED,
+  SCAN_AUTO_SYNC_STOPPED,
+  scanAutoSyncing,
   BODY_VIEW_LOST,
   BODY_VIEW_RELOAD,
   DEMO_NEEDS_WEBGL,
@@ -291,6 +296,9 @@ export const BodyLoopAvatar = ({
   >([]);
   const [savingDefault, setSavingDefault] = useState(false);
   const [defaultError, setDefaultError] = useState(false);
+  // #613: scans the scanner lists that were never stored are fetched on open.
+  const [autoSyncing, setAutoSyncing] = useState(0);
+  const [autoSyncStopped, setAutoSyncStopped] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   // Live vitals: on in the environment, off inline until asked (battery on an
   // 8 GB Air), never with reduced motion.
@@ -366,24 +374,46 @@ export const BodyLoopAvatar = ({
   useEffect(() => {
     if (preview !== undefined || !subjectId || isDemoSubject(subjectId)) return;
     let cancelled = false;
-    void Promise.all([
-      fetch(`/api/vitronic/subjects/${subjectId}/scans`).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-      fetch(`/api/vitronic/subjects/${subjectId}/snapshots`).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-    ])
-      .then(([scansBody, snapshotsBody]: readonly [unknown, unknown]) => {
-        if (cancelled) return;
+    const loadLists = () =>
+      Promise.all([
+        fetch(`/api/vitronic/subjects/${subjectId}/scans`).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+        fetch(`/api/vitronic/subjects/${subjectId}/snapshots`).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+      ]).then(([scansBody, snapshotsBody]: readonly [unknown, unknown]) => {
         const nextScans = isScansPayload(scansBody) ? (scansBody.scans ?? []) : [];
-        const nextSnapshots = isSnapshotsPayload(snapshotsBody)
-          ? (snapshotsBody.snapshots ?? [])
-          : [];
-        setScans(nextScans);
-        setSnapshots(nextSnapshots);
+        if (!cancelled) {
+          setScans(nextScans);
+          setSnapshots(
+            isSnapshotsPayload(snapshotsBody) ? (snapshotsBody.snapshots ?? []) : [],
+          );
+        }
+        return nextScans;
+      });
+    setAutoSyncStopped(false);
+    void loadLists()
+      .then(async (listed) => {
+        // Once per open: the lists read after the fetch do not start another round.
+        const fresh = scansToAutoSync(listed, Date.now());
+        if (cancelled || fresh.length === 0) return;
+        setAutoSyncing(fresh.length);
+        const outcome = await autoSyncScans(fresh, (viatarId) =>
+          fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ viatarId }),
+          }).then((response) => response.ok),
+        );
+        if (cancelled) return;
+        setAutoSyncing(0);
+        setAutoSyncStopped(outcome.stopped);
+        if (outcome.synced.length > 0) await loadLists();
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setAutoSyncing(0);
+      });
     return () => {
       cancelled = true;
     };
@@ -1206,6 +1236,7 @@ export const BodyLoopAvatar = ({
             <div className="mt-3 flex flex-wrap gap-2">
               {scannerActions ? (
                 <Button
+                  disabled={autoSyncing > 0}
                   onClick={() => {
                     void fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
                       method: "POST",
@@ -1242,6 +1273,15 @@ export const BodyLoopAvatar = ({
           ) : null}
           {defaultError ? (
             <p className="text-muted-foreground mt-2 text-xs">{SCAN_DEFAULT_FAILED}</p>
+          ) : null}
+          {autoSyncing > 0 ? (
+            <p role="status" className="text-muted-foreground mt-2 text-xs">
+              {scanAutoSyncing(autoSyncing)}
+            </p>
+          ) : autoSyncStopped ? (
+            <p role="status" className="text-muted-foreground mt-2 text-xs">
+              {SCAN_AUTO_SYNC_STOPPED}
+            </p>
           ) : null}
           {listedScans.length === 0 ? (
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
