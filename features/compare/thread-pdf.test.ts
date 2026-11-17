@@ -14,7 +14,13 @@ import {
 import { pdfDrawnText } from "@/tests/support/pdf-drawn-text";
 
 import { EXPORT_DISCLAIMER } from "./thread-markdown";
-import { BRAND_FONTS_DIR, drawnWidth, pdfFileName, threadPdf } from "./thread-pdf";
+import {
+  BRAND_FONTS_DIR,
+  brandFold,
+  drawnWidth,
+  pdfFileName,
+  threadPdf,
+} from "./thread-pdf";
 import {
   layoutPdf,
   type Measure,
@@ -261,5 +267,36 @@ describe("the PDF file", () => {
 
   test("the file name follows the other formats", () => {
     expect(pdfFileName("Heart Rate: spring 2026!")).toBe("heart-rate-spring-2026.pdf");
+  });
+});
+
+describe("characters in the brand fonts", () => {
+  const codes = (text: string) =>
+    new Set([...text].map((char) => char.codePointAt(0) ?? 0));
+  const latin = "abcdeor -<>=?";
+  const fold = brandFold({
+    regular: codes(`${latin}β≥ř`),
+    bold: codes(`${latin}≥`),
+    italic: codes(`${latin}β≥ř`),
+    mono: codes(latin),
+  });
+
+  test("a character the style's font has stays in that style", () => {
+    expect(fold("code", "mono")).toEqual([{ text: "code", style: "mono" }]);
+  });
+
+  test("one the style lacks comes from the regular font, the rest stays", () => {
+    expect(fold("code β", "mono")).toEqual([
+      { text: "code ", style: "mono" },
+      { text: "β", style: "regular" },
+    ]);
+    expect(fold("ře", "bold")).toEqual([
+      { text: "ř", style: "regular" },
+      { text: "e", style: "bold" },
+    ]);
+  });
+
+  test("one no font has gets the style's stand-in or a question mark", () => {
+    expect(fold("≤ 心", "regular")).toEqual([{ text: "<= ?", style: "regular" }]);
   });
 });

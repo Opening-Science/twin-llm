@@ -90,19 +90,16 @@ const joinSpans = (spans: readonly Span[]): Span[] =>
       : [...joined, span];
   }, []);
 
+/** The code points each style's font can draw. */
+export type CharacterSets = Readonly<Record<PdfStyle, ReadonlySet<number>>>;
+
 /**
  * Each character in its style's font; one that font lacks (Courier has no
- * Greek) in Selecta Regular when that has it, else a stand-in or "?".
+ * Greek) in the regular font when that has it, else a stand-in or "?".
  */
-const brandFold = (styles: Readonly<Record<PdfStyle, PDFFont>>): Fold => {
-  const sets = new Map(
-    (["regular", "bold", "italic", "mono"] as const).map((style) => [
-      style,
-      new Set(styles[style].getCharacterSet()),
-    ]),
-  );
+export const brandFold = (sets: CharacterSets): Fold => {
   const has = (style: PdfStyle) => (char: string) =>
-    sets.get(style)?.has(char.codePointAt(0) ?? -1) === true;
+    sets[style].has(char.codePointAt(0) ?? -1);
   return (text, style) =>
     joinSpans(
       [...text.normalize("NFC")].map((char): Span =>
@@ -142,7 +139,12 @@ const brandFonts = async (doc: PDFDocument, dir: string): Promise<Fonts | null> 
   };
   return {
     styles,
-    fold: brandFold(styles),
+    fold: brandFold({
+      regular: new Set(styles.regular.getCharacterSet()),
+      bold: new Set(styles.bold.getCharacterSet()),
+      italic: new Set(styles.italic.getCharacterSet()),
+      mono: new Set(styles.mono.getCharacterSet()),
+    }),
     slanted: new Set(italic === null ? ["italic" as const] : []),
   };
 };
