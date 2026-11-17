@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { GLUCOSE_PROFILES, type GlucoseProfile } from "@/packages/query-tools/day-beats";
+import { windowEndDate, windowStartDate } from "@/packages/query-tools/schemas";
 import { SUBJECT_SCOPE_VIOLATION } from "@/packages/query-tools/scope";
 import { demoSubjectInScope } from "@/packages/query-tools/synthetic-display";
 
@@ -32,7 +34,9 @@ type SubjectContext = { params: Promise<unknown> };
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** A calendar day, YYYY-MM-DD; "2026-02-30" is not one. */
+const isDay = (value: string | null): value is string =>
+  value !== null && z.iso.date().safeParse(value).success;
 
 const profileOf = (value: string | null): GlucoseProfile | null =>
   value === null
@@ -119,12 +123,13 @@ export const createDayHandler = (deps: DayDeps) =>
       const query = new URL(request.url).searchParams;
       const day = query.get("day");
       const profile = profileOf(query.get("profile"));
-      return day !== null && DAY.test(day) && profile !== null
-        ? { codes: DAY_CODES, day, profile }
-        : null;
+      return isDay(day) && profile !== null ? { codes: DAY_CODES, day, profile } : null;
     },
     async (ref, { day, profile }, audit) => {
-      const rows = await deps.findValues(ref, DAY_CODES);
+      const rows = await deps.findValues(ref, DAY_CODES, {
+        from: windowStartDate(day),
+        to: windowEndDate(day),
+      });
       const result = demoDay(rows, ref, day, profile);
       if (result.kind === "refused") {
         await audit({ refused: result.reason }, 0);
