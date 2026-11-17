@@ -97,10 +97,37 @@ describe("MyDayPanel", () => {
 
   test("lists each window with its line, rule and a way to show its beat", () => {
     const out = html(STATE);
-    expect(out).toContain("20:30 · Blood glucose · furthest 175 mg/dL");
+    expect(out).toContain("20:30 · Glucose · furthest 175 mg/dL");
     expect(out).toContain(DAY.worth_a_look[0]!.rule);
     expect(out).toContain(WORTH_A_LOOK_NOTE);
     expect(out).toContain("Show the 20:30 beat");
+  });
+
+  test("blood and sensor windows at one time each press their own beat", () => {
+    const blood = DAY.beats.findIndex((beat) => beat.worth_a_look);
+    const sensorBeat = {
+      ...DAY.beats[blood]!,
+      value: 152,
+      line: "Sensor glucose up · about 152 mg/dL · derived",
+    };
+    const beats = [
+      ...DAY.beats.slice(0, blood + 1),
+      sensorBeat,
+      ...DAY.beats.slice(blood + 1),
+    ];
+    const windows = [
+      ...DAY.worth_a_look,
+      { ...DAY.worth_a_look[0]!, extreme: 152, rule: "Sensor glucose above 140 mg/dL" },
+    ];
+    const out = html({
+      ...STATE,
+      day: { ...DAY, beats, worth_a_look: windows },
+      selected: blood + 1,
+    });
+    // Only the sensor window's button is pressed, so the two are told apart.
+    const buttons =
+      out.match(/aria-pressed="(true|false)"[^>]*>Show the 20:30 beat/g) ?? [];
+    expect(buttons.map((one) => one.includes('"true"'))).toEqual([false, true]);
   });
 
   test("says so when nothing is past the thresholds", () => {

@@ -1,4 +1,4 @@
-import { formatDate } from "@/infrastructure/format-measure";
+import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 
 /**
  * Copy for "Show me my day" on the Digital Twin page, in one place so
@@ -58,9 +58,10 @@ export const WORTH_A_LOOK = "Worth a look";
 export const WORTH_A_LOOK_NOTE = "A moment to look at, not a verdict on the person.";
 export const WORTH_A_LOOK_NONE = "Nothing past the thresholds on this day.";
 
-const MEASURE_NAME = { heart_rate: "Heart rate", glucose: "Blood glucose" } as const;
+// A glucose window may be blood or sensor; its rule, shown under it, says which.
+const MEASURE_NAME = { heart_rate: "Heart rate", glucose: "Glucose" } as const;
 
-/** One window: when, which signal, and its furthest value past the threshold, as given. */
+/** One window: when, which signal, and its furthest value past the threshold, rounded as the beat lines are. */
 export const worthALookLine = (
   window: Readonly<{
     from: string;
@@ -72,7 +73,7 @@ export const worthALookLine = (
 ): string =>
   `${window.from === window.to ? window.from : `${window.from} to ${window.to}`} · ${
     MEASURE_NAME[window.measure]
-  } · furthest ${window.extreme} ${window.unit}`;
+  } · furthest ${formatNumber(window.extreme, 0)} ${window.unit}`;
 
 /** The button that turns the twin to a window's beat. */
 export const worthALookShow = (from: string): string => `Show the ${from} beat`;
