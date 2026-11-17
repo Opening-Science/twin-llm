@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ObservationRecord, QueryToolPorts, SubjectScopeRow } from "./ports";
-import { mixedUnits, ROW_CAP_EXCEEDED } from "./refusals";
+import { isToolRefusal, mixedUnits, ROW_CAP_EXCEEDED } from "./refusals";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import { type ShowMyPeriodResult } from "./show-my-period";
 import { runHrvTrend, runRestingHrTrend, runShowMyPeriod } from "./tools";
@@ -301,5 +301,25 @@ describe("show_my_period with sensor glucose", () => {
     expect(result.sensor_glucose).toEqual(ROW_CAP_EXCEEDED);
     expect(result.sensor_lag).toBeNull();
     expect(result.n).toBe(35 * 2 + 16 + 1);
+  });
+
+  test("a month from a five-minute monitor is over the cap: sensor refused, the rest answers", async () => {
+    // 30 days × 288 readings = 8640, past the 5000 cap.
+    const month = Array.from({ length: 30 * 288 }, (_, index) => ({
+      ...row("99504-3", 100, "mg/dL", END, "00:00"),
+      effectiveAt: new Date(Date.parse(`${END}T23:55:00.000Z`) - index * 300_000),
+    }));
+    const result = asResult(
+      await runShowMyPeriod(
+        synthetic,
+        { ...WEEK, period: "month" },
+        fakePorts([...FIXTURE, ...month]).ports,
+      ),
+    );
+    expect(result.sensor_glucose).toEqual(ROW_CAP_EXCEEDED);
+    expect(result.sensor_lag).toBeNull();
+    expect(result.glucose).toMatchObject({ specimen: "blood", n: 17 });
+    expect(isToolRefusal(result.resting_hr)).toBe(false);
+    expect(isToolRefusal(result.hrv)).toBe(false);
   });
 });
