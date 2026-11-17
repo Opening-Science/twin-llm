@@ -63,6 +63,14 @@ const INFOMANIAK_FALLBACK: Catalog = Object.freeze([
   placeholderRow("infomaniak", "qwen3", "Qwen 3", 32_000),
 ]);
 
+/**
+ * True for the built-in list Ollama or Infomaniak falls back to when the
+ * provider could not be asked: the models page marks it offline rather than
+ * passing it off as what the provider serves now.
+ */
+export const isFallbackCatalog = (catalog: Catalog): boolean =>
+  catalog === OLLAMA_FALLBACK || catalog === INFOMANIAK_FALLBACK;
+
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : typeof error;
 

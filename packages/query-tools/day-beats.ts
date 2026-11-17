@@ -122,6 +122,20 @@ const SENSOR_BODY: Readonly<Record<Direction, string>> = {
 const sensorOf = (reading: DayReading | null): number | null =>
   reading?.sensorGlucoseMgDl ?? null;
 
+/**
+ * For each reading, the last sensor value before it. Heart rate often comes
+ * every minute and the sensor every few, so the reading just before is
+ * rarely a sensor one.
+ */
+const lastSensorBefore = (sorted: readonly DayReading[]): readonly (number | null)[] =>
+  sorted.reduce<{ last: number | null; out: readonly (number | null)[] }>(
+    (acc, reading) => ({
+      last: sensorOf(reading) ?? acc.last,
+      out: [...acc.out, acc.last],
+    }),
+    { last: null, out: [] },
+  ).out;
+
 const INSULIN_BODY =
   "The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens.";
 
@@ -136,6 +150,7 @@ type Candidate = Readonly<{
 const candidatesOf = (
   reading: DayReading,
   before: DayReading | null,
+  sensorBefore: number | null,
 ): readonly Candidate[] => {
   const all: readonly (Omit<Candidate, "value"> & { value: number | null })[] = [
     {
@@ -154,7 +169,7 @@ const candidatesOf = (
       measure: "glucose",
       specimen: "sensor",
       value: sensorOf(reading),
-      change: change(sensorOf(reading), sensorOf(before)),
+      change: change(sensorOf(reading), sensorBefore),
     },
   ];
   return all.filter((one): one is Candidate => one.value !== null);
@@ -166,9 +181,13 @@ const moved = (candidate: Candidate): number =>
     : Math.abs(candidate.change) /
       (candidate.measure === "heart_rate" ? SCALE.heart_rate : SCALE.glucose);
 
-const measuredBeat = (reading: DayReading, before: DayReading | null): DayBeat | null => {
+const measuredBeat = (
+  reading: DayReading,
+  before: DayReading | null,
+  sensorBefore: number | null,
+): DayBeat | null => {
   const event = reading.event ?? "Reading";
-  const chosen = candidatesOf(reading, before).reduce<Candidate | null>(
+  const chosen = candidatesOf(reading, before, sensorBefore).reduce<Candidate | null>(
     (best, candidate) =>
       best === null || moved(candidate) > moved(best) ? candidate : best,
     null,
@@ -206,11 +225,15 @@ const measuredBeat = (reading: DayReading, before: DayReading | null): DayBeat |
   };
 };
 
-const insulinBeat = (reading: DayReading, before: DayReading | null): DayBeat | null => {
+const insulinBeat = (
+  reading: DayReading,
+  before: DayReading | null,
+  sensorBefore: number | null,
+): DayBeat | null => {
   const rise =
     reading.glucoseMgDl !== null
       ? change(reading.glucoseMgDl, before?.glucoseMgDl ?? null)
-      : change(sensorOf(reading), sensorOf(before));
+      : change(sensorOf(reading), sensorBefore);
   if (rise === null || rise < INSULIN_RISE) return null;
   return {
     time: reading.time,
@@ -400,11 +423,12 @@ export const dayBeats = (
 ): readonly DayBeat[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const windows = redWindows(sorted, profile, thresholds);
+  const sensorBefore = lastSensorBefore(sorted);
   return sorted.flatMap((reading, index) => {
     const before = sorted[index - 1] ?? null;
     return [
-      measuredBeat(reading, before),
-      insulinBeat(reading, before),
+      measuredBeat(reading, before, sensorBefore[index] ?? null),
+      insulinBeat(reading, before, sensorBefore[index] ?? null),
       ...windows.filter((window) => window.from === reading.time).map(windowBeat),
     ].filter((beat): beat is DayBeat => beat !== null);
   });
