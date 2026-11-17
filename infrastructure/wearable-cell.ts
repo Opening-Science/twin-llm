@@ -164,3 +164,52 @@ export const confusableCells = (
       )
       .map((b) => [a, b] as const),
   );
+
+/** The verdicts that name another reading the number is: its source, its day, or both. */
+export const MISCITED_VERDICTS = [
+  "wrong_source",
+  "wrong_day",
+  "wrong_source_and_day",
+] as const;
+
+export type MiscitedVerdict = (typeof MISCITED_VERDICTS)[number];
+
+/**
+ * The reading a stated number is, when it is not the cited one but another
+ * reading of the same measure the answer was offered (#508).
+ */
+export type StatedFrom = Readonly<{
+  source: WearableSourceId;
+  /** Absent when that reading carries no real day. */
+  day?: string;
+  verdict: MiscitedVerdict;
+}>;
+
+export const isMiscitedVerdict = (verdict: unknown): verdict is MiscitedVerdict =>
+  (MISCITED_VERDICTS as readonly unknown[]).includes(verdict);
+
+/**
+ * Where `stated` came from, for a cited reading it does not match: the one
+ * other offered reading of its measure whose value it is. Null when it is
+ * none of them, more than one, or the cited reading is not a number.
+ */
+export const statedFrom = (
+  cited: Parameters<typeof cellOf>[0],
+  stated: string,
+  offered: readonly WearableCell[],
+): StatedFrom | null => {
+  const cell = cellOf(cited);
+  if (cell === null) return null;
+  const trace = traceStated(
+    stated,
+    cell.measure,
+    offered.filter((other) => other.key !== cell.key),
+  );
+  const verdict = citationVerdict(cell, trace);
+  if (trace.kind !== "one" || !isMiscitedVerdict(verdict)) return null;
+  return {
+    source: trace.cell.source,
+    ...(trace.cell.day === null ? {} : { day: trace.cell.day }),
+    verdict,
+  };
+};
