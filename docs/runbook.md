@@ -216,7 +216,7 @@ Smoke tests that the synced packages resolve and export what the host pins, incl
 
 ### Operator: cycle through `@open-twin/provider-vitronic` (never CI)
 
-TwinLLM no longer syncs `provider-vitronic`, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
+TwinLLM syncs `provider-vitronic` for its mapping only and never builds its client, so the library half of this check runs in an open-twin checkout. Dry-run first, then `--execute` with `BODYLOOP_TLS_FINGERPRINT`, host Sync on that scan, then count FHIR `bundle.entry` via `createBodyLoopClient({ apiToken, tlsFingerprintSha256 })` → `getAvailableViatars(client, probandId)` → `getFhirBundleFromVitronicData`. Do not use `packages/vitronic/client.ts` for this check. Fail if the eval hits `/probands` or the password grant.
 
 ```sh
 bun run vitronic:cycle create-scan --proband-id <n>
