@@ -542,7 +542,7 @@ cell with the one found:
 
 `confusableCells` lists pairs of cells of one measure that the app would show
 as the same number; a study item with any such pair is not identifiable and is
-generated again.
+generated again. The study's items and harness: [attribution-study.md](attribution-study.md).
 
 ### Claim sources (#612)
 
