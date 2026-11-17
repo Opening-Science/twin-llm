@@ -149,6 +149,7 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "db:push": DB,
   "db:pull": DB,
   "db:verify": DB,
+  "db:chat-backfill": DB,
   "db:studio": "the person's own view of their database; no learning",
   "verify:import": TOOLING,
   sbom: TOOLING,

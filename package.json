@@ -40,6 +40,7 @@
     "db:push": "prisma db push",
     "db:pull": "prisma db pull",
     "db:verify": "bash scripts/db/verify-migrations.sh",
+    "db:chat-backfill": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/backfill.ts",
     "db:studio": "prisma studio",
     "verify:import": "bash scripts/verify-import.sh",
     "sbom": "bun scripts/sbom/write.ts",
