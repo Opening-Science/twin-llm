@@ -54,6 +54,8 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
+import { MyDayPanel } from "./day/my-day-panel";
+import { useMyDay } from "./day/use-my-day";
 import { DayMotionBar } from "./motion/day-motion-bar";
 import { useDayMotion } from "./motion/use-day-motion";
 import {
@@ -504,6 +506,11 @@ export const BodyLoopAvatar = ({
     enabled: preview === undefined,
   });
   const { onFollow: setFollowDay } = dayMotion;
+  // "Show me my day": the Demo person's day as beats, or the illustrative mock day.
+  const myDay = useMyDay({
+    personRef: biomarkers.personRef,
+    enabled: preview === undefined && biomarkerSubject === "demo",
+  });
   const motion = useBodyMotion(scanScene, reducedMotion, isDemo ? "demo" : "scan", {
     plan: dayMotion.plan,
     lines: dayMotion.lines,
@@ -1014,6 +1021,9 @@ export const BodyLoopAvatar = ({
           <NightPlayback state={night} reducedMotion={reducedMotion} />
         ) : (
           <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
+        )}
+        {environment.active || biomarkerSubject !== "demo" ? null : (
+          <MyDayPanel state={myDay} />
         )}
         {environment.active ? pickCard : null}
       </div>
