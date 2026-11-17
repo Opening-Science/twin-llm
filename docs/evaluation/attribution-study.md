@@ -113,3 +113,25 @@ number. `--report <records.jsonl>` rewrites the report only.
 
 The fakes are for tests and dry runs. No model run of W1 is reported until
 the registration is filed.
+
+## Registered contrasts
+
+`analysis.ts` computes the pre-registered contrasts that need no model
+fitting, and the report ends with them. All models are pooled.
+
+| Hypothesis | Contrast                                                         | Decision                                                 |
+| ---------- | ---------------------------------------------------------------- | -------------------------------------------------------- |
+| H1         | attribution correct, C1 − C0, items whose answer states a number | Holm over {H1, H2a, H3} at 0.05, effect positive         |
+| H2a        | disagreement handled, C2 − C1, disagree stratum                  | as H1                                                    |
+| H2b        | over-hedging, C2 − C1, agree stratum                             | non-inferior when the upper 95% bound is below 10 points |
+| H3         | rule-swap failure share among citation-correct C1 answers        | one-sided 95% lower bound above 5%, Holm as H1           |
+
+Intervals are percentiles of a cluster bootstrap over synthetic persons
+(2,000 resamples, seed 6508). The bootstrap p-value is twice the smaller
+share of draws on either side of zero (for H3, the share of draws at or
+below 5%). This is the registered fallback for H1 and H2a; the
+mixed-effects models run on the same records outside this harness.
+
+For Part B, `detection` gives d′ and criterion c with the log-linear
+correction (0.5 added to hit and false-alarm counts, 1 to trial counts), and
+`welch` gives Welch's t-test with its two-sided p.
