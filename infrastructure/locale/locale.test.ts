@@ -1,6 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
-import { htmlLang, LOCALE_COOKIE, localeCookie, localeFromCookie } from "./locale";
+import {
+  htmlLang,
+  LOCALE_COOKIE,
+  localeCookie,
+  localeFromCookie,
+  otherLocale,
+} from "./locale";
+
+describe("otherLocale", () => {
+  test("offers German from English and English from German", () => {
+    expect(otherLocale("en")).toBe("de");
+    expect(otherLocale("de")).toBe("en");
+  });
+});
 
 describe("localeFromCookie", () => {
   test("only `de` picks German", () => {

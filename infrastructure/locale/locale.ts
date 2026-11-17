@@ -30,5 +30,8 @@ export const localeCookie = (locale: Locale): string =>
 /** The `lang` attribute for `<html>`: British English or German. */
 export const htmlLang = (locale: Locale): string => (locale === "de" ? "de" : "en-GB");
 
+/** The language the switch offers: the one not in use. */
+export const otherLocale = (locale: Locale): Locale => (locale === "de" ? "en" : "de");
+
 /** One string per language; a feature keeps its own words in one of these. */
 export type Translated<T> = Readonly<Record<Locale, T>>;
