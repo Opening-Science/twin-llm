@@ -94,7 +94,9 @@ Measured on the pinned files (2026-10-13):
 A `twin.body` view in the chat (`docs/chat-platform.md`, #48) starts the viewer
 on a focus from `packages/anatomy/twin-focus.ts`: one of the nine systems or one
 of heart, lung, brain, liver, kidney, pancreas and blood vessels. `focusHighlights`
-gives what it lights per atlas kind (HRA the organ group or the whole system,
+gives what it lights per atlas kind (HRA the organ's groups or the whole system;
+the brain is `allenbrain`, the whole brain, with `brain`, which on both HRA atlases is
+the optic chiasm alone;
 BodyParts3D the system), set like a Biomarkers-tab row ("From chat: Liver"), so an
 atlas switch lights it again. `focusDepth` starts the depth at organs, at muscle
 for the musculoskeletal system and at the scan for the skin; after that the
