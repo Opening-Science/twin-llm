@@ -1194,6 +1194,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/synthea/layout.tsx": { open: "the public Synthea generator" },
   "app/synthea/page.tsx": { open: "the public Synthea generator" },
   "app/synthea/docs/page.tsx": { open: "the public Synthea generator" },
+  "app/kiosk/page.tsx": { open: "the synthetic demo body; reads no person's data" },
 };
 
 /** Server actions: each gated function refuses while locked (directly or through `via`). */
