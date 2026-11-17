@@ -1,8 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+import {
+  decodePDFRawStream,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  StandardFonts,
+} from "pdf-lib";
+
+import { pdfDrawnText } from "@/tests/support/pdf-drawn-text";
 
 import { EXPORT_DISCLAIMER } from "./thread-markdown";
-import { drawnWidth, pdfFileName, threadPdf } from "./thread-pdf";
+import {
+  BRAND_FONTS_DIR,
+  brandFold,
+  drawnWidth,
+  pdfFileName,
+  threadPdf,
+} from "./thread-pdf";
 import {
   layoutPdf,
   type Measure,
@@ -17,6 +35,57 @@ import { blocksOf } from "./thread-print";
 const half: Measure = (text, _style, size) => [...text].length * size * 0.5;
 
 const WIDTH = PAGE.width - 2 * PAGE.margin;
+
+/** A folder with no fonts in it: the standard fonts, as in CI. */
+const NO_FONTS = join(import.meta.dir, "no-brand-fonts-here");
+
+/** Installed by `bun run fonts:install` on a machine with the licence; never in CI. */
+const BRAND_INSTALLED = ["Selecta-Regular.woff2", "Selecta-Medium.woff2"].every((file) =>
+  existsSync(join(BRAND_FONTS_DIR, file)),
+);
+
+const SPECIAL = "SpO₂ ≥ 95 %, Dvořák, Müller — β-blocker, μmol/L";
+
+const specialPdf = (fontsDir: string) =>
+  threadPdf(
+    "SpO₂ ≥ 95",
+    `# SpO₂ ≥ 95\n\n${SPECIAL}\n\n**${SPECIAL}**\n\n_${SPECIAL}_\n\n\`code β\`\n\n- 心 stays a question mark`,
+    EXPORT_DISCLAIMER,
+    "2026-10-28",
+    fontsDir,
+  );
+
+/** BaseFont of every font the pages use, subset prefixes dropped. */
+const fontNames = async (bytes: Uint8Array): Promise<string[]> => {
+  const doc = await PDFDocument.load(bytes);
+  const names = doc.getPages().flatMap((page) => {
+    const fonts = page.node.Resources()?.lookup(PDFName.of("Font"), PDFDict);
+    return (fonts?.entries() ?? []).map(([, ref]) => {
+      const font = doc.context.lookup(ref, PDFDict);
+      return (font.get(PDFName.of("BaseFont"))?.toString() ?? "")
+        .replace(/^\//, "")
+        .replace(/-\d+$/, "");
+    });
+  });
+  return [...new Set(names)].sort();
+};
+
+/** How each embedded font program starts: "OTTO" is OpenType, "wOF2" a web font. */
+const embeddedFontMagic = async (bytes: Uint8Array): Promise<string[]> => {
+  const doc = await PDFDocument.load(bytes);
+  return doc.context
+    .enumerateIndirectObjects()
+    .flatMap(([, object]) =>
+      object instanceof PDFRawStream
+        ? [
+            new TextDecoder("latin1").decode(
+              decodePDFRawStream(object).decode().subarray(0, 4),
+            ),
+          ]
+        : [],
+    )
+    .filter((magic) => magic === "OTTO" || magic === "wOF2");
+};
 
 describe("characters the standard fonts draw", () => {
   test("Latin-1 and the Windows extras stay; others get stand-ins or ?", () => {
@@ -134,6 +203,7 @@ describe("the PDF file", () => {
       "# Heart rate\n\nSpO₂ ≥ 95 %. **Uncertainty.** Few.\n\n- one",
       EXPORT_DISCLAIMER,
       "2026-10-28",
+      NO_FONTS,
     );
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
     const doc = await PDFDocument.load(bytes, { updateMetadata: false });
@@ -162,7 +232,71 @@ describe("the PDF file", () => {
     );
   });
 
+  test("without the brand fonts: the standard fonts, nothing embedded, stand-ins", async () => {
+    const bytes = await specialPdf(NO_FONTS);
+    expect(await fontNames(bytes)).toEqual([
+      "Courier",
+      "Helvetica",
+      "Helvetica-Bold",
+      "Helvetica-Oblique",
+    ]);
+    const text = await pdfDrawnText(bytes);
+    expect(text).toContain("SpO2 >= 95 %, Dvorák, Müller — ?-blocker, µmol/L");
+  });
+
+  test.skipIf(!BRAND_INSTALLED)(
+    "with the brand fonts: Selecta as OpenType, every character as written",
+    async () => {
+      const bytes = await specialPdf(BRAND_FONTS_DIR);
+      const names = await fontNames(bytes);
+      expect(names.some((name) => name.includes("Selecta"))).toBe(true);
+      expect(names.some((name) => name.startsWith("Helvetica"))).toBe(false);
+      expect(names).toContain("Courier");
+      const text = await pdfDrawnText(bytes);
+      expect(text).toContain("SpO₂ ≥ 95");
+      expect(text.split("\n").filter((run) => run === SPECIAL)).toHaveLength(3);
+      // Courier has no Greek: β comes from Selecta, the code around it stays mono.
+      expect(text).toContain("code \nβ");
+      expect(text).toContain("? stays a question mark");
+      // Embedded as OpenType, never as the WOFF2 file a PDF reader cannot draw.
+      expect(await embeddedFontMagic(bytes)).toEqual(["OTTO", "OTTO"]);
+      // Two whole fonts (Regular, Medium) are about 100 kB.
+      expect(bytes.length).toBeLessThan(200_000);
+    },
+  );
+
   test("the file name follows the other formats", () => {
     expect(pdfFileName("Heart Rate: spring 2026!")).toBe("heart-rate-spring-2026.pdf");
+  });
+});
+
+describe("characters in the brand fonts", () => {
+  const codes = (text: string) =>
+    new Set([...text].map((char) => char.codePointAt(0) ?? 0));
+  const latin = "abcdeor -<>=?";
+  const fold = brandFold({
+    regular: codes(`${latin}β≥ř`),
+    bold: codes(`${latin}≥`),
+    italic: codes(`${latin}β≥ř`),
+    mono: codes(latin),
+  });
+
+  test("a character the style's font has stays in that style", () => {
+    expect(fold("code", "mono")).toEqual([{ text: "code", style: "mono" }]);
+  });
+
+  test("one the style lacks comes from the regular font, the rest stays", () => {
+    expect(fold("code β", "mono")).toEqual([
+      { text: "code ", style: "mono" },
+      { text: "β", style: "regular" },
+    ]);
+    expect(fold("ře", "bold")).toEqual([
+      { text: "ř", style: "regular" },
+      { text: "e", style: "bold" },
+    ]);
+  });
+
+  test("one no font has gets the style's stand-in or a question mark", () => {
+    expect(fold("≤ 心", "regular")).toEqual([{ text: "<= ?", style: "regular" }]);
   });
 });
