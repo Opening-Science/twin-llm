@@ -8,11 +8,12 @@ import { DAY_FAILED, DAY_NOT_FOUND, DAY_REFUSED, DAY_SIGN_IN } from "./day-copy"
 import {
   createDayHandler,
   createDayListHandler,
+  createMockDayHandler,
   DAY_AUDIT_TOOL,
   DAY_LIST_AUDIT_TOOL,
   type DayDeps,
 } from "./day-handler";
-import { DAY_CODES } from "./demo-day";
+import { DAY_CODES, MOCK_DAY_REF } from "./demo-day";
 
 const SUBJECTS: Readonly<Record<string, { isSynthetic: boolean; cohortId: string }>> = {
   "syn-a": { isSynthetic: true, cohortId: "synthea-v4-seed42" },
@@ -151,5 +152,23 @@ describe("GET /api/digital-twin/day/:subjectRef", () => {
     const response = await getDay(deps, "held-out", "day=2026-11-15");
     expect(response.status).toBe(404);
     expect(asked).toEqual([]);
+  });
+});
+
+describe("GET /api/digital-twin/day", () => {
+  test("returns the illustrative mock day without reading a subject", async () => {
+    const response = await createMockDayHandler({ resolveActorId: async () => "local" })(
+      new Request("http://local/api/digital-twin/day?profile=without_diabetes"),
+    );
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { day: { subject_ref: string } };
+    expect(body.day.subject_ref).toBe(MOCK_DAY_REF);
+  });
+
+  test("asks for sign-in without an actor", async () => {
+    const response = await createMockDayHandler({ resolveActorId: async () => null })(
+      new Request("http://local/api/digital-twin/day"),
+    );
+    expect(response.status).toBe(401);
   });
 });

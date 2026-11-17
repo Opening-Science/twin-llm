@@ -12,13 +12,13 @@ import {
   DAY_REFUSED,
   DAY_SIGN_IN,
 } from "./day-copy";
-import { DAY_CODES, dayList, demoDay } from "./demo-day";
+import { DAY_CODES, dayList, demoDay, mockDay } from "./demo-day";
 
 /**
  * Routes behind "Show me my day". A person's days and a person's day are read
  * like the Demo's lab values: the subject is checked against the Demo cohorts
  * first, the rows come through the same Demo-only read, and every read gets an
- * audit row.
+ * audit row. The mock day reads no subject, so it has no audit row.
  */
 export const DAY_LIST_AUDIT_TOOL = "digital-twin.day.list";
 export const DAY_AUDIT_TOOL = "digital-twin.day";
@@ -137,3 +137,16 @@ export const createDayHandler = (deps: DayDeps) =>
       return NextResponse.json({ day: result.day }, { headers: NO_STORE });
     },
   );
+
+/** GET /api/digital-twin/day?profile=…: the illustrative mock day; no subject is read. */
+export const createMockDayHandler =
+  (deps: Pick<DayDeps, "resolveActorId">) => async (request: Request) => {
+    if (!(await deps.resolveActorId())) {
+      return NextResponse.json({ error: DAY_SIGN_IN }, { status: 401 });
+    }
+    const profile = profileOf(new URL(request.url).searchParams.get("profile"));
+    if (profile === null) {
+      return NextResponse.json({ error: DAY_BAD_REQUEST }, { status: 400 });
+    }
+    return NextResponse.json({ day: mockDay(profile) }, { headers: NO_STORE });
+  };
