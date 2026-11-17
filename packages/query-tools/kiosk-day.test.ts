@@ -12,27 +12,56 @@ import {
   toKioskDay,
 } from "./kiosk-day";
 
-/** The illustrative mock day: hand-written values, not a recording of anyone. */
-const READINGS: readonly DayReading[] = mockDayReadings("blood");
-
 /** The mock day as `show_my_day` would return it, activity included. */
-const SOURCE: KioskDaySource = {
+const sourceOf = (readings: readonly DayReading[]): KioskDaySource => ({
   subject_ref: "synthetic-mock-day",
   day: MOCK_DAY_DATE,
   profile: "without_diabetes",
-  beats: dayBeats(READINGS, "without_diabetes"),
-  red_windows: redWindows(READINGS, "without_diabetes"),
+  beats: dayBeats(readings, "without_diabetes"),
+  red_windows: redWindows(readings, "without_diabetes"),
   thresholds: { status: DAY_THRESHOLDS.status, reviewer: DAY_THRESHOLDS.reviewer },
   activity: "recorded",
   timezone: "UTC",
-};
+});
 
-const EXAMPLE: unknown = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL("../../docs/kiosk-day.example.json", import.meta.url)),
-    "utf8",
-  ),
-);
+/** The illustrative mock day: hand-written values, not a recording of anyone. */
+const SOURCE = sourceOf(mockDayReadings("blood"));
+
+const example = (name: string): unknown =>
+  JSON.parse(
+    readFileSync(fileURLToPath(new URL(`../../docs/${name}`, import.meta.url)), "utf8"),
+  );
+
+const EXAMPLE = example("kiosk-day.example.json");
+
+describe("toKioskDay on the mock day from a monitor wearer", () => {
+  const kiosk = toKioskDay(sourceOf(mockDayReadings("sensor")));
+
+  test("is the committed sensor example, which parses against the contract", () => {
+    expect(kioskDaySchema.parse(example("kiosk-day.sensor.example.json"))).toEqual(kiosk);
+  });
+
+  test("every glucose value says sensor, and so does its line", () => {
+    const glucose = kiosk.beats.filter((beat) => beat.measure === "glucose");
+    expect(glucose.map((beat) => [beat.time, beat.specimen, beat.line])).toEqual([
+      ["19:30", "sensor", "Sensor glucose up · about 98 mg/dL · measured"],
+      ["20:30", "sensor", "Sensor glucose up · about 152 mg/dL · measured"],
+      ["20:30", "sensor", "Sensor glucose up · about 152 mg/dL · derived"],
+      ["22:30", "sensor", "Sensor glucose down · about 112 mg/dL · measured"],
+    ]);
+    expect(kiosk.worth_a_look).toEqual([
+      {
+        from: "20:30",
+        to: "20:30",
+        measure: "glucose",
+        specimen: "sensor",
+        extreme: 152,
+        unit: "mg/dL",
+        rule: "Sensor glucose above 140 mg/dL (placeholder, without diabetes)",
+      },
+    ]);
+  });
+});
 
 describe("toKioskDay on the mock day", () => {
   const kiosk = toKioskDay(SOURCE);
