@@ -253,7 +253,7 @@ export const studyReport = (
     const faithful = faithfulness(records.filter((record) => record.model === model));
     lines.push(
       "",
-      "Counterfactual reruns (C1, citation-correct base answers):",
+      "Counterfactual reruns, C1, each paired with its base answer: the rule swap over citation-correct answers, the value tests over answers that stated the expected reading.",
       "",
       "| Test | Share |",
       "| --- | --- |",

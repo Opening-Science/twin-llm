@@ -94,7 +94,7 @@ const readRecords = (text: string): readonly StudyRecord[] =>
 
 const reportMeta = (records: readonly StudyRecord[]) => ({
   title: "Source attribution study",
-  items: `${new Set(records.map((record) => record.baseItemId)).size} items`,
+  items: String(new Set(records.map((record) => record.baseItemId)).size),
 });
 
 export type StudyIo = Readonly<{
