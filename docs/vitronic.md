@@ -2,8 +2,9 @@
 
 Host connector for BodyLoop scan measurements and a hashed `.glb` avatar. TwinLLM
 owns HTTP. `@open-twin/provider-vitronic` owns FHIR mapping
-(`buildBundleFromVitronicResponse`), but the host **does not persist** that
-bundle. `properties` and height/distance/circumference/angle **lists** are SI
+(`buildBundleFromVitronicResponse`, through
+`infrastructure/open-twin-adapters/vitronic.ts`), but the host **does not
+persist** that bundle on a snapshot. `properties` and height/distance/circumference/angle **lists** are SI
 (m, m2, m3, kg, kg/m2, rad) as received from the BodyLoop 0.13.7 API. The
 BodyLoop UI shows cm/deg; TwinLLM stores the API payloads and converts only for
 display and chat. `VitronicSnapshot.fhirBundle` stays null in this change. The
