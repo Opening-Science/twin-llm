@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { type DayBeat, type Direction } from "./day-beat";
+import { type DayBeat, type Direction, type GlucoseSpecimen } from "./day-beat";
 import THRESHOLDS_JSON from "./day-thresholds.json";
 
 /**
@@ -10,9 +10,14 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  * - One measured beat per reading, about the signal that moved most since the
  *   reading before, each change over its own scale: 20 /min of heart rate
  *   weighs as much as 15 mg/dL of glucose. A tie, or a first reading, goes to
- *   heart rate. A change under 5 /min or 10 mg/dL is "steady".
- * - A narrated insulin beat wherever glucose rose 20 mg/dL or more: insulin is
- *   described, never measured, so it carries no value.
+ *   heart rate, then blood glucose. A change under 5 /min or 10 mg/dL is "steady".
+ * - Sensor glucose (a continuous monitor) is its own signal: its change is
+ *   taken against the sensor reading before, never against blood, and its
+ *   windows are its own. It trails blood glucose by several minutes, and its
+ *   sentences say so.
+ * - A narrated insulin beat wherever glucose rose 20 mg/dL or more (blood, or
+ *   the sensor when the reading has no blood value): insulin is described,
+ *   never measured, so it carries no value.
  * - Red windows: consecutive readings past a threshold from
  *   `day-thresholds.json` (placeholders for Robin to confirm). Heart rate
  *   counts only while still; a reading with unknown activity is not judged.
@@ -25,7 +30,10 @@ export type DayReading = Readonly<{
   /** What the person was doing; null when nothing is recorded. */
   event: string | null;
   heartRatePerMin: number | null;
+  /** Glucose in blood. */
   glucoseMgDl: number | null;
+  /** Glucose from a continuous sensor; absent or null when there is none. */
+  sensorGlucoseMgDl?: number | null;
   /** Null when activity is not recorded. */
   moving: boolean | null;
 }>;
@@ -37,6 +45,8 @@ export type RedWindow = Readonly<{
   from: string;
   to: string;
   measure: "heart_rate" | "glucose";
+  /** Blood or sensor for a glucose window; null for heart rate. */
+  specimen: GlucoseSpecimen | null;
   /** The highest (or, below a range, lowest) value in the window. */
   extreme: number;
   /** Which side of the threshold the window is on; only glucose with diabetes can be below. */
@@ -100,55 +110,130 @@ const GLUCOSE_BODY: Readonly<Record<Direction, string>> = {
   steady: "Blood sugar holds near its usual level.",
 };
 
+const SENSOR_LAG =
+  "The sensor reads the fluid between cells, several minutes behind the blood.";
+
+const SENSOR_BODY: Readonly<Record<Direction, string>> = {
+  up: `Sugar from food passes into the blood and on into the fluid between cells. ${SENSOR_LAG}`,
+  down: `Muscle and liver take sugar out of the blood, and the fluid between cells follows. ${SENSOR_LAG}`,
+  steady: `Sensor glucose holds near its usual level. ${SENSOR_LAG}`,
+};
+
+const sensorOf = (reading: DayReading | null): number | null =>
+  reading?.sensorGlucoseMgDl ?? null;
+
+/**
+ * For each reading, the last sensor value before it. Heart rate often comes
+ * every minute and the sensor every few, so the reading just before is
+ * rarely a sensor one.
+ */
+const lastSensorBefore = (sorted: readonly DayReading[]): readonly (number | null)[] =>
+  sorted.reduce<{ last: number | null; out: readonly (number | null)[] }>(
+    (acc, reading) => ({
+      last: sensorOf(reading) ?? acc.last,
+      out: [...acc.out, acc.last],
+    }),
+    { last: null, out: [] },
+  ).out;
+
 const INSULIN_BODY =
   "The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens.";
 
-const measuredBeat = (reading: DayReading, before: DayReading | null): DayBeat | null => {
+type Candidate = Readonly<{
+  measure: "heart_rate" | "glucose";
+  specimen: GlucoseSpecimen | null;
+  value: number;
+  change: number | null;
+}>;
+
+/** The signals a reading holds, in tie order: heart rate, blood glucose, sensor glucose. */
+const candidatesOf = (
+  reading: DayReading,
+  before: DayReading | null,
+  sensorBefore: number | null,
+): readonly Candidate[] => {
+  const all: readonly (Omit<Candidate, "value"> & { value: number | null })[] = [
+    {
+      measure: "heart_rate",
+      specimen: null,
+      value: reading.heartRatePerMin,
+      change: change(reading.heartRatePerMin, before?.heartRatePerMin ?? null),
+    },
+    {
+      measure: "glucose",
+      specimen: "blood",
+      value: reading.glucoseMgDl,
+      change: change(reading.glucoseMgDl, before?.glucoseMgDl ?? null),
+    },
+    {
+      measure: "glucose",
+      specimen: "sensor",
+      value: sensorOf(reading),
+      change: change(sensorOf(reading), sensorBefore),
+    },
+  ];
+  return all.filter((one): one is Candidate => one.value !== null);
+};
+
+const moved = (candidate: Candidate): number =>
+  candidate.change === null
+    ? 0
+    : Math.abs(candidate.change) /
+      (candidate.measure === "heart_rate" ? SCALE.heart_rate : SCALE.glucose);
+
+const measuredBeat = (
+  reading: DayReading,
+  before: DayReading | null,
+  sensorBefore: number | null,
+): DayBeat | null => {
   const event = reading.event ?? "Reading";
-  const glucoseChange = change(reading.glucoseMgDl, before?.glucoseMgDl ?? null);
-  const heartChange = change(reading.heartRatePerMin, before?.heartRatePerMin ?? null);
-  const moved = (value: number | null, scale: number): number =>
-    value === null ? 0 : Math.abs(value) / scale;
-  const aboutGlucose =
-    reading.glucoseMgDl !== null &&
-    (reading.heartRatePerMin === null ||
-      moved(glucoseChange, SCALE.glucose) > moved(heartChange, SCALE.heart_rate));
-  if (aboutGlucose && reading.glucoseMgDl !== null) {
-    const direction = directionOf("glucose", glucoseChange);
-    const organ = direction === "down" ? "liver" : "bloodvasculature";
+  const chosen = candidatesOf(reading, before, sensorBefore).reduce<Candidate | null>(
+    (best, candidate) =>
+      best === null || moved(candidate) > moved(best) ? candidate : best,
+    null,
+  );
+  if (chosen === null) return null;
+  const direction = directionOf(chosen.measure, chosen.change);
+  if (chosen.measure === "heart_rate") {
     return {
       time: reading.time,
       event,
       source: "measured",
-      signal: {
-        measure: "glucose",
-        direction,
-        value: reading.glucoseMgDl,
-        unit: "mg/dL",
-      },
-      body: { text: GLUCOSE_BODY[direction], organ },
-      view: { focus: organ, depth: "organs" },
+      signal: { measure: "heart_rate", direction, value: chosen.value, unit: "/min" },
+      body: { text: HEART_BODY[direction], organ: "heart" },
+      view: { focus: "heart", depth: "organs" },
     };
   }
-  if (reading.heartRatePerMin === null) return null;
-  const direction = directionOf("heart_rate", heartChange);
+  const specimen = chosen.specimen ?? "blood";
+  const organ = direction === "down" ? "liver" : "bloodvasculature";
   return {
     time: reading.time,
     event,
     source: "measured",
     signal: {
-      measure: "heart_rate",
+      measure: "glucose",
+      specimen,
       direction,
-      value: reading.heartRatePerMin,
-      unit: "/min",
+      value: chosen.value,
+      unit: "mg/dL",
     },
-    body: { text: HEART_BODY[direction], organ: "heart" },
-    view: { focus: "heart", depth: "organs" },
+    body: {
+      text: (specimen === "sensor" ? SENSOR_BODY : GLUCOSE_BODY)[direction],
+      organ,
+    },
+    view: { focus: organ, depth: "organs" },
   };
 };
 
-const insulinBeat = (reading: DayReading, before: DayReading | null): DayBeat | null => {
-  const rise = change(reading.glucoseMgDl, before?.glucoseMgDl ?? null);
+const insulinBeat = (
+  reading: DayReading,
+  before: DayReading | null,
+  sensorBefore: number | null,
+): DayBeat | null => {
+  const rise =
+    reading.glucoseMgDl !== null
+      ? change(reading.glucoseMgDl, before?.glucoseMgDl ?? null)
+      : change(sensorOf(reading), sensorBefore);
   if (rise === null || rise < INSULIN_RISE) return null;
   return {
     time: reading.time,
@@ -163,11 +248,10 @@ const insulinBeat = (reading: DayReading, before: DayReading | null): DayBeat | 
 type Breach = Readonly<{ time: string; value: number }>;
 
 const glucoseBreach = (
-  reading: DayReading,
+  value: number | null,
   profile: GlucoseProfile,
   thresholds: DayThresholds,
 ): boolean => {
-  const value = reading.glucoseMgDl;
   if (value === null) return false;
   if (profile === "without_diabetes")
     return value > thresholds.glucoseWithoutDiabetesAboveMgDl;
@@ -196,12 +280,58 @@ const runsOf = (
       : [...runs, [breach]];
   }, []);
 
-const glucoseRule = (profile: GlucoseProfile, thresholds: DayThresholds): string => {
+const glucoseRule = (
+  profile: GlucoseProfile,
+  thresholds: DayThresholds,
+  specimen: GlucoseSpecimen,
+): string => {
+  const name = specimen === "sensor" ? "Sensor glucose" : "Blood glucose";
   if (profile === "without_diabetes") {
-    return `Blood glucose above ${thresholds.glucoseWithoutDiabetesAboveMgDl} mg/dL (placeholder, without diabetes)`;
+    return `${name} above ${thresholds.glucoseWithoutDiabetesAboveMgDl} mg/dL (placeholder, without diabetes)`;
   }
   const [low, high] = thresholds.glucoseWithDiabetesRangeMgDl;
-  return `Blood glucose outside ${low}–${high} mg/dL (placeholder consensus range, with diabetes)`;
+  return `${name} outside ${low}–${high} mg/dL (placeholder consensus range, with diabetes)`;
+};
+
+/**
+ * Glucose windows of one specimen. Blood runs over every reading, as before;
+ * sensor runs over the readings that carry a sensor value, so a blood or
+ * heart-rate reading between two sensor readings does not split a window.
+ */
+const glucoseWindows = (
+  sorted: readonly DayReading[],
+  profile: GlucoseProfile,
+  thresholds: DayThresholds,
+  specimen: GlucoseSpecimen,
+): readonly RedWindow[] => {
+  const valueOf = (reading: DayReading): number | null =>
+    specimen === "sensor" ? sensorOf(reading) : reading.glucoseMgDl;
+  const readings =
+    specimen === "sensor"
+      ? sorted.filter((reading) => valueOf(reading) !== null)
+      : sorted;
+  const low =
+    profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
+  // One pass per side, so a run that jumps from below the range to above it
+  // is two windows, each with its own extreme.
+  return (["below", "above"] as const).flatMap((side) =>
+    runsOf(
+      readings,
+      (reading) =>
+        glucoseBreach(valueOf(reading), profile, thresholds) &&
+        (valueOf(reading) ?? 0) < low === (side === "below"),
+      (reading) => valueOf(reading) ?? 0,
+    ).map((run): RedWindow => ({
+      from: run[0]?.time ?? "",
+      to: run[run.length - 1]?.time ?? "",
+      measure: "glucose",
+      specimen,
+      extreme: extremeOf(run, side === "below"),
+      side,
+      rule: glucoseRule(profile, thresholds, specimen),
+      thresholds: "placeholder",
+    })),
+  );
 };
 
 const extremeOf = (run: readonly Breach[], below: boolean): number =>
@@ -224,31 +354,14 @@ export const redWindows = (
     from: run[0]?.time ?? "",
     to: run[run.length - 1]?.time ?? "",
     measure: "heart_rate",
+    specimen: null,
     extreme: extremeOf(run, false),
     side: "above",
     rule: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while still (placeholder)`,
     thresholds: "placeholder",
   }));
-  const low =
-    profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
-  // One pass per side, so a run that jumps from below the range to above it
-  // is two windows, each with its own extreme.
-  const glucose = (["below", "above"] as const).flatMap((side) =>
-    runsOf(
-      sorted,
-      (reading) =>
-        glucoseBreach(reading, profile, thresholds) &&
-        (reading.glucoseMgDl ?? 0) < low === (side === "below"),
-      (reading) => reading.glucoseMgDl ?? 0,
-    ).map((run): RedWindow => ({
-      from: run[0]?.time ?? "",
-      to: run[run.length - 1]?.time ?? "",
-      measure: "glucose",
-      extreme: extremeOf(run, side === "below"),
-      side,
-      rule: glucoseRule(profile, thresholds),
-      thresholds: "placeholder",
-    })),
+  const glucose = (["blood", "sensor"] as const).flatMap((specimen) =>
+    glucoseWindows(sorted, profile, thresholds, specimen),
   );
   return [...heart, ...glucose].sort((a, b) => a.from.localeCompare(b.from));
 };
@@ -278,12 +391,15 @@ const windowBeat = (window: RedWindow): DayBeat => {
       view: { focus: "heart", depth: "organs" },
     };
   }
+  const specimen = window.specimen ?? "blood";
+  const name = specimen === "sensor" ? "Sensor glucose" : "Blood sugar";
   return {
     time: window.from,
     event: WINDOW_EVENT,
     source: "derived",
     signal: {
       measure: "glucose",
+      specimen,
       direction: window.side === "below" ? "down" : "up",
       value: window.extreme,
       unit: "mg/dL",
@@ -291,8 +407,8 @@ const windowBeat = (window: RedWindow): DayBeat => {
     body: {
       text:
         window.side === "below"
-          ? `Blood sugar stays below the range for a while. ${window.rule}.`
-          : `Blood sugar stays past the threshold for a while. ${window.rule}.`,
+          ? `${name} stays below the range for a while. ${window.rule}.`
+          : `${name} stays past the threshold for a while. ${window.rule}.`,
       organ: "bloodvasculature",
     },
     view: { focus: "bloodvasculature", depth: "organs" },
@@ -307,11 +423,12 @@ export const dayBeats = (
 ): readonly DayBeat[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const windows = redWindows(sorted, profile, thresholds);
+  const sensorBefore = lastSensorBefore(sorted);
   return sorted.flatMap((reading, index) => {
     const before = sorted[index - 1] ?? null;
     return [
-      measuredBeat(reading, before),
-      insulinBeat(reading, before),
+      measuredBeat(reading, before, sensorBefore[index] ?? null),
+      insulinBeat(reading, before, sensorBefore[index] ?? null),
       ...windows.filter((window) => window.from === reading.time).map(windowBeat),
     ].filter((beat): beat is DayBeat => beat !== null);
   });

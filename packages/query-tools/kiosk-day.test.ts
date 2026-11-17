@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { DAY_THRESHOLDS, type DayReading, dayBeats, redWindows } from "./day-beats";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { MOCK_DAY_DATE, mockDayReadings } from "./mock-day";
 import {
   KIOSK_DAY_NOTICE,
   KIOSK_DAY_SCHEMA_VERSION,
@@ -13,18 +13,12 @@ import {
 } from "./kiosk-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const READINGS: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const READINGS: readonly DayReading[] = mockDayReadings("blood");
 
 /** The mock day as `show_my_day` would return it, activity included. */
 const SOURCE: KioskDaySource = {
   subject_ref: "synthetic-mock-day",
-  day: MOCK_DAY.day,
+  day: MOCK_DAY_DATE,
   profile: "without_diabetes",
   beats: dayBeats(READINGS, "without_diabetes"),
   red_windows: redWindows(READINGS, "without_diabetes"),

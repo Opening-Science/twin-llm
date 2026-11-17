@@ -7,10 +7,12 @@ import { kioskDaySchema } from "@/packages/query-tools/kiosk-day";
 
 import {
   DAY_REFUSED,
+  MY_DAY_DAYS_FAILED,
   MY_DAY_LOADING,
   MY_DAY_MOCK_NOTE,
   MY_DAY_MOCK_OPTION,
   MY_DAY_NOT_RECORDED,
+  MY_DAY_NOTE,
 } from "./day-copy";
 import { beatFocus } from "./beat-focus";
 import { MOCK_CHOICE } from "./day-view";
@@ -88,6 +90,18 @@ describe("MyDayPanel", () => {
     const out = html({ ...STATE, day: undefined, error: DAY_REFUSED["no-readings"] });
     expect(out).toContain(DAY_REFUSED["no-readings"]);
     expect(out).not.toContain(DAY.notice);
+  });
+
+  test("opens with a plain line, naming no tool", () => {
+    expect(MY_DAY_NOTE).toBe("Your day of heart rate and blood sugar, step by step.");
+    expect(html(STATE)).toContain(MY_DAY_NOTE);
+  });
+
+  test("says when the person's days did not load, rather than offering the mock silently", () => {
+    const out = html({ ...STATE, days: null, choice: MOCK_CHOICE, day: DAY });
+    expect(out).toContain(MY_DAY_DAYS_FAILED);
+    expect(out).toContain(MY_DAY_MOCK_OPTION);
+    expect(html(STATE)).not.toContain(MY_DAY_DAYS_FAILED);
   });
 
   test("says it is loading before the days are in", () => {

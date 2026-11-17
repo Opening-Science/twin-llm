@@ -5,7 +5,7 @@ import type { Block } from "./thread-print";
  * Pure: it is handed a width measure, so the PDF writer measures with its
  * fonts and the tests with a fixed one. Inline marks (`**bold**`, `_em_`,
  * `` `code` ``) become styles; the marks themselves are never printed.
- * Text is folded into the characters the standard PDF fonts can draw.
+ * Text is folded into the characters each style's font can draw.
  */
 
 export type PdfStyle = "regular" | "bold" | "italic" | "mono";
@@ -23,6 +23,12 @@ export type PdfRun = Readonly<{
 export type PdfPage = readonly PdfRun[];
 
 export type Measure = (text: string, style: PdfStyle, size: number) => number;
+
+/**
+ * Text in a style as spans its fonts can draw. A character the style's font
+ * lacks may come back in another style whose font has it.
+ */
+export type Fold = (text: string, style: PdfStyle) => Span[];
 
 /** A4 in points, with 18 mm margins like the print page. */
 export const PAGE = { width: 595.28, height: 841.89, margin: 51 } as const;
@@ -43,7 +49,8 @@ const HEADING: Readonly<Record<number, Readonly<{ size: number; before: number }
 /** Windows-1252 beyond Latin-1: what the standard fonts draw in 0x80–0x9F. */
 const CP1252_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
 
-const drawable = (char: string): boolean => {
+/** What the standard PDF fonts draw: Windows-1252. */
+export const winAnsiDrawable = (char: string): boolean => {
   const code = char.codePointAt(0) ?? 0;
   return (
     (code >= 0x20 && code <= 0x7e) ||
@@ -54,6 +61,8 @@ const drawable = (char: string): boolean => {
 
 /** Readable stand-ins for characters the standard fonts lack. */
 const STAND_INS: Readonly<Record<string, string>> = {
+  // Greek mu as the Latin-1 micro sign, so μmol/L keeps its unit.
+  μ: "µ",
   "≥": ">=",
   "≤": "<=",
   "≈": "~",
@@ -103,7 +112,7 @@ const SUPERSCRIPT: Readonly<Record<string, string>> = {
  * exponent stays an exponent: "10⁹/L" is "10^9/L", not "109/L". A run of
  * only ¹ ² ³ is Latin-1 and stays as it is.
  */
-const exponents = (text: string): string =>
+const exponents = (text: string, drawable: (char: string) => boolean): string =>
   text.replace(/[⁰¹²³⁴-⁹⁺⁻]+/g, (run) =>
     [...run].every(drawable)
       ? run
@@ -111,20 +120,26 @@ const exponents = (text: string): string =>
   );
 
 /**
- * Text the standard fonts can draw: exponents and stand-ins first, then
- * accents dropped from letters outside Latin-1 (č → c), then "?" for
- * anything left.
+ * Text a font can draw: exponents and stand-ins first, then accents dropped
+ * (č → c), then "?" for anything left. By default the standard fonts'
+ * characters, Windows-1252.
  */
-export const pdfText = (text: string): string =>
-  [...exponents(text.normalize("NFC"))]
+export const pdfText = (
+  text: string,
+  drawable: (char: string) => boolean = winAnsiDrawable,
+): string =>
+  [...exponents(text.normalize("NFC"), drawable)]
     .map((char) => {
       if (drawable(char)) return char;
       const stand = STAND_INS[char];
-      if (stand !== undefined) return stand;
+      if (stand !== undefined && [...stand].every(drawable)) return stand;
       const bare = char.normalize("NFD").replace(/\p{M}/gu, "");
       return [...bare].every(drawable) && bare !== "" ? bare : "?";
     })
     .join("");
+
+/** Every style in the standard fonts. */
+export const WIN_ANSI: Fold = (text, style) => [{ text: pdfText(text), style }];
 
 // --- inline marks -----------------------------------------------------------
 
@@ -134,7 +149,11 @@ export type Span = Readonly<{ text: string; style: PdfStyle }>;
 const MARK =
   /`([^`]+)`|\*\*([^*]+)\*\*|(^|[\s(])_([^_]+)_(?=$|[\s).,;:!?])|(^|[\s(])\*([^*]+)\*(?=$|[\s).,;:!?])/g;
 
-export const spansOf = (line: string, base: PdfStyle = "regular"): Span[] => {
+export const spansOf = (
+  line: string,
+  base: PdfStyle = "regular",
+  fold: Fold = WIN_ANSI,
+): Span[] => {
   const spans: Span[] = [];
   let at = 0;
   const push = (text: string, style: PdfStyle) => {
@@ -150,7 +169,7 @@ export const spansOf = (line: string, base: PdfStyle = "regular"): Span[] => {
     at = match.index + whole.length;
   }
   push(line.slice(at), base);
-  return spans.map((span) => ({ ...span, text: pdfText(span.text) }));
+  return spans.flatMap((span) => fold(span.text, span.style));
 };
 
 // --- wrapping ---------------------------------------------------------------
@@ -240,25 +259,26 @@ type Group = Readonly<{ heading: boolean; lines: Line[] }>;
 const plainGroups = (lines: Line[][]): Group[] =>
   lines.map((group) => ({ heading: false, lines: group }));
 
-const groupsOf = (block: Block, width: number, measure: Measure): Group[] => {
+const groupsOf = (block: Block, width: number, measure: Measure, fold: Fold): Group[] => {
   if (block.kind === "heading") {
     const { size, before } = HEADING[block.level] ?? { size: BODY, before: 8 };
-    const lines = wrapSpans(spansOf(block.text, "bold"), width, size, measure).map(
+    const lines = wrapSpans(spansOf(block.text, "bold", fold), width, size, measure).map(
       (spans, index) => ({ indent: 0, size, spans, before: index === 0 ? before : 0 }),
     );
     return [{ heading: true, lines }];
   }
-  return plainGroups(linesOf(block, width, measure));
+  return plainGroups(linesOf(block, width, measure, fold));
 };
 
 const linesOf = (
   block: Exclude<Block, { kind: "heading" }>,
   width: number,
   measure: Measure,
+  fold: Fold,
 ): Line[][] => {
   if (block.kind === "list") {
     return block.items.map((item, itemIndex) =>
-      wrapSpans(spansOf(item), width - LIST_INDENT, BODY, measure).map(
+      wrapSpans(spansOf(item, "regular", fold), width - LIST_INDENT, BODY, measure).map(
         (spans, index) => ({
           indent: LIST_INDENT,
           size: BODY,
@@ -272,12 +292,14 @@ const linesOf = (
   if (block.lines.length === 0) return [];
   return [
     block.lines.flatMap((source, lineIndex) =>
-      wrapSpans(spansOf(source), width, BODY, measure).map((spans, index) => ({
-        indent: 0,
-        size: BODY,
-        spans,
-        before: index === 0 && lineIndex === 0 ? 6 : 0,
-      })),
+      wrapSpans(spansOf(source, "regular", fold), width, BODY, measure).map(
+        (spans, index) => ({
+          indent: 0,
+          size: BODY,
+          spans,
+          before: index === 0 && lineIndex === 0 ? 6 : 0,
+        }),
+      ),
     ),
   ];
 };
@@ -302,6 +324,7 @@ const footerRuns = (
   pages: number,
   footer: string,
   measure: Measure,
+  fold: Fold,
 ): PdfRun[] => {
   const y = PAGE.margin / 2;
   const count = `Page ${String(page)} of ${String(pages)}`;
@@ -312,7 +335,9 @@ const footerRuns = (
       y,
       size: FOOTER,
       style: "regular",
-      text: pdfText(footer),
+      text: fold(footer, "regular")
+        .map((span) => span.text)
+        .join(""),
       muted: true,
     },
     {
@@ -335,6 +360,7 @@ export const layoutPdf = (
   blocks: readonly Block[],
   footer: string,
   measure: Measure,
+  fold: Fold = WIN_ANSI,
 ): PdfPage[] => {
   const width = PAGE.width - 2 * PAGE.margin;
   const top = PAGE.height - PAGE.margin;
@@ -349,7 +375,7 @@ export const layoutPdf = (
     fresh = true;
   };
 
-  const groups = blocks.flatMap((block) => groupsOf(block, width, measure));
+  const groups = blocks.flatMap((block) => groupsOf(block, width, measure, fold));
   groups.forEach((group, groupIndex) => {
     group.lines.forEach((line, lineIndex) => {
       let need = step(line);
@@ -367,6 +393,6 @@ export const layoutPdf = (
 
   return pages.map((runs, index) => [
     ...runs,
-    ...footerRuns(index + 1, pages.length, footer, measure),
+    ...footerRuns(index + 1, pages.length, footer, measure, fold),
   ]);
 };
