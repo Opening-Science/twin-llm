@@ -2,16 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { DAY_THRESHOLDS, type DayReading } from "./day-beats";
 import { glucosePeriod } from "./day-period";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { MOCK_DAY_DATE, mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const MOCK: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const MOCK: readonly DayReading[] = mockDayReadings("blood");
 
 const glucose = (time: string, value: number | null): DayReading => ({
   time,
@@ -25,7 +19,7 @@ describe("glucosePeriod on the mock day", () => {
   test("without diabetes: average 105.7 mg/dL, one reading of 14 above 140", () => {
     // Hand-checked: the 14 glucose readings sum to 1480; only 175 at 20:30 is above 140.
     const period = glucosePeriod(
-      [{ day: MOCK_DAY.day, readings: MOCK }],
+      [{ day: MOCK_DAY_DATE, readings: MOCK }],
       "without_diabetes",
     );
     expect(period).toEqual({
@@ -42,7 +36,7 @@ describe("glucosePeriod on the mock day", () => {
 
   test("with diabetes: every reading inside 70–180 mg/dL", () => {
     const period = glucosePeriod(
-      [{ day: MOCK_DAY.day, readings: MOCK }],
+      [{ day: MOCK_DAY_DATE, readings: MOCK }],
       "with_diabetes",
     );
     expect(period.range).toEqual({
