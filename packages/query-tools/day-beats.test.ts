@@ -272,6 +272,39 @@ describe("sensor glucose", () => {
     ]);
   });
 
+  test("a sensor change skips the heart-rate minutes between sensor readings", () => {
+    const minute = (time: string, sensorGlucoseMgDl: number | null): DayReading => ({
+      time,
+      event: null,
+      heartRatePerMin: 62,
+      glucoseMgDl: null,
+      sensorGlucoseMgDl,
+      moving: null,
+    });
+    const readings = [
+      minute("07:00", 95),
+      minute("07:01", null),
+      minute("07:02", null),
+      minute("07:03", null),
+      minute("07:04", null),
+      minute("07:05", 125),
+    ];
+    const at0705 = dayBeats(readings, "without_diabetes").filter(
+      (beat) => beat.time === "07:05",
+    );
+    expect(at0705.map((beat) => [beat.source, beat.signal.measure])).toEqual([
+      ["measured", "glucose"],
+      ["narrated", "insulin"],
+    ]);
+    expect(at0705[0]?.signal).toEqual({
+      measure: "glucose",
+      specimen: "sensor",
+      direction: "up",
+      value: 125,
+      unit: "mg/dL",
+    });
+  });
+
   test("a sensor rise of 20 mg/dL adds the narrated insulin beat", () => {
     const beats = dayBeats(
       [sensor("07:00", 95), sensor("07:15", 120)],
