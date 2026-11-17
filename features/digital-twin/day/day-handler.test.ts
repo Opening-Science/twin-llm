@@ -11,6 +11,8 @@ import {
   createMockDayHandler,
   DAY_AUDIT_TOOL,
   DAY_LIST_AUDIT_TOOL,
+  createPeriodHandler,
+  PERIOD_AUDIT_TOOL,
   type DayDeps,
 } from "./day-handler";
 import { DAY_CODES, MOCK_DAY_REF } from "./demo-day";
@@ -170,5 +172,46 @@ describe("GET /api/digital-twin/day", () => {
       new Request("http://local/api/digital-twin/day"),
     );
     expect(response.status).toBe(401);
+  });
+});
+
+const getPeriod = (deps: DayDeps, ref: string, query: string) =>
+  createPeriodHandler(deps)(
+    new Request(`http://local/api/digital-twin/period/${ref}?${query}`),
+    context(ref),
+  );
+
+describe("GET /api/digital-twin/period/:subjectRef", () => {
+  test("returns the summary lines, audited with the rows read", async () => {
+    const { deps, audits } = fakeDeps();
+    const response = await getPeriod(deps, "syn-a", "period=week&end=2026-11-16");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      period: { start: string; lines: unknown[] };
+    };
+    expect(body.period.start).toBe("2026-11-10");
+    expect(body.period.lines).toHaveLength(4);
+    expect(audits[0]).toMatchObject({
+      tool: PERIOD_AUDIT_TOOL,
+      args: { period: "week", end: "2026-11-16", profile: "without_diabetes" },
+      rowCount: 1,
+    });
+  });
+
+  test("a bad period or end is refused before any read", async () => {
+    const { deps, asked } = fakeDeps();
+    expect((await getPeriod(deps, "syn-a", "period=year&end=2026-11-16")).status).toBe(
+      400,
+    );
+    expect((await getPeriod(deps, "syn-a", "period=week")).status).toBe(400);
+    expect(asked).toEqual([]);
+  });
+
+  test("a subject outside the Demo cohorts gets no period", async () => {
+    const { deps, asked } = fakeDeps();
+    expect((await getPeriod(deps, "held-out", "period=week&end=2026-11-16")).status).toBe(
+      404,
+    );
+    expect(asked).toEqual([]);
   });
 });

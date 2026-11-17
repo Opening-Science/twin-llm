@@ -11,8 +11,10 @@ import {
   DAY_NOT_FOUND,
   DAY_REFUSED,
   DAY_SIGN_IN,
+  PERIOD_REFUSED,
 } from "./day-copy";
 import { DAY_CODES, dayList, demoDay, mockDay } from "./demo-day";
+import { demoPeriod, type Period, PERIOD_CODES } from "./demo-period";
 
 /**
  * Routes behind "Show me my day". A person's days and a person's day are read
@@ -22,6 +24,7 @@ import { DAY_CODES, dayList, demoDay, mockDay } from "./demo-day";
  */
 export const DAY_LIST_AUDIT_TOOL = "digital-twin.day.list";
 export const DAY_AUDIT_TOOL = "digital-twin.day";
+export const PERIOD_AUDIT_TOOL = "digital-twin.period";
 
 export type DayDeps = Pick<
   CohortDeps,
@@ -135,6 +138,37 @@ export const createDayHandler = (deps: DayDeps) =>
       }
       await audit(result.day, rows.length);
       return NextResponse.json({ day: result.day }, { headers: NO_STORE });
+    },
+  );
+
+const PERIODS: readonly Period[] = ["week", "month"];
+
+/** GET /api/digital-twin/period/:subjectRef?period=week|month&end=YYYY-MM-DD&profile=…: the summary card. */
+export const createPeriodHandler = (deps: DayDeps) =>
+  demoRead(
+    deps,
+    PERIOD_AUDIT_TOOL,
+    (request) => {
+      const query = new URL(request.url).searchParams;
+      const period = PERIODS.find((one) => one === query.get("period"));
+      const end = query.get("end");
+      const profile = profileOf(query.get("profile"));
+      return period !== undefined && end !== null && DAY.test(end) && profile !== null
+        ? { codes: PERIOD_CODES, period, end, profile }
+        : null;
+    },
+    async (ref, { period, end, profile }, audit) => {
+      const rows = await deps.findValues(ref, PERIOD_CODES);
+      const result = demoPeriod(rows, period, end, profile);
+      if (result.kind === "refused") {
+        await audit({ refused: result.reason }, 0);
+        return NextResponse.json(
+          { error: PERIOD_REFUSED[result.reason] },
+          { status: 422, headers: NO_STORE },
+        );
+      }
+      await audit(result.summary, result.rowsUsed);
+      return NextResponse.json({ period: result.summary }, { headers: NO_STORE });
     },
   );
 
