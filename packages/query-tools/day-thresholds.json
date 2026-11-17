@@ -1,8 +1,9 @@
 {
   "status": "placeholder",
   "reviewer": "Robin",
-  "note": "Placeholder thresholds for red windows, to be confirmed by Robin. Not clinical guidance.",
+  "note": "Placeholder thresholds for red windows and recovery after workouts, to be confirmed by Robin. Not clinical guidance.",
   "heartRateStillAbovePerMin": 100,
   "glucoseWithoutDiabetesAboveMgDl": 140,
-  "glucoseWithDiabetesRangeMgDl": [70, 180]
+  "glucoseWithDiabetesRangeMgDl": [70, 180],
+  "recoveryWithinPerMin": 10
 }

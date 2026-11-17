@@ -11,13 +11,26 @@ import {
 import type { NumberSource } from "@/infrastructure/number-sources";
 import { type DecorateText, RichText } from "@/infrastructure/rich-text";
 
-import { citeHref, citeTitle, INVENTED_CITE_LINE } from "./cite-links";
+import {
+  citeHref,
+  citeTitle,
+  INVENTED_CITE_LINE,
+  UNSUPPORTED_CITE_LINE,
+} from "./cite-links";
 import { type NumberLink, numberLinks, splitNumbers } from "./number-links";
 import { cardTitleId } from "./tool-steps";
 
 /** One cited id: a link to its source, a label without one, or an id no search gave. */
 const Cite = ({ token }: Readonly<{ token: CiteToken }>) => {
-  if (token.kind === "unsupported" || token.kind === "text") return <>{token.label}</>;
+  if (token.kind === "text") return <>{token.label}</>;
+  if (token.kind === "unsupported") {
+    return (
+      <span className="compare-cite-unsupported" title={UNSUPPORTED_CITE_LINE}>
+        {token.label}
+        <span className="sr-only"> ({UNSUPPORTED_CITE_LINE})</span>
+      </span>
+    );
+  }
   if (token.kind === "invented") {
     return (
       <span className="compare-cite-missing" title={INVENTED_CITE_LINE}>

@@ -3,17 +3,26 @@ import { describe, expect, test } from "bun:test";
 import type { CatalogModel } from "@/infrastructure/model-catalog";
 
 import {
+  autoModelName,
+  boxChecked,
   boxDisabled,
+  canAddSpecialist,
   compareRows,
   droppedModels,
   initialModeState,
+  specialistPicks,
   type ModeContext,
+  type ModeState,
   modeProblem,
   modeSummary,
   offeredModes,
   pickedModels,
   pickerFooter,
+  rowSubline,
   setMode,
+  setSpecialistModel,
+  specialistModel,
+  specialistModelChoices,
   toggleRow,
 } from "./chat-modes";
 
@@ -25,7 +34,12 @@ const model = (id: string, name: string, providerId = "ollama"): CatalogModel =>
   contextTokens: 32_000,
 });
 
-const agent = (id: string, name: string, base: CatalogModel): CatalogModel => ({
+const agent = (
+  id: string,
+  name: string,
+  base: CatalogModel,
+  skill: string | null = null,
+): CatalogModel => ({
   ...base,
   id: `agent:${id}`,
   name,
@@ -33,7 +47,7 @@ const agent = (id: string, name: string, base: CatalogModel): CatalogModel => ({
     id,
     name,
     role: "A synthetic role.",
-    skill: null,
+    skill,
     baseModelId: base.id,
     baseModelName: base.name,
   },
@@ -64,7 +78,7 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("a new chat starts on Auto when the catalog has it", () => {
     const state = initialModeState(ctx(), null);
     expect(state.mode).toBe("auto");
-    expect(offeredModes(ctx())).toEqual(["auto", "basic", "manual", "compare"]);
+    expect(offeredModes(ctx())).toEqual(["auto", "basic", "specialists", "compare"]);
     expect(pickedModels(state, ctx(), "How did I sleep?")).toEqual([
       { id: "agent:auto", name: "Auto → Sleep" },
     ]);
@@ -73,14 +87,7 @@ describe("modes offered and the new chat (SPEC 7.1, 7.2)", () => {
   test("without the Auto row it starts on Compare, and Auto is not offered", () => {
     const context = ctx({ catalog: CATALOG.slice(1) });
     expect(initialModeState(context, null).mode).toBe("compare");
-    expect(offeredModes(context)).toEqual(["basic", "manual", "compare"]);
-  });
-
-  test("the other modes open on sensible picks, never an empty list", () => {
-    const state = initialModeState(ctx(), null);
-    expect(state.specialists).toEqual(["agent:gp"]);
-    expect(state.models).toEqual(["qwen3:4b"]);
-    expect(compareRows(state, ctx(), "").length).toBeGreaterThan(0);
+    expect(offeredModes(context)).toEqual(["basic", "specialists", "compare"]);
   });
 });
 
@@ -89,28 +96,51 @@ describe("a reopened thread starts where its last turn stopped (SPEC 7.2)", () =
     expect(initialModeState(ctx(), ["agent:auto"]).mode).toBe("auto");
   });
 
-  test("a paired id: Manual with that specialist and model", () => {
-    const state = initialModeState(ctx(), ["agent:diet@qwen3:8b"]);
-    expect(state.mode).toBe("manual");
-    expect(state.specialists).toEqual(["agent:diet"]);
-    expect(state.models).toEqual(["qwen3:8b"]);
+  test("a saved Manual thread: Specialists on the same specialist and model", () => {
+    const state = initialModeState(ctx(), ["agent:diet@qwen3:8b", "agent:sleep"]);
+    expect(state.mode).toBe("specialists");
     expect(pickedModels(state, ctx(), "")).toEqual([
       { id: "agent:diet@qwen3:8b", name: "Diet specialist · Qwen3 8B" },
+      { id: "agent:sleep", name: "Sleep" },
     ]);
   });
 
-  test("one offered id: Manual with its specialist and base model, or the model", () => {
-    const specialist = initialModeState(ctx(), ["agent:sleep"]);
-    expect([specialist.mode, specialist.specialists, specialist.models]).toEqual([
-      "manual",
-      ["agent:sleep"],
-      ["qwen3:8b"],
+  test("one specialist on two models: Compare, so no answer is lost", () => {
+    const state = initialModeState(ctx(), ["agent:diet", "agent:diet@qwen3:8b"]);
+    expect([state.mode, compareRows(state, ctx(), "")]).toEqual([
+      "compare",
+      ["agent:diet", "agent:diet@qwen3:8b"],
     ]);
+  });
+
+  test("one plain model: Basic on that model (#610)", () => {
     const plain = initialModeState(ctx(), ["llama3:8b"]);
-    expect([plain.mode, plain.specialists, plain.models]).toEqual([
-      "manual",
-      [],
-      ["llama3:8b"],
+    expect([plain.mode, plain.basic, plain.fromThread]).toEqual([
+      "basic",
+      "llama3:8b",
+      true,
+    ]);
+    expect(pickedModels(plain, ctx(), "").map(({ id }) => id)).toEqual(["llama3:8b"]);
+  });
+
+  test("specialists only: Specialists with those rows, kept as chosen (#610)", () => {
+    const one = initialModeState(ctx(), ["agent:sleep"]);
+    expect([one.mode, specialistPicks(one, ctx(), "Is my BMI going up?")]).toEqual([
+      "specialists",
+      ["agent:sleep"],
+    ]);
+    const two = initialModeState(ctx(), ["agent:gp", "agent:diet", "agent:gone"]);
+    expect([two.mode, specialistPicks(two, ctx(), "How did I sleep?")]).toEqual([
+      "specialists",
+      ["agent:gp", "agent:diet"],
+    ]);
+  });
+
+  test("specialists and models together: Compare", () => {
+    const state = initialModeState(ctx(), ["agent:gp", "llama3:8b"]);
+    expect([state.mode, compareRows(state, ctx(), "")]).toEqual([
+      "compare",
+      ["agent:gp", "llama3:8b"],
     ]);
   });
 
@@ -152,49 +182,6 @@ describe("Compare defaults follow the question until a row is ticked (SPEC 7.3)"
   });
 });
 
-describe("Manual sends each specialist on each model (SPEC 7.1)", () => {
-  const manual = (specialists: string[], models: string[]) => ({
-    ...setMode(initialModeState(ctx(), null), "manual"),
-    specialists,
-    models,
-  });
-
-  test("a specialist on its own model sends its plain row, else the pair", () => {
-    expect(
-      pickedModels(manual(["agent:diet"], ["qwen3:4b", "llama3:8b"]), ctx(), "").map(
-        ({ id }) => id,
-      ),
-    ).toEqual(["agent:diet", "agent:diet@llama3:8b"]);
-  });
-
-  test("no specialist: the models answer as themselves", () => {
-    expect(
-      pickedModels(manual([], ["qwen3:4b", "qwen3:8b"]), ctx(), "").map(({ id }) => id),
-    ).toEqual(["qwen3:4b", "qwen3:8b"]);
-  });
-
-  test("more than three answers is a problem and the box that would cause it is disabled", () => {
-    const state = manual(["agent:diet", "agent:gp"], ["qwen3:4b"]);
-    expect(boxDisabled(state, "models", "qwen3:8b", ctx(), "")).toBe(
-      "Three answers at most.",
-    );
-    expect(
-      modeProblem(
-        manual(["agent:diet", "agent:gp"], ["qwen3:4b", "llama3:8b"]),
-        ctx(),
-        "",
-      ),
-    ).toBe("Three answers at most.");
-  });
-
-  test("the last model cannot be unticked", () => {
-    expect(boxDisabled(manual([], ["qwen3:4b"]), "models", "qwen3:4b", ctx(), "")).toBe(
-      "Manual needs at least one model.",
-    );
-    expect(modeProblem(manual([], []), ctx(), "")).toBe("Pick at least one model.");
-  });
-});
-
 describe("Basic sends one plain model (#610)", () => {
   const basic = (context = ctx()) => setMode(initialModeState(context, null), "basic");
 
@@ -233,7 +220,132 @@ describe("Basic sends one plain model (#610)", () => {
 
   test("offered only when the catalog has a plain model", () => {
     const agentsOnly = ctx({ catalog: CATALOG.slice(0, 4) });
-    expect(offeredModes(agentsOnly)).toEqual(["auto", "manual", "compare"]);
+    expect(offeredModes(agentsOnly)).toEqual(["auto", "specialists", "compare"]);
+  });
+});
+
+describe("Specialists sends specialists on their own models (#610)", () => {
+  const specialists = (context = ctx()) =>
+    setMode(initialModeState(context, null), "specialists");
+  const ids = (state: ModeState, prompt = "", context = ctx()) =>
+    pickedModels(state, context, prompt).map(({ id }) => id);
+
+  test("one answer by default: the specialist Auto would pick, else General", () => {
+    const state = specialists();
+    expect(ids(state)).toEqual(["agent:gp"]);
+    expect(modeSummary(state, ctx(), "")).toBe("Specialists · General");
+    expect(pickerFooter(state, ctx(), "")).toBe("1 of at most 3 answers.");
+    expect(ids(state, "How long did I sleep last night?")).toEqual(["agent:sleep"]);
+    expect(ids(state, "Is my BMI going up?")).toEqual(["agent:diet"]);
+  });
+
+  test("in incognito, the first specialist that runs here", () => {
+    const local = ctx({ incognito: true, localModelIds: ["agent:diet"] });
+    expect(ids(specialists(local), "How long did I sleep?", local)).toEqual([
+      "agent:diet",
+    ]);
+  });
+
+  test("never a plain model, never Auto", () => {
+    const sent = ids(specialists(), "How did I sleep?");
+    expect(sent.every((id) => id.startsWith("agent:") && id !== "agent:auto")).toBe(true);
+  });
+
+  test("adding: up to three, then no room; the last one stays", () => {
+    const start = specialists();
+    expect(canAddSpecialist(start, ctx(), "")).toBe(true);
+    const two = toggleRow(start, "specialists", "agent:sleep", ctx(), "");
+    expect(ids(two, "Is my BMI going up?")).toEqual(["agent:gp", "agent:sleep"]);
+    expect(modeSummary(two, ctx(), "")).toBe("Specialists · 2");
+    const three = toggleRow(two, "specialists", "agent:diet", ctx(), "");
+    expect(ids(three)).toEqual(["agent:gp", "agent:sleep", "agent:diet"]);
+    expect(canAddSpecialist(three, ctx(), "")).toBe(false);
+    const four = ctx({
+      catalog: [...CATALOG, agent("anatomy", "Anatomy specialist", LARGE)],
+    });
+    expect(boxDisabled(three, "specialists", "agent:anatomy", four, "")).toBe(
+      "Three answers at most.",
+    );
+    expect(boxDisabled(start, "specialists", "agent:gp", ctx(), "")).toBe(
+      "Keep at least one specialist.",
+    );
+    expect(modeProblem({ ...two, specialists: [] }, ctx(), "")).toBe(
+      "Pick one to three specialists.",
+    );
+  });
+
+  test("offered only when the catalog has a specialist", () => {
+    const modelsOnly = ctx({ catalog: CATALOG.slice(4) });
+    expect(offeredModes(modelsOnly)).toEqual(["basic", "compare"]);
+  });
+});
+
+describe("a specialist on a model the person picks (#610, was Manual)", () => {
+  const start = setMode(initialModeState(ctx(), null), "specialists");
+  const ids = (state: ModeState) => pickedModels(state, ctx(), "").map(({ id }) => id);
+
+  test("its own model by default; another model makes the pair", () => {
+    expect(specialistModel("agent:gp", ctx())).toBe("qwen3:8b");
+    const moved = setSpecialistModel(start, ctx(), "", "agent:gp", "llama3:8b");
+    expect(ids(moved)).toEqual(["agent:gp@llama3:8b"]);
+    expect(specialistModel("agent:gp@llama3:8b", ctx())).toBe("llama3:8b");
+    expect(pickedModels(moved, ctx(), "")[0]?.name).toBe("General · Llama 3 8B");
+    expect(modeSummary(moved, ctx(), "")).toBe("Specialists · General · Llama 3 8B");
+  });
+
+  test("back on its own model it is the plain row again", () => {
+    const moved = setSpecialistModel(start, ctx(), "", "agent:gp", "llama3:8b");
+    const back = setSpecialistModel(moved, ctx(), "", "agent:gp@llama3:8b", "qwen3:8b");
+    expect(ids(back)).toEqual(["agent:gp"]);
+  });
+
+  test("a moved specialist still counts as itself: ticked, and unticked with its model", () => {
+    const moved = setSpecialistModel(start, ctx(), "", "agent:gp", "llama3:8b");
+    const two = toggleRow(moved, "specialists", "agent:sleep", ctx(), "");
+    expect(boxChecked(two, "specialists", "agent:gp", ctx(), "")).toBe(true);
+    expect(ids(toggleRow(two, "specialists", "agent:gp", ctx(), ""))).toEqual([
+      "agent:sleep",
+    ]);
+  });
+
+  test("the models offered, greyed in incognito when the pair cannot run here", () => {
+    expect(specialistModelChoices("agent:gp", ctx()).map(({ id }) => id)).toEqual([
+      "qwen3:4b",
+      "qwen3:8b",
+      "llama3:8b",
+    ]);
+    const local = ctx({ incognito: true, localModelIds: ["agent:gp", "qwen3:8b"] });
+    expect(
+      specialistModelChoices("agent:gp", local).map(({ id, reason }) => [id, reason]),
+    ).toEqual([
+      ["qwen3:4b", "Not on this machine, so not for incognito chats."],
+      ["qwen3:8b", null],
+      ["llama3:8b", "Not on this machine, so not for incognito chats."],
+    ]);
+  });
+});
+
+describe("each row names its model and tools (#610)", () => {
+  test("a specialist names its model and its skill's tools", () => {
+    expect(rowSubline(agent("sleep", "Sleep", LARGE, "sleep"))).toBe(
+      "on Qwen3 8B · /sleep tools",
+    );
+  });
+
+  test("General has no skill, so the chat's own tools", () => {
+    expect(rowSubline(agent("gp", "General", LARGE))).toBe("on Qwen3 8B · chat tools");
+  });
+
+  test("a model names its id, Auto what it does", () => {
+    expect(rowSubline(SMALL)).toBe("Ollama");
+    expect(rowSubline(agent("auto", "Auto", SMALL))).toBe(
+      "Picks an agent for each question.",
+    );
+  });
+
+  test("Auto's panel names the model Auto runs its pick on", () => {
+    expect(autoModelName(ctx())).toBe("Qwen3 4B");
+    expect(autoModelName(ctx({ catalog: CATALOG.slice(1) }))).toBeNull();
   });
 });
 
@@ -241,17 +353,6 @@ describe("summary, footer and problems", () => {
   test("the pill names the mode and count", () => {
     const base = initialModeState(ctx(), null);
     expect(modeSummary(base, ctx(), "")).toBe("Auto");
-    expect(
-      modeSummary(
-        {
-          ...setMode(base, "manual"),
-          specialists: [],
-          models: ["qwen3:4b", "llama3:8b"],
-        },
-        ctx(),
-        "",
-      ),
-    ).toBe("Manual · 2 answers");
     expect(
       modeSummary(
         {
@@ -280,13 +381,9 @@ describe("summary, footer and problems", () => {
   test("the footer counts the answers", () => {
     const base = initialModeState(ctx(), null);
     expect(pickerFooter(base, ctx(), "")).toBe("One answer per prompt.");
-    expect(
-      pickerFooter(
-        { ...setMode(base, "manual"), specialists: [], models: ["qwen3:4b"] },
-        ctx(),
-        "",
-      ),
-    ).toBe("1 of at most 3 answers.");
+    expect(pickerFooter(setMode(base, "specialists"), ctx(), "")).toBe(
+      "1 of at most 3 answers.",
+    );
   });
 
   test("only offered ids are sent, at most three", () => {
@@ -328,7 +425,7 @@ describe("incognito offers local models only (SPEC 7.4, 7.8)", () => {
   test("Auto is offered only when its model runs here", () => {
     expect(offeredModes(ctx({ incognito: true, localModelIds: [] }))).toEqual([
       "basic",
-      "manual",
+      "specialists",
       "compare",
     ]);
   });
