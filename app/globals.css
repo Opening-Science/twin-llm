@@ -1359,6 +1359,33 @@
     @apply w-full;
   }
 
+  /* "Show me my day" under the twin: controls, notes, then the beats in time order. */
+  .twin-my-day {
+    @apply border-border mt-4 flex scroll-mt-16 flex-col gap-2 border-t pt-3;
+  }
+
+  .twin-my-day-controls {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .twin-beats {
+    @apply border-border ml-1 flex flex-col border-l;
+  }
+
+  .twin-beat {
+    @apply relative grid grid-cols-[3.25rem_minmax(0,1fr)] gap-2 py-2 pl-3;
+  }
+
+  /* A dot on the line marks each beat; the time beside it says when. */
+  .twin-beat::before {
+    content: "";
+    @apply bg-muted-foreground absolute top-3.5 -left-[3px] size-1.5 rounded-full;
+  }
+
+  .twin-beat-time {
+    @apply text-muted-foreground pt-px font-mono text-xs tabular-nums;
+  }
+
   .twin-environment .twin-live-lines {
     @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border;
   }
