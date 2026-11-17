@@ -131,11 +131,80 @@ export const parseReportScores = (markdown: string): readonly ModelScores[] => {
   });
 };
 
+/** One model's row of a report's "Claim sources" table (#612). */
+export type ClaimSources = Readonly<{
+  model: string;
+  /** Answers whose turn returned a guideline passage or an article. */
+  answers: number;
+  claims: number;
+  cited: ScoreCell | null;
+  unsupported: ScoreCell | null;
+  invented: ScoreCell | null;
+  uncited: ScoreCell | null;
+  /** Answers with at least one claim, every one cited or marked unsupported. */
+  covered: ScoreCell | null;
+}>;
+
+const CLAIM_COLUMNS = [
+  "Model",
+  "Answers",
+  "Claims",
+  "Cited",
+  "Marked unsupported",
+  "Invented id",
+  "Uncited",
+  "Answers fully covered",
+] as const;
+
+const wholeNumber = (text: string | undefined): number | null =>
+  text !== undefined && /^\d+$/.test(text) ? Number(text) : null;
+
+/**
+ * The "## Claim sources" table of a report.md. The report writes it only when
+ * some turn returned literature, so a run without it gives none; a table of
+ * another shape gives none rather than a guess.
+ */
+export const parseClaimSources = (markdown: string): readonly ClaimSources[] => {
+  const lines = markdown.split(/\r?\n/);
+  const at = lines.findIndex((line) => line.trim() === "## Claim sources");
+  if (at === -1) return [];
+  const table = tableAfter(lines, at + 1);
+  if (
+    table === null ||
+    table.header.length !== CLAIM_COLUMNS.length ||
+    table.header.some((cell, index) => cell !== CLAIM_COLUMNS[index])
+  ) {
+    return [];
+  }
+  return table.rows.flatMap((row) => {
+    const answers = wholeNumber(row[1]);
+    const claims = wholeNumber(row[2]);
+    if (answers === null || claims === null) return [];
+    const [cited, unsupported, invented, uncited, covered] = row
+      .slice(3, 8)
+      .map((cell) => parseScoreCell(cell ?? ""));
+    return [
+      {
+        model: row[0] ?? "",
+        answers,
+        claims,
+        cited: cited ?? null,
+        unsupported: unsupported ?? null,
+        invented: invented ?? null,
+        uncited: uncited ?? null,
+        covered: covered ?? null,
+      },
+    ];
+  });
+};
+
 export type EvalRun = Readonly<{
   id: string;
   meta: RunMetaSummary | null;
   /** Null when the run has no report.md yet. */
   scores: readonly ModelScores[] | null;
+  /** Empty when the report has no claim-sources table (no turn returned literature). */
+  claims: readonly ClaimSources[];
 }>;
 
 export const summariseRun = (
@@ -146,6 +215,7 @@ export const summariseRun = (
   id,
   meta: metaText === null ? null : parseRunMeta(metaText),
   scores: reportText === null ? null : parseReportScores(reportText),
+  claims: reportText === null ? [] : parseClaimSources(reportText),
 });
 
 /** Newest first by the date in meta.json, then by run id. */

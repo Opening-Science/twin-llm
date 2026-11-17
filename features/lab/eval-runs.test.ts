@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  parseClaimSources,
   parseReportScores,
   parseRunMeta,
   parseScoreCell,
@@ -108,6 +109,58 @@ describe("parseReportScores", () => {
 
   test("a report without score tables gives none", () => {
     expect(parseReportScores("# Eval report x\n\nNothing here.")).toEqual([]);
+  });
+});
+
+/** The "Claim sources" section as `eval:report` writes it (#612). */
+const CLAIMS = [
+  "## Claim sources",
+  "",
+  "Each sentence of the Answer section, over the answers whose turn returned a guideline passage or an article (#612).",
+  "",
+  "| Model | Answers | Claims | Cited | Marked unsupported | Invented id | Uncited | Answers fully covered |",
+  "| --- | --- | --- | --- | --- | --- | --- | --- |",
+  "| ollama:qwen3:4b | 13 | 20 | 12/20 (39–78 %) | 3/20 (5–36 %) | 1/20 (1–24 %) | 4/20 (8–42 %) | 6/13 (23–71 %) |",
+  "| ollama:qwen3:8b | 2 | 0 | — | — | — | — | 0/2 (0–66 %) |",
+  "",
+].join("\n");
+
+describe("parseClaimSources", () => {
+  test("one row per model, counts and shares with their interval", () => {
+    expect(parseClaimSources(`${REPORT}\n${CLAIMS}`)).toEqual([
+      {
+        model: "ollama:qwen3:4b",
+        answers: 13,
+        claims: 20,
+        cited: { passes: 12, n: 20, lowPct: 39, highPct: 78 },
+        unsupported: { passes: 3, n: 20, lowPct: 5, highPct: 36 },
+        invented: { passes: 1, n: 20, lowPct: 1, highPct: 24 },
+        uncited: { passes: 4, n: 20, lowPct: 8, highPct: 42 },
+        covered: { passes: 6, n: 13, lowPct: 23, highPct: 71 },
+      },
+      {
+        model: "ollama:qwen3:8b",
+        answers: 2,
+        claims: 0,
+        cited: null,
+        unsupported: null,
+        invented: null,
+        uncited: null,
+        covered: { passes: 0, n: 2, lowPct: 0, highPct: 66 },
+      },
+    ]);
+  });
+
+  test("none when no turn returned literature, or the table has another shape", () => {
+    expect(parseClaimSources(REPORT)).toEqual([]);
+    expect(
+      parseClaimSources(CLAIMS.replace("| Model | Answers |", "| Model | Lines |")),
+    ).toEqual([]);
+  });
+
+  test("summariseRun carries them, and none without a report", () => {
+    expect(summariseRun("r", META, `${REPORT}\n${CLAIMS}`).claims).toHaveLength(2);
+    expect(summariseRun("r", META, null).claims).toEqual([]);
   });
 });
 
