@@ -293,6 +293,79 @@ export const scoreTable = (scores: ModelScores): EvidenceTable => ({
   rows: scores.rows.map((row) => [row.criterion, ...row.cells.map(scoreCellText)]),
 });
 
+/** A run's claim sources, one row per model, as the report gives them. */
+export const claimTable = (
+  runId: string,
+  rows: readonly ClaimSources[],
+): EvidenceTable => ({
+  caption: `Claim sources of ${runId}`,
+  // The report's headings, two shortened so the table fits a laptop screen.
+  columns: [
+    "Model",
+    "Answers",
+    "Claims",
+    "Cited",
+    "Unsupported",
+    "Invented id",
+    "Uncited",
+    "Fully covered",
+  ],
+  rows: rows.map((row) => [
+    row.model,
+    formatNumber(row.answers, 0),
+    formatNumber(row.claims, 0),
+    scoreCellText(row.cited),
+    scoreCellText(row.unsupported),
+    scoreCellText(row.invented),
+    scoreCellText(row.uncited),
+    scoreCellText(row.covered),
+  ]),
+});
+
+const CLAIM_SHARES = [
+  ["cited", "cited"],
+  ["marked_unsupported", "unsupported"],
+  ["invented_id", "invented"],
+  ["uncited", "uncited"],
+  ["answers_fully_covered", "covered"],
+] as const;
+
+/** Every claim share of every run, one row each, for a paper's table or figure. */
+export const claimsCsv = (runs: readonly EvalRun[]): string =>
+  toCsv(
+    [
+      "run_id",
+      "model",
+      "answers",
+      "claims",
+      "share",
+      "count",
+      "n",
+      "rate",
+      "wilson95_low_pct",
+      "wilson95_high_pct",
+    ],
+    runs.flatMap((run) =>
+      run.claims.flatMap((row) =>
+        CLAIM_SHARES.map(([name, key]): readonly CsvCell[] => {
+          const cell = row[key];
+          return [
+            run.id,
+            row.model,
+            row.answers,
+            row.claims,
+            name,
+            cell?.passes,
+            cell?.n,
+            cell === null || cell.n === 0 ? null : cell.passes / cell.n,
+            cell?.lowPct,
+            cell?.highPct,
+          ];
+        }),
+      ),
+    ),
+  );
+
 /** Every score cell of every run, one row each, for a paper's table or figure. */
 export const scoresCsv = (runs: readonly EvalRun[]): string =>
   toCsv(

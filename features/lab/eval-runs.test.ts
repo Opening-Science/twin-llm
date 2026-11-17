@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  claimsCsv,
+  claimTable,
   parseClaimSources,
   parseReportScores,
   parseRunMeta,
@@ -161,6 +163,35 @@ describe("parseClaimSources", () => {
   test("summariseRun carries them, and none without a report", () => {
     expect(summariseRun("r", META, `${REPORT}\n${CLAIMS}`).claims).toHaveLength(2);
     expect(summariseRun("r", META, null).claims).toEqual([]);
+  });
+
+  test("claimTable keeps the report's columns, a dash where nothing was claimed", () => {
+    const run = summariseRun("r", META, `${REPORT}\n${CLAIMS}`);
+    const table = claimTable(run.id, run.claims);
+    expect(table.columns[3]).toBe("Cited");
+    expect(table.rows[0]).toEqual([
+      "ollama:qwen3:4b",
+      "13",
+      "20",
+      "12/20 · 39–78 %",
+      "3/20 · 5–36 %",
+      "1/20 · 1–24 %",
+      "4/20 · 8–42 %",
+      "6/13 · 23–71 %",
+    ]);
+    expect(table.rows[1]?.[3]).toBe("—");
+  });
+
+  test("claimsCsv gives one row per share, empty where nothing was claimed", () => {
+    const run = summariseRun("r", META, `${REPORT}\n${CLAIMS}`);
+    const lines = claimsCsv([run]).split("\r\n");
+    expect(lines[0]).toBe(
+      "run_id,model,answers,claims,share,count,n,rate,wilson95_low_pct,wilson95_high_pct",
+    );
+    expect(lines[1]).toBe("r,ollama:qwen3:4b,13,20,cited,12,20,0.6,39,78");
+    expect(lines[6]).toBe("r,ollama:qwen3:8b,2,0,cited,,,,,");
+    expect(lines[10]).toBe("r,ollama:qwen3:8b,2,0,answers_fully_covered,0,2,0,0,66");
+    expect(lines.length).toBe(12);
   });
 });
 
