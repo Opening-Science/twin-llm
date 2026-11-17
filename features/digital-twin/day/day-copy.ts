@@ -19,8 +19,9 @@ export const DAY_REFUSED = {
 
 /** The panel under the twin. */
 export const MY_DAY_TITLE = "Show me my day";
-export const MY_DAY_NOTE =
-  "One synthetic day of heart rate and blood glucose as beats, from the same steps as the show_my_day tool.";
+export const MY_DAY_NOTE = "Your day of heart rate and blood sugar, step by step.";
+export const MY_DAY_DAYS_FAILED =
+  "Could not load this person's days, so only the illustrative day is offered.";
 export const MY_DAY_PICK = "Day";
 export const MY_DAY_PROFILE = "Glucose thresholds";
 export const MY_DAY_PROFILES = [
