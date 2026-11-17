@@ -42,3 +42,11 @@ export const KIOSK_UTC = "Times are UTC.";
 /** The thresholds stay placeholders until the reviewer confirms them. */
 export const kioskPlaceholder = (reviewer: string): string =>
   `Thresholds are placeholders until ${reviewer} confirms them.`;
+
+/** The attract loop: nobody is at the screen yet. */
+export const KIOSK_ATTRACT = "Press anywhere to start";
+export const KIOSK_ATTRACT_NOTE =
+  "See one day of a synthetic person: heart rate and blood sugar, beat by beat, on the twin.";
+
+/** The one control's name before a day starts. */
+export const KIOSK_START = "Start the day";
