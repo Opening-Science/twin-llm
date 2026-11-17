@@ -7,6 +7,7 @@ import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import {
   MY_DAY_BEATS,
+  MY_DAY_DAYS_FAILED,
   MY_DAY_LOADING,
   MY_DAY_MOCK_NOTE,
   MY_DAY_MOCK_OPTION,
@@ -155,6 +156,9 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
         {MY_DAY_TITLE}
       </h3>
       <p className="text-muted-foreground text-xs">{MY_DAY_NOTE}</p>
+      {state.days === null ? (
+        <p className="text-muted-foreground text-xs">{MY_DAY_DAYS_FAILED}</p>
+      ) : null}
       {state.days === undefined ? (
         <p className="text-muted-foreground text-xs">{MY_DAY_LOADING}</p>
       ) : (

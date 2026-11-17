@@ -3,17 +3,17 @@ import "server-only";
 import { ANALYTICS_ROW_CAP } from "@/packages/query-tools/refusals";
 import {
   DAY_THRESHOLDS,
-  type DayReading,
   dayBeats,
   type GlucoseProfile,
   redWindows,
 } from "@/packages/query-tools/day-beats";
-import MOCK_DAY from "@/packages/query-tools/fixtures/mock-day.json";
 import { type KioskDay, toKioskDay } from "@/packages/query-tools/kiosk-day";
+import { MOCK_DAY_DATE, mockDayReadings } from "@/packages/query-tools/mock-day";
 import {
   GLUCOSE_LOINCS,
   HEART_RATE_LOINC,
   readingsFromRows,
+  SENSOR_GLUCOSE_LOINC,
 } from "@/packages/query-tools/show-my-day";
 import { utcDay } from "@/packages/query-tools/stats";
 
@@ -30,8 +30,12 @@ import { type DayListEntry } from "./day-view";
  * mock, and never mixed with a person's readings.
  */
 
-/** The codes a day reads: heart rate and blood glucose, as `show_my_day` reads them. */
-export const DAY_CODES: readonly string[] = [HEART_RATE_LOINC, ...GLUCOSE_LOINCS];
+/** The codes a day reads: heart rate, blood and sensor glucose, as `show_my_day` reads them. */
+export const DAY_CODES: readonly string[] = [
+  HEART_RATE_LOINC,
+  ...GLUCOSE_LOINCS,
+  SENSOR_GLUCOSE_LOINC,
+];
 
 const UNIT_OF = (loinc: string): string =>
   loinc === HEART_RATE_LOINC ? "/min" : "mg/dL";
@@ -92,19 +96,14 @@ export const demoDay = (
   };
 };
 
-const MOCK_READINGS: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+/** The mock day's readings: blood and sensor glucose side by side. */
+const MOCK_READINGS = mockDayReadings("both");
 
 /** The illustrative mock day (`fixtures/mock-day.json`): made-up values, activity recorded. */
 export const mockDay = (profile: GlucoseProfile): KioskDay =>
   toKioskDay({
     subject_ref: MOCK_DAY_REF,
-    day: MOCK_DAY.day,
+    day: MOCK_DAY_DATE,
     profile,
     beats: dayBeats(MOCK_READINGS, profile),
     red_windows: redWindows(MOCK_READINGS, profile),

@@ -56,6 +56,16 @@ describe("demoDay", () => {
     expect(result.day.worth_a_look).toEqual([]);
   });
 
+  test("reads sensor glucose as its own measure", () => {
+    const sensor = [...ROWS, row("s", "99504-3", 101, "2026-11-15T09:00:00Z", "mg/dL")];
+    expect(dayList(sensor)[0]).toEqual({ day: "2026-11-15", readings: 5 });
+    const result = demoDay(sensor, "syn-a", "2026-11-15", "without_diabetes");
+    if (result.kind !== "day") throw new Error("expected a day");
+    expect(result.day.beats.some((beat) => beat.line.startsWith("Sensor glucose"))).toBe(
+      true,
+    );
+  });
+
   test("refuses a day with no readings", () => {
     expect(demoDay(ROWS, "syn-a", "2026-11-01", "without_diabetes")).toEqual({
       kind: "refused",
@@ -78,7 +88,13 @@ describe("mockDay", () => {
     expect(day.subject_ref).toBe(MOCK_DAY_REF);
     expect(day.activity).toBe("recorded");
     expect(day.beats.length).toBeGreaterThan(0);
-    expect(day.beats.filter((beat) => beat.worth_a_look)).toHaveLength(1);
+    // Blood and sensor glucose side by side: each passes the threshold at 20:30.
+    expect(
+      day.beats.filter((beat) => beat.worth_a_look).map((beat) => beat.line),
+    ).toEqual([
+      "Blood glucose up · about 175 mg/dL · derived",
+      "Sensor glucose up · about 152 mg/dL · derived",
+    ]);
   });
 
   test("follows the profile's thresholds", () => {
