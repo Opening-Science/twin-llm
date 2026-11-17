@@ -45,3 +45,10 @@ export const myDayPlaceholder = (reviewer: string): string =>
 /** One option of the day picker: the day and how many readings it holds. */
 export const myDayOption = (day: string, readings: number): string =>
   `${formatDate(day)} · ${readings} ${readings === 1 ? "reading" : "readings"}`;
+
+/** Under a pressed beat: what the twin now shows. */
+export const myDayShows = (label: string): string => `The twin shows: ${label}.`;
+export const MY_DAY_PICK_HINT =
+  "Press a beat to turn the twin to it; press it again to let go.";
+/** Before the organ's name where the viewer says what lit it. */
+export const DAY_FOCUS_FROM = "From the day: ";

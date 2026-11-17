@@ -14,6 +14,7 @@ import {
   MY_DAY_NOT_RECORDED,
   MY_DAY_NOTE,
 } from "./day-copy";
+import { beatFocus } from "./beat-focus";
 import { MOCK_CHOICE } from "./day-view";
 import { MyDayPanel } from "./my-day-panel";
 import { type MyDayState } from "./use-my-day";
@@ -27,8 +28,11 @@ const STATE: MyDayState = {
   profile: "without_diabetes",
   day: { ...DAY, activity: "not recorded" },
   error: null,
+  selected: null,
+  focus: null,
   onChoice: noop,
   onProfile: noop,
+  onBeat: noop,
 };
 
 const html = (state: MyDayState) =>
@@ -68,6 +72,18 @@ describe("MyDayPanel", () => {
     const narrated = DAY.beats.find((beat) => beat.source === "narrated");
     expect(narrated?.line).toContain("narrated, not measured");
     expect(narrated?.line).not.toMatch(/\d/);
+  });
+
+  test("each beat is a toggle; the pressed one says what the twin shows", () => {
+    const index = DAY.beats.findIndex((beat) => beat.event === "Worth a look");
+    const focus = beatFocus(DAY.beats[index]!);
+    const out = html({ ...STATE, selected: index, focus });
+    expect(out.match(/aria-pressed="true" class="twin-beat-button"/g)).toHaveLength(1);
+    expect(out.match(/aria-pressed="false" class="twin-beat-button"/g)).toHaveLength(
+      DAY.beats.length - 1,
+    );
+    expect(out).toContain("The twin shows: Blood vessels.");
+    expect(html(STATE)).not.toContain("The twin shows");
   });
 
   test("shows the route's sentence instead of beats on a refusal", () => {
