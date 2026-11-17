@@ -190,6 +190,7 @@ describe("redWindows", () => {
     ).find((beat) => beat.source === "derived");
     expect(low?.signal).toEqual({
       measure: "glucose",
+      specimen: "blood",
       direction: "down",
       value: 62,
       unit: "mg/dL",

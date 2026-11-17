@@ -122,6 +122,7 @@ const measuredBeat = (reading: DayReading, before: DayReading | null): DayBeat |
       source: "measured",
       signal: {
         measure: "glucose",
+        specimen: "blood",
         direction,
         value: reading.glucoseMgDl,
         unit: "mg/dL",
@@ -284,6 +285,7 @@ const windowBeat = (window: RedWindow): DayBeat => {
     source: "derived",
     signal: {
       measure: "glucose",
+      specimen: "blood",
       direction: window.side === "below" ? "down" : "up",
       value: window.extreme,
       unit: "mg/dL",
