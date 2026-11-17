@@ -1778,3 +1778,86 @@
   }
 }
 /* --- Chart kit motion (end) -------------------------------------------------- */
+
+/* --- Kiosk (/kiosk) ----------------------------------------------------------
+   One portrait screen (an 85-inch panel, 1080 × 1920 and up) seen from a few
+   metres away, so type is sized from the screen's height, not the root size.
+   On a landscape screen the same column stands in the centre. */
+.kiosk {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--primary) 14%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--muted) 80%, var(--background)),
+      var(--background)
+    );
+  color: var(--foreground);
+  user-select: none;
+}
+
+.kiosk-head,
+.kiosk-foot {
+  width: min(100%, calc(100dvh * 0.75));
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+  text-align: center;
+}
+
+.kiosk-head {
+  padding-top: clamp(1rem, 3.5vh, 5rem);
+}
+
+.kiosk-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.4vh, 4.5rem);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.kiosk-subtitle {
+  margin-top: 0.4em;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 2rem);
+}
+
+.kiosk-stage {
+  position: relative;
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: 0;
+  margin-inline: auto;
+}
+
+.kiosk-twin {
+  position: absolute;
+  inset: 0;
+}
+
+/* The kiosk screen owns every press; the 3D view never turns under a finger. */
+.kiosk-twin canvas {
+  pointer-events: none;
+}
+
+.kiosk-twin-note {
+  position: absolute;
+  inset: auto 0 40%;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 2rem);
+  text-align: center;
+}
+
+.kiosk-foot {
+  padding-bottom: clamp(0.75rem, 2.5vh, 3.5rem);
+  color: var(--muted-foreground);
+  font-size: clamp(0.8rem, 1.15vh, 1.5rem);
+  line-height: 1.45;
+}
+/* --- Kiosk (end) ------------------------------------------------------------- */
