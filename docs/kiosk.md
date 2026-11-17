@@ -9,6 +9,19 @@ never a scan, so the page needs no sign-in, no unlock and no sidebar. It is alwa
 dark, whatever the machine's theme. On a landscape screen the same portrait column
 stands in the centre.
 
+## The day
+
+Under the twin the kiosk plays the illustrative mock day
+(`packages/query-tools/fixtures/mock-day.json`) in the kiosk-day shape
+([kiosk-day.md](kiosk-day.md)), built on the server by `mockKioskDay` and drawn as
+written: the time and event, the value line, the body sentence, and where the twin
+turns. The twin goes to the beat's layer and lights its organ. A window's beat reads
+"Worth a look" with a mark and a note beside it, never a colour alone. The notice, the
+placeholder note and "Times are UTC" stay on screen with every beat.
+
+A press anywhere on the screen, or Space, Enter or the right arrow, goes on to the next
+beat; the left arrow goes back. The last beat stays.
+
 ## Running it on the screen
 
 The demo body has to be on the machine first (`bun run anatomy:fetch`, see

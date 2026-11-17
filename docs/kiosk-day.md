@@ -12,7 +12,9 @@ mock day: [kiosk-day.example.json](kiosk-day.example.json). A test fails when th
 example and the code drift apart.
 
 How the kiosk gets the response (an MCP call, an HTTP route, or a file for the demo) is
-not decided yet; the shape is the same whichever it is.
+not decided yet; the shape is the same whichever it is. TwinLLM's own `/kiosk` page
+([kiosk.md](kiosk.md)) builds the mock day on the server and plays it through this
+shape.
 
 ## Top level
 
