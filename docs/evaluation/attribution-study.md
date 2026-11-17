@@ -32,8 +32,9 @@ holds the asked day and the day before and after, per source.
 - **Values.** A latent value per day from a person's level, plus a
   per-source bias and noise (`ERROR_MODEL`, assumed, not from the accuracy
   review). The stratum then sets the asked day's gap against the app's own
-  tolerance (`SOURCE_TOLERANCE`): within half of it to agree, 1.5 to 3 times
-  it to disagree.
+  tolerance (`SOURCE_TOLERANCE`): agreeing readings on distinct whole steps
+  within half of it each way; disagreeing ones 1.5 to 2.5 times it from the
+  first source, a third on the other side.
 - **Identifiability.** No two readings of an item are shown as the same
   number (`confusableCells`). The readings of the days next to the asked day
   are moved by whole units until none collides; the asked day's readings,

@@ -359,13 +359,17 @@ const drawValues = (draw: Draw, random: Random): readonly W1Metric[] => {
     Array.from({ length: 2 * half + 1 }, (_, index) => index - half),
     random,
   );
+  // Disagreeing readings sit 1.5 to 2.5 bands from the first, a second one
+  // on the other side, so every pair is beyond the band and none is far
+  // outside a plausible night.
+  const side = random() < 0.5 ? -1 : 1;
   for (const [index, source] of present.entries()) {
     const value =
       stratum === "agree"
         ? Math.round(asked) + (steps[index] ?? 0) + (random() - 0.5) * 0.4
         : index === 0
           ? asked
-          : asked + (random() < 0.5 ? -1 : 1) * width * (1.5 + random() * 1.5) * index;
+          : asked + (index === 1 ? side : -side) * width * (1.5 + random());
     out.push(metricOf(source, measure, askedDay, value));
   }
   return out;

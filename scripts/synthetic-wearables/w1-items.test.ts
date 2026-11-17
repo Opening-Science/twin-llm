@@ -126,6 +126,20 @@ describe("generateW1", () => {
     }
   });
 
+  test("every reading stays within a plausible night", () => {
+    const range = {
+      "resting-heart-rate": [35, 95],
+      "heart-rate-variability": [8, 160],
+    } as const;
+    for (const item of core) {
+      const [low, high] = range[item.measure as keyof typeof range];
+      for (const metric of item.metrics) {
+        expect(metric.value).toBeGreaterThanOrEqual(low);
+        expect(metric.value).toBeLessThanOrEqual(high);
+      }
+    }
+  });
+
   test("every reading is tagged with its source and day and is synthetic", () => {
     for (const item of w1) {
       expect(item.personId.startsWith(`test-${W1_DEFAULTS.seed}-w1-`)).toBe(true);
