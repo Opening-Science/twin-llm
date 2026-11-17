@@ -4,8 +4,14 @@ import { cn } from "@/infrastructure/ui";
 
 /**
  * An on/off switch. `role="switch"` with `aria-checked`, a real button so
- * Space and Enter work, and a label that names what it turns on.
+ * Space and Enter work, and a label that names what it turns on. The track
+ * is 20px high; an invisible `::before` reaches 5px past it above and
+ * below and 3px at the sides, so a finger has 30 by 42px to hit, past the
+ * 24px minimum, and nothing around it moves.
  */
+
+export const SWITCH_HIT_AREA =
+  "before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-['']";
 export const Switch = ({
   checked,
   onChange,
@@ -26,6 +32,7 @@ export const Switch = ({
     onClick={() => onChange(!checked)}
     className={cn(
       "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+      SWITCH_HIT_AREA,
       checked ? "bg-primary border-primary" : "bg-muted border-input",
     )}
   >
