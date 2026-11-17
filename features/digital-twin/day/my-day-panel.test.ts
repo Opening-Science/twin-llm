@@ -11,6 +11,8 @@ import {
   MY_DAY_MOCK_NOTE,
   MY_DAY_MOCK_OPTION,
   MY_DAY_NOT_RECORDED,
+  WORTH_A_LOOK_NONE,
+  WORTH_A_LOOK_NOTE,
 } from "./day-copy";
 import { beatFocus } from "./beat-focus";
 import { MOCK_CHOICE } from "./day-view";
@@ -82,6 +84,32 @@ describe("MyDayPanel", () => {
     );
     expect(out).toContain("The twin shows: Blood vessels.");
     expect(html(STATE)).not.toContain("The twin shows");
+  });
+
+  test("marks a window's beat in words, an icon and a shape, never by colour alone", () => {
+    const out = html(STATE);
+    expect(out.match(/data-worth="true"/g)).toHaveLength(1);
+    const beat = out.slice(out.indexOf('data-worth="true"'));
+    expect(beat.indexOf("<svg")).toBeLessThan(beat.indexOf("Worth a look"));
+  });
+
+  test("lists each window with its line, rule and a way to show its beat", () => {
+    const out = html(STATE);
+    expect(out).toContain("20:30 · Blood glucose · furthest 175 mg/dL");
+    expect(out).toContain(DAY.worth_a_look[0]!.rule);
+    expect(out).toContain(WORTH_A_LOOK_NOTE);
+    expect(out).toContain("Show the 20:30 beat");
+  });
+
+  test("says so when nothing is past the thresholds", () => {
+    const quiet = {
+      ...DAY,
+      worth_a_look: [],
+      beats: DAY.beats.filter((b) => !b.worth_a_look),
+    };
+    const out = html({ ...STATE, day: quiet });
+    expect(out).toContain(WORTH_A_LOOK_NONE);
+    expect(out).not.toContain('data-worth="true"');
   });
 
   test("shows the route's sentence instead of beats on a refusal", () => {

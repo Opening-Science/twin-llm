@@ -1391,6 +1391,24 @@
     @apply bg-muted-foreground absolute top-4 -left-[3px] size-1.5 rounded-full;
   }
 
+  /* A window's beat: a hollow diamond on the line and a dashed outline, beside the
+     eye icon and the words, so it reads in greyscale too. */
+  .twin-beat[data-worth="true"]::before {
+    @apply border-foreground bg-background top-3.5 -left-[5px] size-2.5 rotate-45 rounded-none border;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button {
+    @apply border-foreground/50 border-dashed;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button[aria-pressed="true"] {
+    @apply border-solid;
+  }
+
+  .twin-worth {
+    @apply border-border flex flex-col gap-1 rounded-md border p-2.5;
+  }
+
   .twin-beat-time {
     @apply text-muted-foreground pt-px font-mono text-xs tabular-nums;
   }

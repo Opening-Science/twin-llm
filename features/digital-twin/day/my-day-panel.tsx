@@ -1,6 +1,8 @@
 "use client";
 
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
+import { Button } from "@/infrastructure/ui-kit/button";
+import { EyeIcon } from "@/infrastructure/ui-kit/icons";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import {
@@ -19,6 +21,11 @@ import {
   MY_DAY_UTC,
   myDayOption,
   myDayShows,
+  WORTH_A_LOOK,
+  WORTH_A_LOOK_NONE,
+  WORTH_A_LOOK_NOTE,
+  worthALookLine,
+  worthALookShow,
   myDayPlaceholder,
 } from "./day-copy";
 import { MOCK_CHOICE } from "./day-view";
@@ -46,7 +53,11 @@ const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>
       {day.beats.map((beat, index) => {
         const pressed = state.selected === index;
         return (
-          <li key={`${beat.time}-${index}`} className="twin-beat">
+          <li
+            key={`${beat.time}-${index}`}
+            className="twin-beat"
+            data-worth={beat.worth_a_look ? "true" : undefined}
+          >
             <button
               type="button"
               aria-pressed={pressed}
@@ -55,7 +66,10 @@ const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>
             >
               <time className="twin-beat-time">{beat.time}</time>
               <span className="flex min-w-0 flex-col">
-                <span className="text-sm font-medium">{beat.event}</span>
+                <span className="flex items-center gap-1 text-sm font-medium">
+                  {beat.worth_a_look ? <EyeIcon /> : null}
+                  {beat.event}
+                </span>
                 <span className="text-sm">{beat.line}</span>
                 <span className="text-muted-foreground text-xs leading-relaxed">
                   {beat.body.text}
@@ -72,6 +86,54 @@ const BeatList = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>
       })}
     </ol>
   );
+
+const WORTH_ID = "twin-worth-title";
+
+/**
+ * The day's windows past a threshold, in words with an eye icon, never by
+ * colour alone. Each names its time, signal, furthest value and rule as the
+ * server wrote them, and can turn the twin to its beat.
+ */
+const WorthALook = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay }>) => (
+  <section className="twin-worth" aria-labelledby={WORTH_ID}>
+    <h4 id={WORTH_ID} className="flex items-center gap-1 text-sm font-medium">
+      <EyeIcon />
+      {WORTH_A_LOOK}
+    </h4>
+    <p className="text-muted-foreground text-xs">{WORTH_A_LOOK_NOTE}</p>
+    {day.worth_a_look.length === 0 ? (
+      <p className="text-muted-foreground text-xs">{WORTH_A_LOOK_NONE}</p>
+    ) : (
+      <ul className="flex flex-col gap-2">
+        {day.worth_a_look.map((window) => {
+          const index = day.beats.findIndex(
+            (beat) =>
+              beat.worth_a_look &&
+              beat.time === window.from &&
+              beat.measure === window.measure,
+          );
+          return (
+            <li key={`${window.measure}-${window.from}`} className="flex flex-col gap-1">
+              <p className="text-sm">{worthALookLine(window)}</p>
+              <p className="text-muted-foreground text-xs">{window.rule}</p>
+              {index >= 0 ? (
+                <Button
+                  size="sm"
+                  variant="pill"
+                  className="self-start"
+                  aria-pressed={state.selected === index}
+                  onClick={() => state.onBeat(state.selected === index ? null : index)}
+                >
+                  {worthALookShow(window.from)}
+                </Button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </section>
+);
 
 const DayNotes = ({ day, mock }: Readonly<{ day: KioskDay; mock: boolean }>) => (
   <div className="text-muted-foreground flex flex-col gap-1 text-xs">
@@ -129,6 +191,7 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
       ) : state.day ? (
         <>
           <DayNotes day={state.day} mock={mock} />
+          <WorthALook state={state} day={state.day} />
           <BeatList state={state} day={state.day} />
         </>
       ) : state.days === undefined ? null : (
