@@ -6,10 +6,10 @@ const LOINC = "http://loinc.org";
 /** Glucose in blood: the code Google Health sends every glucose reading under. */
 const BLOOD_GLUCOSE_LOINC = "2339-0";
 /** Glucose in interstitial fluid: a continuous glucose monitor's sensor reading. */
-export const SENSOR_GLUCOSE_LOINC = "99504-3";
+const SENSOR_GLUCOSE_LOINC = "99504-3";
 const SENSOR_GLUCOSE_DISPLAY = "Glucose [Mass/volume] in Interstitial fluid";
 /** Google Health's specimen for a continuous glucose monitor's reading. */
-export const INTERSTITIAL_FLUID = "INTERSTITIAL_FLUID";
+const INTERSTITIAL_FLUID = "INTERSTITIAL_FLUID";
 
 export const WAREHOUSE_SOURCE = "synthea" as const;
 

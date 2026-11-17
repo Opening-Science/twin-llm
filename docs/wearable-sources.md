@@ -119,8 +119,11 @@ with that specimen is stored as sensor glucose, LOINC 99504-3 "Glucose [Mass/vol
 Interstitial fluid", so `show_my_day` reads it as its own measure, labelled sensor, with
 the lag note, and never next to blood glucose ([query-layer.md](query-layer.md)). Any
 other specimen (`CAPILLARY_BLOOD`, ...), or none, stays blood glucose; only 2339-0 moves.
-The specimen is read when a reading is stored, not when it is read: rows stored before
-this came in keep 2339-0 until their bundle is ingested again. Test from a synthetic
+The specimen is read when a reading is stored, not when it is read. Ingesting the same
+bundle again writes nothing (it is already ingested), so rows stored before this came in
+keep 2339-0 until that bundle's rows are removed and it is stored afresh. The personal
+FHIR import (`packages/personal-data/parse-fhir.ts`) keeps each file's own code, so an
+uploaded file's monitor readings stay 2339-0 there. Test from a synthetic
 bundle built by open-twin's Google Health mapper:
 `packages/warehouse/fixtures/google-health-glucose.json`, which its test builds again.
 
