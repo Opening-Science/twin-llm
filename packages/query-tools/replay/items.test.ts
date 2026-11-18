@@ -199,6 +199,20 @@ describe("events", () => {
     ).toBe(false);
   });
 
+  test("a meal or a tag is what the person entered, never a device's", () => {
+    for (const event of [breakfast, { ...breakfast, kind: "tag", meal: undefined }]) {
+      expect(
+        issues(
+          replayEventSchema.safeParse({
+            ...event,
+            provenance: "measured",
+            source: { kind: "device", name: "Synthetic ring" },
+          }),
+        ),
+      ).toEqual(["a meal or a tag is entered by the person"]);
+    }
+  });
+
   test("an event cannot end before it starts", () => {
     expect(
       replayEventSchema.safeParse({ ...breakfast, to: "2026-10-20T05:00:00Z" }).success,
