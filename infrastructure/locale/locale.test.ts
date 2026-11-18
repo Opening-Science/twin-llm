@@ -9,21 +9,6 @@ import {
   otherLocale,
 } from "./locale";
 
-describe("localeFromDocumentCookie", () => {
-  test("finds the language among other cookies", () => {
-    expect(localeFromDocumentCookie("twinllm-sidebar=pinned; twinllm-locale=de")).toBe(
-      "de",
-    );
-    expect(localeFromDocumentCookie("twinllm-locale=de")).toBe("de");
-  });
-
-  test("is English without the cookie, or for a cookie that only ends in its name", () => {
-    expect(localeFromDocumentCookie("")).toBe("en");
-    expect(localeFromDocumentCookie("twinllm-locale=en; a=b")).toBe("en");
-    expect(localeFromDocumentCookie("other-twinllm-locale=de")).toBe("en");
-  });
-});
-
 describe("otherLocale", () => {
   test("offers German from English and English from German", () => {
     expect(otherLocale("en")).toBe("de");
@@ -64,5 +49,20 @@ describe("htmlLang", () => {
   test("British English by default, German when chosen", () => {
     expect(htmlLang("en")).toBe("en-GB");
     expect(htmlLang("de")).toBe("de");
+  });
+});
+
+describe("localeFromDocumentCookie", () => {
+  test("finds the language among other cookies", () => {
+    expect(localeFromDocumentCookie("twinllm-sidebar=pinned; twinllm-locale=de")).toBe(
+      "de",
+    );
+    expect(localeFromDocumentCookie("twinllm-locale=de")).toBe("de");
+  });
+
+  test("is English without the cookie, or for a cookie that only ends in its name", () => {
+    expect(localeFromDocumentCookie("")).toBe("en");
+    expect(localeFromDocumentCookie("twinllm-locale=en; a=b")).toBe("en");
+    expect(localeFromDocumentCookie("other-twinllm-locale=de")).toBe("en");
   });
 });

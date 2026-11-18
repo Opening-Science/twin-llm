@@ -39,7 +39,7 @@ export const DEVICE_NAME: Readonly<Record<DeviceSource, string>> = {
 
 /**
  * Oura has no logo yet (its wordmark is not in the repository), so its row
- * keeps an empty tile.
+ * keeps a blank slot where the tile would be.
  */
 const LOGO: Readonly<Record<DeviceSource, VendorLogo | undefined>> = {
   oura: undefined,

@@ -10,19 +10,20 @@ import {
   compareRows,
   droppedModels,
   initialModeState,
-  specialistPicks,
   type ModeContext,
-  type ModeState,
   modeProblem,
+  type ModeState,
   modeSummary,
   offeredModes,
   pickedModels,
   pickerFooter,
   rowSubline,
+  setCompareModel,
   setMode,
   setSpecialistModel,
   specialistModel,
   specialistModelChoices,
+  specialistPicks,
   toggleRow,
 } from "./chat-modes";
 
@@ -101,7 +102,7 @@ describe("a reopened thread starts where its last turn stopped (SPEC 7.2)", () =
     expect(state.mode).toBe("specialists");
     expect(pickedModels(state, ctx(), "")).toEqual([
       { id: "agent:diet@qwen3:8b", name: "Diet specialist · Qwen3 8B" },
-      { id: "agent:sleep", name: "Sleep" },
+      { id: "agent:sleep", name: "Sleep · Qwen3 8B" },
     ]);
   });
 
@@ -439,6 +440,18 @@ describe("summary, footer and problems", () => {
     );
   });
 
+  test("a specialist on its own model names that model beside another answer (#859)", () => {
+    const state = {
+      ...setMode(initialModeState(ctx(), null), "compare"),
+      compare: ["agent:gp", "qwen3:4b"],
+      compareChosen: true,
+    };
+    expect(pickedModels(state, ctx(), "")).toEqual([
+      { id: "agent:gp", name: "General · Qwen3 8B" },
+      { id: "qwen3:4b", name: "Qwen3 4B" },
+    ]);
+  });
+
   test("only offered ids are sent, at most three", () => {
     const state = {
       ...setMode(initialModeState(ctx(), null), "compare"),
@@ -481,5 +494,99 @@ describe("incognito offers local models only (SPEC 7.4, 7.8)", () => {
       "specialists",
       "compare",
     ]);
+  });
+});
+
+describe("a Compare specialist on a model the person picks (#859)", () => {
+  const prompt = "How long did I sleep?";
+  const compare = (rows: readonly string[]): ModeState => ({
+    ...setMode(initialModeState(ctx(), null), "compare"),
+    compare: rows,
+    compareChosen: true,
+  });
+  const sent = (state: ModeState) => pickedModels(state, ctx(), prompt);
+
+  test("its own model by default; another model makes the pair, named in its column", () => {
+    const moved = setCompareModel(
+      compare(["agent:gp", "qwen3:4b"]),
+      ctx(),
+      prompt,
+      "agent:gp",
+      "qwen3:4b",
+    );
+    expect(sent(moved)).toEqual([
+      { id: "agent:gp@qwen3:4b", name: "General · Qwen3 4B" },
+      { id: "qwen3:4b", name: "Qwen3 4B" },
+    ]);
+    expect(boxChecked(moved, "compare", "agent:gp", ctx(), prompt)).toBe(true);
+  });
+
+  test("back on its own model it is the plain row again", () => {
+    const moved = setCompareModel(
+      compare(["agent:gp", "qwen3:4b"]),
+      ctx(),
+      prompt,
+      "agent:gp",
+      "llama3:8b",
+    );
+    const back = setCompareModel(moved, ctx(), prompt, "agent:gp@llama3:8b", "qwen3:8b");
+    expect(compareRows(back, ctx(), prompt)).toEqual(["agent:gp", "qwen3:4b"]);
+  });
+
+  test("unticked, it goes with whichever model it was on", () => {
+    const moved = setCompareModel(
+      compare(["agent:gp", "agent:sleep", "qwen3:4b"]),
+      ctx(),
+      prompt,
+      "agent:gp",
+      "qwen3:4b",
+    );
+    const off = toggleRow(moved, "compare", "agent:gp", ctx(), prompt);
+    expect(compareRows(off, ctx(), prompt)).toEqual(["agent:sleep", "qwen3:4b"]);
+  });
+
+  test("a model picked in Specialists carries into Compare", () => {
+    const specialists = setSpecialistModel(
+      setMode(initialModeState(ctx(), null), "specialists"),
+      ctx(),
+      "",
+      "agent:gp",
+      "qwen3:4b",
+    );
+    const inCompare = setMode(specialists, "compare");
+    expect(compareRows(inCompare, ctx(), prompt)[0]).toBe("agent:gp@qwen3:4b");
+    const ticked = toggleRow(
+      { ...inCompare, compare: ["qwen3:4b"], compareChosen: true },
+      "compare",
+      "agent:gp",
+      ctx(),
+      prompt,
+    );
+    expect(sent(ticked).map(({ name }) => name)).toEqual([
+      "Qwen3 4B",
+      "General · Qwen3 4B",
+    ]);
+  });
+
+  test("a Specialists pick that cannot run in incognito leaves the specialist on its own model", () => {
+    const local = ctx({
+      incognito: true,
+      localModelIds: ["agent:gp", "qwen3:8b", "qwen3:4b"],
+    });
+    const specialists = setSpecialistModel(
+      setMode(initialModeState(ctx(), null), "specialists"),
+      ctx(),
+      "",
+      "agent:gp",
+      "llama3:8b",
+    );
+    const ticked = toggleRow(
+      { ...setMode(specialists, "compare"), compare: ["qwen3:4b"], compareChosen: true },
+      "compare",
+      "agent:gp",
+      local,
+      prompt,
+    );
+    expect(compareRows(ticked, local, prompt)).toEqual(["qwen3:4b", "agent:gp"]);
   });
 });

@@ -7,7 +7,7 @@ const NUMBER_CELL = "px-2 py-1.5 text-right font-mono text-xs";
 /** Subjects per age band (rows) and sex (columns), with totals both ways. */
 export const SexAgeTable = ({ split }: { readonly split: SexAgeSplit }) => (
   <div className="relative overflow-x-auto">
-    <table className="w-full min-w-md border-collapse text-sm">
+    <table className="w-full min-w-max border-collapse text-sm">
       <caption className="sr-only">
         Subjects in the cohort by age band and sex, with totals
       </caption>

@@ -2,6 +2,8 @@
  * Literature citations per turn (#236), drained into the response document's
  * `sources.literature`. Metadata only, never the passage.
  */
+import { collectorKey } from "@/packages/audit/answer-scope";
+
 import type { LiteratureHit } from "./hit";
 
 export type LiteratureCitation = Readonly<{
@@ -45,7 +47,8 @@ export const recordLiteratureTurn = (
   sessionId: string,
   sources: readonly LiteratureCitation[],
 ): void => {
-  turns.set(sessionId, [...(turns.get(sessionId) ?? []), ...sources]);
+  const key = collectorKey(sessionId);
+  turns.set(key, [...(turns.get(key) ?? []), ...sources]);
 };
 
 export const drainLiteratureTurn = (sessionId: string): LiteratureTurn => {
