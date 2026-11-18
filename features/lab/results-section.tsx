@@ -88,8 +88,8 @@ const RunClaims = ({ run }: Readonly<{ run: EvalRun }>) =>
       <p className="text-muted-foreground text-sm leading-relaxed">
         Sentences of the answers whose searches returned a guideline passage or an
         article: cited, marked unsupported, naming an id no search returned, or uncited.
-        Fully covered: every claim cited or marked. It reads what an answer says about its
-        sources, not whether a claim is true.
+        Fully covered: at least one claim, every one cited or marked unsupported. It reads
+        what an answer says about its sources, not whether a claim is true.
       </p>
       <LabTable table={claimTable(run.id, run.claims)} />
       <div className="flex flex-wrap gap-2">

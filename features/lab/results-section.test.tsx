@@ -39,6 +39,7 @@ describe("EvalRunsBody claim sources (#612)", () => {
     expect(html).toContain("2026-11-17-run · claim sources");
     expect(html).toContain("6/10 · 31–83 %");
     expect(html).toContain("Download CSV");
+    expect(html).toContain("Fully covered: at least one claim, every one cited");
   });
 
   test("a report without them shows no claim-sources block", () => {
