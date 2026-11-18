@@ -87,6 +87,16 @@ describe("speech sidecar client", () => {
     expect(called).toBe(0);
   });
 
+  test("a redirect is never followed, so the recording stays put", async () => {
+    const target = await start();
+    const redirecting = await start({ redirectTo: target.baseUrl });
+    const config = configFor(redirecting.baseUrl);
+    expect(await speechHealth(config)).toBeNull();
+    expect((await transcribeSpeech(config, HALF_SECOND, "en")).ok).toBe(false);
+    expect((await speakText(config, { text: "Hello.", language: "en" })).ok).toBe(false);
+    expect(target.received).toEqual([]);
+  });
+
   test("voice off is its own code", async () => {
     expect(await transcribeSpeech(configFor(null), HALF_SECOND, "en")).toEqual({
       ok: false,

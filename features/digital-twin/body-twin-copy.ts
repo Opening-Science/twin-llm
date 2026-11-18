@@ -9,6 +9,12 @@ export const SCAN_SET_DEFAULT = "Set as default";
 export const SCAN_CLEAR_DEFAULT = "Clear default";
 export const SCAN_DEFAULT_TAG = "default";
 export const SCAN_DEFAULT_FAILED = "Could not save the default scan.";
+export const scanAutoSyncing = (count: number): string =>
+  count === 1
+    ? "Fetching a new scan from the scanner…"
+    : `Fetching ${count} new scans from the scanner…`;
+export const SCAN_AUTO_SYNC_STOPPED =
+  "The scanner stopped answering; the scans left can be synced by hand.";
 export const BODY_VIEW_LOST =
   "The 3D view stopped: the browser lost its graphics context.";
 export const BODY_VIEW_RELOAD = "Reload 3D view";

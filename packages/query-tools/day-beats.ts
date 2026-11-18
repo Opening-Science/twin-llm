@@ -7,10 +7,12 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  * A day of heart rate and glucose turned into beats and red windows. Pure,
  * free of I/O, tested with the illustrative mock day in `fixtures/`.
  *
- * - One measured beat per reading, about the signal that moved most since the
- *   reading before, each change over its own scale: 20 /min of heart rate
- *   weighs as much as 15 mg/dL of glucose. A tie, or a first reading, goes to
- *   heart rate, then blood glucose. A change under 5 /min or 10 mg/dL is "steady".
+ * - One measured beat per reading, about the signal that moved most since its
+ *   own last reading, each change over its own scale: 20 /min of heart rate
+ *   weighs as much as 15 mg/dL of glucose. A change under 5 /min or 10 mg/dL is
+ *   "steady", and a change past its steady band leads a steady one whatever
+ *   their weights. A tie, or a first reading, goes to heart rate, then blood
+ *   glucose.
  * - Sensor glucose (a continuous monitor) is its own signal: its change is
  *   taken against the sensor reading before, never against blood, and its
  *   windows are its own. It trails blood glucose by several minutes, and its
@@ -18,7 +20,7 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  * - A narrated insulin beat wherever glucose rose 20 mg/dL or more (blood, or
  *   the sensor when the reading has no blood value): insulin is described,
  *   never measured, so it carries no value.
- * - Red windows: consecutive readings past a threshold from
+ * - Red windows: consecutive readings of one measure past a threshold from
  *   `day-thresholds.json` (placeholders for Robin to confirm). Heart rate
  *   counts only while still; a reading with unknown activity is not judged.
  *   Each window opens with a derived beat at its highest value.
@@ -122,18 +124,32 @@ const SENSOR_BODY: Readonly<Record<Direction, string>> = {
 const sensorOf = (reading: DayReading | null): number | null =>
   reading?.sensorGlucoseMgDl ?? null;
 
+/** Each measure's last value before a reading; null when it has none yet that day. */
+type Previous = Readonly<{
+  heartRate: number | null;
+  glucose: number | null;
+  sensor: number | null;
+}>;
+
+const NOTHING_BEFORE: Previous = { heartRate: null, glucose: null, sensor: null };
+
 /**
- * For each reading, the last sensor value before it. Heart rate often comes
- * every minute and the sensor every few, so the reading just before is
- * rarely a sensor one.
+ * For each reading, each measure's last value before it. Readings are paired
+ * by minute and the measures come at their own pace (heart rate often every
+ * minute, glucose every few), so the reading just before may hold only
+ * another measure. Each change is taken against the measure's own last value.
  */
-const lastSensorBefore = (sorted: readonly DayReading[]): readonly (number | null)[] =>
-  sorted.reduce<{ last: number | null; out: readonly (number | null)[] }>(
+const previousValues = (sorted: readonly DayReading[]): readonly Previous[] =>
+  sorted.reduce<{ last: Previous; out: readonly Previous[] }>(
     (acc, reading) => ({
-      last: sensorOf(reading) ?? acc.last,
+      last: {
+        heartRate: reading.heartRatePerMin ?? acc.last.heartRate,
+        glucose: reading.glucoseMgDl ?? acc.last.glucose,
+        sensor: sensorOf(reading) ?? acc.last.sensor,
+      },
       out: [...acc.out, acc.last],
     }),
-    { last: null, out: [] },
+    { last: NOTHING_BEFORE, out: [] },
   ).out;
 
 const INSULIN_BODY =
@@ -147,29 +163,25 @@ type Candidate = Readonly<{
 }>;
 
 /** The signals a reading holds, in tie order: heart rate, blood glucose, sensor glucose. */
-const candidatesOf = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): readonly Candidate[] => {
+const candidatesOf = (reading: DayReading, before: Previous): readonly Candidate[] => {
   const all: readonly (Omit<Candidate, "value"> & { value: number | null })[] = [
     {
       measure: "heart_rate",
       specimen: null,
       value: reading.heartRatePerMin,
-      change: change(reading.heartRatePerMin, before?.heartRatePerMin ?? null),
+      change: change(reading.heartRatePerMin, before.heartRate),
     },
     {
       measure: "glucose",
       specimen: "blood",
       value: reading.glucoseMgDl,
-      change: change(reading.glucoseMgDl, before?.glucoseMgDl ?? null),
+      change: change(reading.glucoseMgDl, before.glucose),
     },
     {
       measure: "glucose",
       specimen: "sensor",
       value: sensorOf(reading),
-      change: change(sensorOf(reading), sensorBefore),
+      change: change(sensorOf(reading), before.sensor),
     },
   ];
   return all.filter((one): one is Candidate => one.value !== null);
@@ -181,15 +193,19 @@ const moved = (candidate: Candidate): number =>
     : Math.abs(candidate.change) /
       (candidate.measure === "heart_rate" ? SCALE.heart_rate : SCALE.glucose);
 
-const measuredBeat = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): DayBeat | null => {
+const isSteady = (candidate: Candidate): boolean =>
+  directionOf(candidate.measure, candidate.change) === "steady";
+
+/** A change past its steady band leads a steady one; otherwise the larger weighted change. */
+const leads = (candidate: Candidate, best: Candidate): boolean =>
+  isSteady(candidate) === isSteady(best)
+    ? moved(candidate) > moved(best)
+    : isSteady(best);
+
+const measuredBeat = (reading: DayReading, before: Previous): DayBeat | null => {
   const event = reading.event ?? "Reading";
-  const chosen = candidatesOf(reading, before, sensorBefore).reduce<Candidate | null>(
-    (best, candidate) =>
-      best === null || moved(candidate) > moved(best) ? candidate : best,
+  const chosen = candidatesOf(reading, before).reduce<Candidate | null>(
+    (best, candidate) => (best === null || leads(candidate, best) ? candidate : best),
     null,
   );
   if (chosen === null) return null;
@@ -225,15 +241,11 @@ const measuredBeat = (
   };
 };
 
-const insulinBeat = (
-  reading: DayReading,
-  before: DayReading | null,
-  sensorBefore: number | null,
-): DayBeat | null => {
+const insulinBeat = (reading: DayReading, before: Previous): DayBeat | null => {
   const rise =
     reading.glucoseMgDl !== null
-      ? change(reading.glucoseMgDl, before?.glucoseMgDl ?? null)
-      : change(sensorOf(reading), sensorBefore);
+      ? change(reading.glucoseMgDl, before.glucose)
+      : change(sensorOf(reading), before.sensor);
   if (rise === null || rise < INSULIN_RISE) return null;
   return {
     time: reading.time,
@@ -294,9 +306,9 @@ const glucoseRule = (
 };
 
 /**
- * Glucose windows of one specimen. Blood runs over every reading, as before;
- * sensor runs over the readings that carry a sensor value, so a blood or
- * heart-rate reading between two sensor readings does not split a window.
+ * Glucose windows of one specimen, run over the readings that carry that
+ * specimen's value, so a reading holding only another measure does not split
+ * a window.
  */
 const glucoseWindows = (
   sorted: readonly DayReading[],
@@ -306,10 +318,7 @@ const glucoseWindows = (
 ): readonly RedWindow[] => {
   const valueOf = (reading: DayReading): number | null =>
     specimen === "sensor" ? sensorOf(reading) : reading.glucoseMgDl;
-  const readings =
-    specimen === "sensor"
-      ? sorted.filter((reading) => valueOf(reading) !== null)
-      : sorted;
+  const readings = sorted.filter((reading) => valueOf(reading) !== null);
   const low =
     profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
   // One pass per side, so a run that jumps from below the range to above it
@@ -347,7 +356,7 @@ export const redWindows = (
 ): readonly RedWindow[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const heart = runsOf(
-    sorted,
+    sorted.filter((reading) => reading.heartRatePerMin !== null),
     (reading) => heartBreach(reading, thresholds),
     (reading) => reading.heartRatePerMin ?? 0,
   ).map((run): RedWindow => ({
@@ -423,12 +432,12 @@ export const dayBeats = (
 ): readonly DayBeat[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const windows = redWindows(sorted, profile, thresholds);
-  const sensorBefore = lastSensorBefore(sorted);
+  const previous = previousValues(sorted);
   return sorted.flatMap((reading, index) => {
-    const before = sorted[index - 1] ?? null;
+    const before = previous[index] ?? NOTHING_BEFORE;
     return [
-      measuredBeat(reading, before, sensorBefore[index] ?? null),
-      insulinBeat(reading, before, sensorBefore[index] ?? null),
+      measuredBeat(reading, before),
+      insulinBeat(reading, before),
       ...windows.filter((window) => window.from === reading.time).map(windowBeat),
     ].filter((beat): beat is DayBeat => beat !== null);
   });

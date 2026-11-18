@@ -121,8 +121,10 @@ const readOpenType = async (path: string): Promise<Uint8Array | null> => {
 /** Selecta when Regular and Medium are installed and usable, else null. */
 const brandFonts = async (doc: PDFDocument, dir: string): Promise<Fonts | null> => {
   const [regular, emphasis, italic] = await Promise.all(
+    // Read at run time, not bundled: without the hint the export route's
+    // build trace takes in the whole project.
     [BRAND_FILES.regular, BRAND_FILES.emphasis, BRAND_FILES.italic].map((file) =>
-      readOpenType(join(dir, file)),
+      readOpenType(join(/* turbopackIgnore: true */ dir, file)),
     ),
   );
   if (regular === null || emphasis === null) return null;

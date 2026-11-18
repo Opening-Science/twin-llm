@@ -104,6 +104,55 @@ request gets its own folder under the setup's `work/` for its audio, removed whe
 request ends. The log has the call, the language and the timings, never the text or the
 audio.
 
+## The app's routes
+
+The browser never talks to the sidecar. It calls the app, which checks the request and
+passes it on (`features/voice/`). All three need a signed-in person; the two that carry
+speech sit behind the unlock gate like the chat.
+
+| Route                                  | In                   | Out                                                        |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------- |
+| `GET /api/voice/status`                | nothing              | `{ on, languages }`; `on` is false while voice is off      |
+| `POST /api/voice/transcribe?language=` | the WAV              | `{ text, language, timings: { audioMs, sttMs, totalMs } }` |
+| `POST /api/voice/speak`                | `{ text, language }` | `audio/wav`                                                |
+
+`totalMs` is the whole request as the app saw it, so the three timings say how long the
+person spoke, how long the sidecar took and what the route added. A failure is
+`{ code, error }` with the sentence from the table above: 503 while voice is off or down,
+504 on a timeout, 502 for the sidecar's own failure, 400 for a recording it cannot read and
+422 when nothing was heard.
+
+## Push to talk
+
+When the sidecar answers, the chat's prompt bar shows a microphone button and the voice
+language beside it (EN or DE, remembered in this browser; a German browser starts on DE).
+Nothing about voice is drawn while it is off.
+
+Hold the button, or hold Space or Enter on it, and speak; let go to send. A hold of 59
+seconds sends itself, so it stays under the sidecar's limit, and leaving the page mid-hold
+lets go of the microphone. The browser records with its own encoder, then decodes, mixes
+down to one channel and resamples to 16 kHz before the upload (`infrastructure/speech/recorder.ts`), and lets go of the
+microphone. The text goes out as a typed prompt would, on the models and mode the bar
+shows; when it cannot (no model, a mode problem, answers still streaming) it waits in the
+box. The hint line then says what took how long, such as "Heard 1.8s of German, written
+down in 0.6s (0.7s in all)". A blocked or missing microphone, or a failure, is one
+sentence beside the button.
+
+## Reading answers aloud
+
+The answer to a spoken question is read back once it is finished, in the language it was
+asked in: the first finished answer of that turn with words to say, once. One that failed,
+was stopped or is withheld is not read. Every other finished answer gets a Read aloud
+button while voice is on, in the language picked on the prompt bar; pressed again it
+stops. One answer plays at a time.
+
+What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
+code, tables, images, web addresses and bracketed citation ids are left out, a link keeps
+its words, and a heading or list item ends as a sentence. The text goes to
+`/api/voice/speak` in pieces of whole sentences of up to 400 characters, so the first
+plays while the next is made, and nothing is kept once it has played. A spoken turn is
+known only to the open page; a reloaded thread is not read back on its own.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
