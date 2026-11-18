@@ -422,14 +422,15 @@ The `RUN_LIVE=1` tests that need only a migrated Postgres (#430). Plain `bun tes
 DATABASE_URL=postgresql://<user>@127.0.0.1:<port>/<throwaway, migrated> bun run test:live-db
 ```
 
-Use a throwaway database: the tests write and delete synthetic warehouse rows (cohort `synthea-v4-seed1099`) and made-up GBD imports, and refuse to start if those are already there.
+Use a throwaway database: the tests write and delete synthetic warehouse rows (cohorts `synthea-v4-seed1099` and `synthea-v4-seed1098`) and made-up GBD imports, and refuse to start if those are already there.
 
 | Runs                                                 | Tests |
 | ---------------------------------------------------- | ----: |
 | `features/data-explorer/cohort-queries.live.test.ts` |     7 |
-| `packages/gbd-local/store.live.test.ts`              |     6 |
+| `packages/gbd-local/store.live.test.ts`              |     7 |
 | `features/gbd/gbd-import-routes.live.test.ts`        |     2 |
 | `scripts/gbd/import.live.test.ts`                    |     2 |
+| `scripts/synthetic-scans/ingest.live.test.ts`        |     2 |
 
 Left out, because they need more than a database:
 
@@ -447,7 +448,7 @@ Left out, because they need more than a database:
 
 `scripts/db/live-db-tests.test.ts` (in plain `bun test`) fails when a test file that reads `RUN_LIVE` is in neither list, so a new database live test has to be added to the run (and the count) or excluded with a reason.
 
-- Good: `test:live-db OK: 17 pass, 0 skip, 0 fail`.
+- Good: `test:live-db OK: 20 pass, 0 skip, 0 fail`.
 - Last run: 2026-11-02 04:25 CET on a throwaway database (local Postgres 18, pgvector 0.8.6), after `migrate deploy` and again after `db:verify`: 17 pass, 0 skip, 0 fail. With one file forced to skip: `test:live-db FAIL: 4 skipped; 15 passed, expected 17`, exit 1.
 
 ## Parallel worktrees
