@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { checkExport, EXPORT_COPY } from "./export-notice";
+import { checkExport, confirmExport, EXPORT_COPY } from "./export-notice";
 
 /** A server that answers every request with `answer`, noting what was asked. */
 const answering =
@@ -44,5 +44,77 @@ describe("the export notice's check (#531)", () => {
     for (const answer of [error, odd, text]) {
       expect(await checkExport("t1", "markdown", answering([], answer))).toEqual(failed);
     }
+  });
+});
+
+describe("the export notice's download (#853)", () => {
+  const made = () =>
+    new Response(new Uint8Array([37, 80, 68, 70]), {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": 'attachment; filename="sleep-week.pdf"',
+      },
+    });
+
+  test("asks for the confirmed file and keeps the server's file name", async () => {
+    const asked: string[] = [];
+    const answer = await confirmExport("t1", "pdf", answering(asked, made));
+    expect(asked).toEqual(["/api/threads/t1/export?format=pdf&confirm=1"]);
+    expect(answer.status).toBe("made");
+    if (answer.status !== "made") return;
+    expect(answer.name).toBe("sleep-week.pdf");
+    expect([...new Uint8Array(await answer.file.arrayBuffer())]).toEqual([
+      37, 80, 68, 70,
+    ]);
+  });
+
+  test("a refusal or a failure shows the server's sentence, never a file", async () => {
+    const sentence = "The file could not be made, so nothing was recorded. Try again.";
+    const plain = (status: number) => () =>
+      new Response(sentence, {
+        status,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    for (const status of [403, 500]) {
+      expect(await confirmExport("t1", "markdown", answering([], plain(status)))).toEqual(
+        {
+          status: "failed",
+          line: sentence,
+        },
+      );
+    }
+    const locked = () =>
+      Response.json(
+        {
+          code: "PERSONAL_DATA_LOCKED",
+          message: "Your data is locked. Unlock it to continue.",
+        },
+        { status: 423 },
+      );
+    expect(await confirmExport("t1", "pdf", answering([], locked))).toEqual({
+      status: "failed",
+      line: "Your data is locked. Unlock it to continue.",
+    });
+  });
+
+  test("an error page or an empty answer gets the plain failure line", async () => {
+    const failed = { status: "failed" as const, line: EXPORT_COPY.notMade };
+    const html = () =>
+      new Response("<!DOCTYPE html><html>Internal error</html>", {
+        status: 500,
+        headers: { "content-type": "text/html" },
+      });
+    const empty = () => new Response(null, { status: 502 });
+    for (const answer of [html, empty]) {
+      expect(await confirmExport("t1", "pdf", answering([], answer))).toEqual(failed);
+    }
+  });
+
+  test("a lost connection gets the plain failure line", async () => {
+    const offline = () => Promise.reject(new TypeError("Failed to fetch"));
+    expect(await confirmExport("t1", "pdf", offline)).toEqual({
+      status: "failed",
+      line: EXPORT_COPY.notMade,
+    });
   });
 });

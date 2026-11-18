@@ -75,7 +75,7 @@ export const EmptyState = ({
         <IncognitoToggle incognito={incognito} />
       </div>
     ) : null}
-    <h2 className="text-display">TwinLLM</h2>
+    <h1 className="text-display">TwinLLM</h1>
     <p className="text-muted-foreground max-w-xl text-[15px] leading-relaxed">
       {EMPTY_LINE}
     </p>
