@@ -105,6 +105,11 @@ prompt.
 - Never positions, contours, vertices, or glb bytes.
 - Geometry lives on `VitronicSnapshot.markers` / `measures` and in the viewer.
 
+## Reference scans
+
+The reference set recorded before the scanner moves on 15 December 2026, where
+it is kept and the checklist for it: [vitronic-reference-scans.md](vitronic-reference-scans.md).
+
 ## API reference
 
 The integration was written against BodyLoop API 0.13.7, whose OpenAPI document VUSE
