@@ -43,12 +43,13 @@ const NOTES = [
 describe("KioskScreen", () => {
   const html = renderToStaticMarkup(createElement(KioskScreen, { day: DAY }));
 
-  test("opens on the attract loop: the title, the call to press, and the research line", () => {
+  test("opens on the attract loop: the call to press, and the tour's first place", () => {
     expect(text(html)).toEqual([
       KIOSK_TITLE,
       KIOSK_SUBTITLE,
       KIOSK_ATTRACT,
       KIOSK_ATTRACT_NOTE,
+      "The twin shows: Heart.",
       KIOSK_FOOTER,
     ]);
   });
