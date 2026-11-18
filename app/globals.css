@@ -2005,6 +2005,11 @@
   z-index: 10;
   background: transparent;
   cursor: pointer;
+  /* A tap is a press at once: no double-tap zoom wait, no grey flash, no
+     long-press callout on a touch panel. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .kiosk-press:focus-visible {
