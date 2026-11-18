@@ -1,7 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useReducer, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
 
@@ -16,9 +23,11 @@ import {
   KIOSK_START,
   KIOSK_SUBTITLE,
   KIOSK_TITLE,
+  kioskShows,
 } from "./kiosk-copy";
 import { kioskFocus } from "./kiosk-focus";
 import { ATTRACT, type KioskEvent, kioskSession } from "./kiosk-session";
+import { kioskTourStops, TOUR_STEP_MS, tourBeat } from "./kiosk-tour";
 import { keyboardTrigger, type KioskTrigger } from "./kiosk-trigger";
 
 const KioskTwin = dynamic(() => import("./kiosk-twin").then((mod) => mod.KioskTwin), {
@@ -36,7 +45,8 @@ const DEFAULT_TRIGGERS: readonly KioskTrigger[] = [keyboardTrigger];
  * portrait panel (1080 × 1920 and up); on a landscape screen the same column
  * stands in the centre.
  *
- * Nobody there: the attract loop. The twin turns and the screen asks for a
+ * Nobody there: the attract loop. The twin turns, lights the places the day
+ * will visit one after another (`kiosk-tour.ts`), and the screen asks for a
  * press. A press (anywhere on the screen, or from a trigger such as the
  * keyboard) starts one day in the kiosk-day shape (`docs/kiosk-day.md`),
  * built on the server; each press goes on a beat and the twin turns to the
@@ -67,7 +77,10 @@ export const KioskScreen = ({
   const back = useCallback(() => dispatch({ type: "back", nowMs: Date.now() }), []);
   const playing = session.phase === "day";
   const index = playing ? session.beat : null;
-  const beat = index === null ? undefined : day.beats[index];
+  const stops = useMemo(() => kioskTourStops(day), [day]);
+  const [tourStep, setTourStep] = useState(0);
+  const shown = playing ? index : tourBeat(stops, tourStep);
+  const beat = shown === null ? undefined : day.beats[shown];
   // One focus object per beat, so the twin turns only when the beat changes.
   const focus = useMemo(() => (beat ? kioskFocus(beat) : null), [beat]);
 
@@ -86,10 +99,14 @@ export const KioskScreen = ({
     return () => window.clearInterval(timer);
   }, [playing]);
 
-  // Back in the attract loop, focus leaves whatever the last visitor reached.
+  // Back in the attract loop, focus leaves whatever the last visitor reached,
+  // and the tour starts again from its first place.
   useEffect(() => {
     if (playing) return;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    setTourStep(0);
+    const timer = window.setInterval(() => setTourStep((step) => step + 1), TOUR_STEP_MS);
+    return () => window.clearInterval(timer);
   }, [playing]);
 
   return (
@@ -112,6 +129,9 @@ export const KioskScreen = ({
           <div className="kiosk-attract">
             <p className="kiosk-attract-call">{KIOSK_ATTRACT}</p>
             <p className="kiosk-attract-note">{KIOSK_ATTRACT_NOTE}</p>
+            {focus ? (
+              <p className="kiosk-attract-shows">{kioskShows(focus.label)}</p>
+            ) : null}
           </div>
         )}
       </div>
