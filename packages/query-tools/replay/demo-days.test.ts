@@ -37,6 +37,17 @@ const stream = (
 
 const REFERENCE = day(DEMO_PERSON_A, DEMO_REFERENCE_DAY);
 
+/** The reference day's sensor glucose at a local time; a missing one throws. */
+const sensorAt = (time: string): number => {
+  const found = stream(REFERENCE, "glucose", "sensor").find(
+    (reading) => clock(reading) === time,
+  );
+  if (found === undefined || !isAvailable(found)) {
+    throw new Error(`no sensor glucose at ${time}`);
+  }
+  return found.value;
+};
+
 describe("the demo days", () => {
   test("every day of both people parses, is synthetic and carries the notice", () => {
     const all = [...demoReplayDays(DEMO_PERSON_A), ...demoReplayDays(DEMO_PERSON_B)];
@@ -182,13 +193,15 @@ describe("the reference day holds the evidence for all sixteen phases", () => {
   });
 
   test("sensor glucose rises before waking, after breakfast and after dinner", () => {
-    const value = (time: string): number =>
-      stream(REFERENCE, "glucose", "sensor").find((reading) => clock(reading) === time)
-        ?.value ?? 0;
-    expect(value("06:30")).toBeGreaterThan(value("04:00") + 8);
-    expect(value("08:15")).toBeGreaterThan(value("07:30") + 30);
-    expect(value("20:15")).toBeGreaterThan(140);
-    expect(value("18:45")).toBeLessThan(value("18:00") - 10);
+    expect(sensorAt("06:30")).toBeGreaterThan(sensorAt("04:00") + 8);
+    expect(sensorAt("08:15")).toBeGreaterThan(sensorAt("07:30") + 30);
+    expect(sensorAt("20:15")).toBeGreaterThan(140);
+    expect(sensorAt("18:45")).toBeLessThan(sensorAt("18:00") - 10);
+  });
+
+  test("a time without a sensor value fails the check, never reads as zero", () => {
+    expect(() => sensorAt("10:00")).toThrow("no sensor glucose at 10:00");
+    expect(() => sensorAt("18:50")).toThrow("no sensor glucose at 18:50");
   });
 
   test("sensor glucose is missing from 10:00 to 10:45, with a reason and no value", () => {
