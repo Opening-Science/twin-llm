@@ -1335,6 +1335,79 @@ The human shares stay at 25 % and 31 %. No other headline figure, and none
 for qwen3:8b, the pilot or the agents, changes. The tables above keep the
 figures as first reported; none of the conclusions drawn from them moves.
 
+## Citation rule on, 18 Nov 2026 (#612)
+
+#632 put a citation rule into the `guideline_search` tool text: a sentence
+of the Answer that rests on a passage ends with the passage's id
+(`[ean-als-2024]`), and a claim no passage supports with `[unsupported]`.
+#646 scores it (`score/claim-sources.ts`, harness.md "Claim sources").
+These runs ask v1 and v1h again, qwen3:4b first and then qwen3:8b, with the
+rule in the tool text, to see whether the models follow it.
+
+### Setup
+
+- Code: main at `876d0f60` for all four runs, open-twin `2fd26911`.
+- Database: a fresh throwaway Postgres 18.6 with pgvector on
+  127.0.0.1:5805, built as in question-set.md "Refresh": migrations, the
+  synthea-v4-seed42 patient files (`contentSha256` `f4941fab…ba09eb`, the
+  pin), the synthetic wearable series (generator v2, seed 42, 30 subjects,
+  16,449 readings over 90 days ending 2026-10-01, the same count as in
+  October) and the guideline catalogue (`bun run eval:guidelines`). No
+  guideline full text is on this machine, so all ten titles are catalogue
+  chunks: a hit gives id, title, society, year and DOI, and no passage.
+- Drift checks before any model ran: the v1 and v1h keys rebuilt from the
+  cohort differ from the committed keys only in `open_twin_sha` (the pin
+  moved in #650); every entry is the same. The runs read the committed
+  keys (v1 `77f3083fdb6f…`, v1h `6810ca88b970…`).
+- Models: Ollama on this machine, both Q4_K_M, one at a time on the GPU.
+  Sampling none set, timeout 300 s, no cache hits. S4 was skipped as
+  `MISSING_ENV` (no GBD settings), 12 v1 lines and 5 v1h lines.
+
+| Run id                         | Model             | Set | Lines | Answered | Errors | Model time |
+| ------------------------------ | ----------------- | --- | ----- | -------- | ------ | ---------- |
+| `2026-11-17-qwen3-4b-v1-cite`  | `ollama:qwen3:4b` | v1  | 146   | 134      | 0      | 81.2 min   |
+| `2026-11-18-qwen3-4b-v1h-cite` | `ollama:qwen3:4b` | v1h | 44    | 39       | 0      | 22.0 min   |
+| `2026-11-18-qwen3-8b-v1-cite`  | `ollama:qwen3:8b` | v1  | 146   | 134      | 0      | 11.0 min   |
+| `2026-11-18-qwen3-8b-v1h-cite` | `ollama:qwen3:8b` | v1h | 44    | 39       | 0      | 4.0 min    |
+
+Model time is the sum of the lines' total times. The first run started on
+17 November and finished on the 18th, so its id carries the start date and
+its `meta.json` the end date.
+
+### Claim sources
+
+Over the answers whose turn returned a guideline hit (only S3 asks for one).
+Shares of claims, and of answers for "fully covered", with the Wilson 95 %
+interval. The October rows are the S3 reruns after #272 and the first v1h
+run, both with the same catalogue loaded and no citation rule, rescored
+with the current scorer.
+
+| Run                        | Answers | Claims | Cited         | Marked unsupported | Invented id   | Uncited            | Fully covered |
+| -------------------------- | ------- | ------ | ------------- | ------------------ | ------------- | ------------------ | ------------- |
+| qwen3:4b S3, 30 Oct (r272) | 13      | 111    | 0/111 (0–3 %) | 0/111 (0–3 %)      | 0/111 (0–3 %) | 111/111 (97–100 %) | 0/13 (0–23 %) |
+| qwen3:8b S3, 30 Oct (r272) | 5       | 10     | 0/10 (0–28 %) | 0/10 (0–28 %)      | 0/10 (0–28 %) | 10/10 (72–100 %)   | 0/5 (0–43 %)  |
+| qwen3:4b v1h, 1 Nov        | 5       | 5      | 0/5 (0–43 %)  | 0/5 (0–43 %)       | 0/5 (0–43 %)  | 5/5 (57–100 %)     | 0/5 (0–43 %)  |
+| qwen3:4b v1, rule on       | 14      | 22     | 0/22 (0–15 %) | 2/22 (3–28 %)      | 0/22 (0–15 %) | 20/22 (72–97 %)    | 2/14 (4–40 %) |
+| qwen3:4b v1h, rule on      | 4       | 4      | 0/4 (0–49 %)  | 0/4 (0–49 %)       | 0/4 (0–49 %)  | 4/4 (51–100 %)     | 0/4 (0–49 %)  |
+| qwen3:8b v1, rule on       | 3       | 5      | 0/5 (0–43 %)  | 0/5 (0–43 %)       | 0/5 (0–43 %)  | 5/5 (57–100 %)     | 0/3 (0–56 %)  |
+| qwen3:8b v1h, rule on      | 0       | 0      | —             | —                  | —             | —                  | —             |
+
+No Answer sentence in any run cites a returned id. The rule shows only in
+two qwen3:4b answers (Q-S3-01, repeats 1 and 2), which end with
+`[unsupported]` after saying that the ALS guideline's text on ventilation
+is not in the library: both fully covered. qwen3:8b called
+`guideline_search` on 3 of 14 S3 lines in v1 and on none of the 5 in v1h,
+so it had almost nothing to cite.
+
+The ids do appear, but outside the Answer. In 6 of the 14 qwen3:4b v1
+answers with a hit (Q-S3-01 repeat 3, Q-S3-03 to Q-S3-06, Q-S3-12) and 1 of
+4 in v1h (Q-S3-H02), the returned id is listed under "Evidence Used",
+which the matcher does not read; in October none was. The Answer itself
+names the DOI or its URL instead (Q-S3-01 repeat 3, Q-S3-02, Q-S3-05,
+Q-S3-07, Q-S3-08), which the matcher reads as no citation. The response format asks for evidence
+keys under "Evidence Used" and the citation rule asks for ids in the
+Answer; the 4B model follows the first.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
