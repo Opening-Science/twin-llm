@@ -236,6 +236,75 @@ describe("answerClaims", () => {
   });
 });
 
+describe("sentence ends around marks (#847)", () => {
+  const statuses = (answer: string) =>
+    answerClaims(reply(answer), parts).map((claim) => [claim.text, claim.status]);
+
+  test("a bold sentence ends at its stop, inside the bold", () => {
+    expect(
+      statuses(
+        "**Riluzole is the standard first therapy.** Sleep quality falls with age in adults [PMC1234567].",
+      ),
+    ).toEqual([
+      ["**Riluzole is the standard first therapy.**", "uncited"],
+      ["Sleep quality falls with age in adults.", "cited"],
+    ]);
+  });
+
+  test("a quoted sentence ends at its stop, inside the quotes", () => {
+    expect(
+      statuses(
+        'The guideline says "offer riluzole early." Sleep quality falls with age [PMC1234567].',
+      ),
+    ).toEqual([
+      ['The guideline says "offer riluzole early."', "uncited"],
+      ["Sleep quality falls with age.", "cited"],
+    ]);
+  });
+
+  test("a stop inside brackets, then the id, ends the sentence", () => {
+    expect(
+      statuses(
+        "Riluzole slows the disease (by a few months.) [ean-als-2024] Next we look at sleep in adults.",
+      ),
+    ).toEqual([
+      ["Riluzole slows the disease (by a few months.)", "cited"],
+      ["Next we look at sleep in adults.", "uncited"],
+    ]);
+  });
+
+  test("No. ends a sentence unless a number follows", () => {
+    expect(
+      statuses(
+        "Does sleep drop with age? No. [PMC1234567] Riluzole is offered early in every case.",
+      ),
+    ).toEqual([
+      ["Does sleep drop with age?", "uncited"],
+      ["Riluzole is offered early in every case.", "uncited"],
+    ]);
+    expect(statuses("Trial No. 4 found longer sleep in adults [PMC1234567].")).toEqual([
+      ["Trial No. 4 found longer sleep in adults.", "cited"],
+    ]);
+  });
+
+  test("a sentence wrapped over two lines is one claim", () => {
+    expect(
+      statuses("Sleep quality falls with age\nin most adults [PMC1234567]."),
+    ).toEqual([["Sleep quality falls with age in most adults.", "cited"]]);
+  });
+
+  test("a new bullet still starts a new sentence", () => {
+    expect(
+      statuses(
+        "- Sleep quality falls with age\n- Riluzole is offered early [ean-als-2024].",
+      ),
+    ).toEqual([
+      ["Sleep quality falls with age", "uncited"],
+      ["Riluzole is offered early.", "cited"],
+    ]);
+  });
+});
+
 describe("claimCoverage", () => {
   test("counts claims by status", () => {
     const claims = answerClaims(
