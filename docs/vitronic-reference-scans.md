@@ -25,8 +25,9 @@ checklist); the table above is what each of them needs.
 
 - Every scan is synced into TwinLLM on the operator's machine (Digital Twin →
   subject → Sync). The mesh lands in gitignored `data/vitronic/<userId>/<sha256>.glb`
-  (or `VITRONIC_DATA_DIR`), sealed with the owner's keys; the measures in
-  `VitronicSnapshot`, sealed too ([vitronic.md](vitronic.md)).
+  (or `VITRONIC_DATA_DIR`); the measures in `VitronicSnapshot`
+  ([vitronic.md](vitronic.md)). In personal mode both are sealed with the
+  owner's keys, and the mesh file is then `<sha256>.glb.enc`.
 - A copy of the scanner's own export goes to the same machine's encrypted disk,
   outside every git checkout.
 - Nothing is uploaded anywhere else.
@@ -69,7 +70,7 @@ During the session:
 
 Before 15 December:
 
-- [ ] Every row's `glb_sha256` matches a file under `data/vitronic/`
+- [ ] Every row's `glb_sha256` matches a file under `data/vitronic/` (`.glb` or `.glb.enc`)
 - [ ] The scanner's own export copied to the encrypted disk
 - [ ] The list and the set backed up together, off GitHub
 - [ ] #614 closed with the number of people and scans only, no labels or ids
