@@ -22,6 +22,15 @@ describe("mockKioskDay", () => {
     expect(MOCK_DAY_REF).toBe("synthetic-mock-day");
   });
 
+  test("reads blood glucose only unless asked for the sensor too", () => {
+    const sensorLines = (glucose?: "both") =>
+      mockKioskDay("without_diabetes", glucose)
+        .beats.filter((beat) => beat.line.startsWith("Sensor glucose"))
+        .map((beat) => beat.time);
+    expect(sensorLines()).toEqual([]);
+    expect(sensorLines("both")).toHaveLength(1);
+  });
+
   test("with diabetes reads the same day against the other thresholds", () => {
     const without = mockKioskDay("without_diabetes");
     const withDiabetes = mockKioskDay("with_diabetes");

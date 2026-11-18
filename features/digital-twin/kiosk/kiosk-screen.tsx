@@ -26,7 +26,7 @@ import {
   kioskHintText,
   kioskShows,
 } from "./kiosk-copy";
-import { kioskFocus } from "./kiosk-focus";
+import { beatFocus } from "../day/beat-focus";
 import { kioskHint } from "./kiosk-hint";
 import { ATTRACT, type KioskEvent, kioskSession } from "./kiosk-session";
 import { kioskTourStops, TOUR_STEP_MS, tourBeat } from "./kiosk-tour";
@@ -84,7 +84,7 @@ export const KioskScreen = ({
   const shown = playing ? index : tourBeat(stops, tourStep);
   const beat = shown === null ? undefined : day.beats[shown];
   // One focus object per beat, so the twin turns only when the beat changes.
-  const focus = useMemo(() => (beat ? kioskFocus(beat) : null), [beat]);
+  const focus = useMemo(() => (beat ? beatFocus(beat) : null), [beat]);
 
   useEffect(() => {
     const stops = triggers.map((trigger) => trigger(press, back));
