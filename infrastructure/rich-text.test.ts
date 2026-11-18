@@ -98,7 +98,7 @@ describe("RichText blocks", () => {
     expect(render("[bad](javascript:alert(1)) and [ok](https://example.org)")).toBe(
       wrap(
         P(
-          `[bad](javascript:alert(1)) and <a href="https://example.org" target="_blank" rel="noreferrer" class="text-primary underline underline-offset-2">ok</a>`,
+          `[bad](javascript:alert(1)) and <a href="https://example.org" target="_blank" rel="noreferrer" class="text-primary underline underline-offset-2">ok<span class="sr-only"> (opens in a new tab)</span></a>`,
         ),
       ),
     );

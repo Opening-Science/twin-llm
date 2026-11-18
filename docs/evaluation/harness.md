@@ -529,6 +529,9 @@ uncited. `eval:report` adds a "Claim sources" section only when some line
 returned literature, with each status's share of the claims and the share of
 answers with at least one claim and every claim cited or marked unsupported, the bar #612 sets.
 Wilson 95 % intervals. An extra metric: the eight criteria do not change.
+The Lab's Evaluation runs page (`/lab/evaluations`) shows that table under
+the run's scores, with a CSV of one row per share; a run whose report has no
+such section shows nothing for it.
 
 The harness runs the chat turn without wearable context, so a run today
 writes no `wearable.sources.*` row and its wearable tools return synthetic
