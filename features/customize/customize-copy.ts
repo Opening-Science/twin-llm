@@ -43,7 +43,7 @@ export const CUSTOMIZE_COPY: Translated<CustomizeCopy> = {
   de: {
     title: "Anpassen",
     intro:
-      "Skills, die du in einem Chat ausführst, die Agenten darauf, deine Zwillingsnotizen, geplante Skills, die Daten, die TwinLLM für dich lesen darf, die Geräte und Dienste, die du verbindest, ob etwas aus deinen Daten lernen darf, und jede Wahl zum Behalten oder Zurückhalten unter Einstellungen. Jeder Teil sagt, was er liest, bevor er läuft.",
+      "Skills, die du in einem Chat ausführst, die Agenten darauf, deine Notizen, geplante Skills, die Daten, die TwinLLM für dich lesen darf, die Geräte und Dienste, die du verbindest, ob etwas aus deinen Daten lernen darf, und jede Wahl zum Behalten oder Zurückhalten unter Einstellungen. Jeder Teil sagt, was er liest, bevor er läuft.",
     navLabel: "Anpassen",
     tabs: {
       skills: "Skills",
