@@ -209,6 +209,21 @@ describe("statedFrom", () => {
     expect(statedFrom(ouraHrv, "52 ms", close)).toBeNull();
   });
 
+  test("only a reading of the same day or a neighbouring one, not a coincidence weeks off", () => {
+    const weekLater = { ...whoopHrvDayBefore, key: "whoop.recovery.hrv.2026-01-09" };
+    const dayAfter = { ...whoopHrvDayBefore, key: "whoop.recovery.hrv.2026-01-03" };
+    expect(statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, weekLater]))).toBeNull();
+    expect(statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, dayAfter]))).toEqual({
+      source: "whoop",
+      day: "2026-01-03",
+      verdict: "wrong_day",
+    });
+    // A far reading of the same value does not make a near one ambiguous.
+    expect(
+      statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, dayAfter, weekLater])),
+    ).toEqual({ source: "whoop", day: "2026-01-03", verdict: "wrong_day" });
+  });
+
   test("no reading holds it, or the cited value is not a number", () => {
     expect(statedFrom(ouraHrv, "61 ms", cells())).toBeNull();
     expect(statedFrom({ ...ouraHrv, value: "n/a" }, "52 ms", cells())).toBeNull();

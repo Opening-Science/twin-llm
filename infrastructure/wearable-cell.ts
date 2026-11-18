@@ -188,10 +188,23 @@ export type StatedFrom = Readonly<{
 export const isMiscitedVerdict = (verdict: unknown): verdict is MiscitedVerdict =>
   (MISCITED_VERDICTS as readonly unknown[]).includes(verdict);
 
+const DAY_MS = 86_400_000;
+
+/**
+ * Whether two readings' days are the same or next to each other. Readings
+ * with no real day are only near each other.
+ */
+const nearDay = (a: string | null, b: string | null): boolean => {
+  if (a === null || b === null) return a === b;
+  return Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) <= DAY_MS;
+};
+
 /**
  * Where `stated` came from, for a cited reading it does not match: the one
- * other offered reading of its measure whose value it is. Null when it is
- * none of them, more than one, or the cited reading is not a number.
+ * other offered reading of its measure, on the cited day or a neighbouring
+ * one, whose value it is. A match further off could be coincidence among the
+ * many readings offered, so it is not named. Null when it is none of them,
+ * more than one, or the cited reading is not a number.
  */
 export const statedFrom = (
   cited: Parameters<typeof cellOf>[0],
@@ -203,7 +216,7 @@ export const statedFrom = (
   const trace = traceStated(
     stated,
     cell.measure,
-    offered.filter((other) => other.key !== cell.key),
+    offered.filter((other) => other.key !== cell.key && nearDay(other.day, cell.day)),
   );
   const verdict = citationVerdict(cell, trace);
   if (trace.kind !== "one" || !isMiscitedVerdict(verdict)) return null;
