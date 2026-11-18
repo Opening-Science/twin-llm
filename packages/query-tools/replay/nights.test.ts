@@ -87,6 +87,19 @@ describe("ten nights of person A", () => {
     expect(on("2026-10-27").status.evidence).toContain("2026-10-26/night-resting-hr");
   });
 
+  test("every evidence id names its day, the night's own reading included", () => {
+    for (const night of NIGHTS) {
+      const delta = night.resting_delta;
+      const ids = [
+        ...night.status.evidence,
+        ...(delta.state === "available" ? delta.evidence : []),
+      ];
+      for (const id of ids) expect(id).toMatch(/^\d{4}-\d{2}-\d{2}\/[^/]+$/);
+    }
+    expect(on("2026-10-27").status.evidence).toContain("2026-10-27/night-resting-hr");
+    expect(on("2026-10-27").status.evidence).not.toContain("night-resting-hr");
+  });
+
   test("the sentence says what the numbers show, without a cause", () => {
     expect(on("2026-10-27").sentence).toBe(
       "Resting heart rate 62 /min, 8 /min above the personal baseline of 54 /min. The second raised night or more in a row.",
