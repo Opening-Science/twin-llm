@@ -185,11 +185,18 @@ export const partB = (
 const fixed = (value: number | null | undefined, digits = 2) =>
   value === null || value === undefined ? "–" : value.toFixed(digits);
 
+const pValue = (value: number | null | undefined) =>
+  value === null || value === undefined
+    ? "–"
+    : value < 0.001
+      ? "< 0.001"
+      : value.toFixed(3);
+
 export const partBMarkdown = (result: PartB, note: string): string => {
   const row = (name: string, test: Welch | null) => {
     const holmed = result.holm[name];
     const supported = holmed?.reject === true && (test?.difference ?? 0) > 0;
-    return `| ${name} | ${fixed(test?.difference)} | ${fixed(test?.t)} | ${fixed(test?.df, 1)} | ${fixed(test?.p, 3)} | ${holmed === undefined ? "–" : `${fixed(holmed.adjusted, 3)} (${supported ? "supported" : "not supported"})`} |`;
+    return `| ${name} | ${fixed(test?.difference)} | ${fixed(test?.t)} | ${fixed(test?.df, 1)} | ${pValue(test?.p)} | ${holmed === undefined ? "–" : `${pValue(holmed.adjusted)} (${supported ? "supported" : "not supported"})`} |`;
   };
   const reasons = EXCLUSION_REASONS.map(
     (reason) =>
