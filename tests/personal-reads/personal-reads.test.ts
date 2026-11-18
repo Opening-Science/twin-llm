@@ -764,6 +764,25 @@ type PageEntry = Audited &
 
 /** Pages (not API routes) that read wearable summaries → their audit rows. */
 const PERSONAL_READ_PAGES: Readonly<Record<string, PageEntry>> = {
+  "/dashboard": {
+    kind: "audited",
+    file: "app/(shell)/dashboard/page.tsx",
+    reader: "readConnectorSummaries(",
+    tools: ["personal.read.dashboard-page"],
+    call: (record) =>
+      readConnectorSummaries(
+        {
+          isPersonalMode: () => true,
+          getLatestOuraSummary: async () => SUMMARY,
+          getLatestWhoopSummary: async () => null,
+          getLatestGoogleHealthSummary: async () => null,
+          auditPersonalRead: auditPersonalRead(record.append),
+        },
+        ACTOR,
+        APP_USER,
+        "dashboard-page",
+      ),
+  },
   "/customize/connectors": {
     kind: "audited",
     file: "app/(shell)/customize/connectors/page.tsx",
