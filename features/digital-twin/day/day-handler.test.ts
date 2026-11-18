@@ -212,6 +212,17 @@ describe("GET /api/digital-twin/period/:subjectRef", () => {
     });
   });
 
+  test("reads the week and the 35 days its trends compare, no more", async () => {
+    const { deps, spans } = fakeDeps();
+    await getPeriod(deps, "syn-a", "period=week&end=2026-11-16");
+    expect(spans).toEqual([
+      {
+        from: new Date("2026-10-13T00:00:00.000Z"),
+        to: new Date("2026-11-16T23:59:59.999Z"),
+      },
+    ]);
+  });
+
   test("a bad period or end is refused before any read", async () => {
     const { deps, asked } = fakeDeps();
     expect((await getPeriod(deps, "syn-a", "period=year&end=2026-11-16")).status).toBe(

@@ -1,9 +1,18 @@
 import "server-only";
 
-import { type GlucoseProfile } from "@/packages/query-tools/day-beats";
-import { glucosePeriod } from "@/packages/query-tools/day-period";
-import { ANALYTICS_ROW_CAP, type ToolRefusal } from "@/packages/query-tools/refusals";
-import { GLUCOSE_LOINCS } from "@/packages/query-tools/show-my-day";
+import { DAY_THRESHOLDS, type GlucoseProfile } from "@/packages/query-tools/day-beats";
+import { type GlucosePeriod, glucosePeriod } from "@/packages/query-tools/day-period";
+import {
+  ANALYTICS_ROW_CAP,
+  mixedUnits,
+  ROW_CAP_EXCEEDED,
+  type ToolRefusal,
+} from "@/packages/query-tools/refusals";
+import {
+  GLUCOSE_LOINCS,
+  SENSOR_GLUCOSE_LOINC,
+  SENSOR_LAG_NOTE,
+} from "@/packages/query-tools/show-my-day";
 import { glucoseDays, PERIOD_DAYS } from "@/packages/query-tools/show-my-period";
 import { addDays } from "@/packages/query-tools/stats";
 import {
@@ -33,6 +42,7 @@ export type Period = keyof typeof PERIOD_DAYS;
 /** The codes a period reads: glucose, resting heart rate, HRV. */
 export const PERIOD_CODES: readonly string[] = [
   ...GLUCOSE_LOINCS,
+  SENSOR_GLUCOSE_LOINC,
   TREND_MEASURES.resting_hr.synthetic,
   TREND_MEASURES.hrv.synthetic,
 ];
@@ -58,20 +68,49 @@ const within = (row: CohortRow, span: Readonly<{ from: Date; to: Date }>): boole
   row.effectiveAt.getTime() >= span.from.getTime() &&
   row.effectiveAt.getTime() <= span.to.getTime();
 
+/** Sensor glucose over the period, or null without a sensor reading; never converted. */
+const sensorOf = (
+  rows: readonly CohortRow[],
+  profile: GlucoseProfile,
+): GlucosePeriod | ToolRefusal | null => {
+  if (rows.length === 0) return null;
+  if (rows.length > ANALYTICS_ROW_CAP) return ROW_CAP_EXCEEDED;
+  const units = [...new Set(rows.map((row) => row.unitUcum))];
+  if (units.some((unit) => unit !== GLUCOSE_UNIT)) {
+    return mixedUnits(SENSOR_GLUCOSE_LOINC, [...new Set([GLUCOSE_UNIT, ...units])]);
+  }
+  return glucosePeriod(glucoseDays(rows, "sensor"), profile, DAY_THRESHOLDS, "sensor");
+};
+
+const periodWindow = (period: Period, end: string) => ({
+  start: addDays(end, 1 - PERIOD_DAYS[period]),
+  end,
+});
+
+/** The span a period reads: the period and the 35 days its trends compare. */
+export const periodRead = (
+  period: Period,
+  end: string,
+): Readonly<{ from: Date; to: Date }> => spanOf(comparedRead(periodWindow(period, end)));
+
 export const demoPeriod = (
   rows: readonly CohortRow[],
   period: Period,
   end: string,
   profile: GlucoseProfile,
 ): DemoPeriodResult => {
-  const window = { start: addDays(end, 1 - PERIOD_DAYS[period]), end };
+  const window = periodWindow(period, end);
   // The same rows show_my_period's one capped read holds.
-  const read = rows.filter(
-    (row) =>
-      PERIOD_CODES.includes(row.loinc) && within(row, spanOf(comparedRead(window))),
+  const span = spanOf(window);
+  const inRead = rows.filter(
+    (row) => PERIOD_CODES.includes(row.loinc) && within(row, periodRead(period, end)),
+  );
+  // As show_my_period: sensor glucose is its own capped read over the period only.
+  const read = inRead.filter((row) => row.loinc !== SENSOR_GLUCOSE_LOINC);
+  const sensor = inRead.filter(
+    (row) => row.loinc === SENSOR_GLUCOSE_LOINC && within(row, span),
   );
   if (read.length > ANALYTICS_ROW_CAP) return { kind: "refused", reason: "too-many" };
-  const span = spanOf(window);
   const glucose = read.filter(
     (row) =>
       (GLUCOSE_LOINCS as readonly string[]).includes(row.loinc) && within(row, span),
@@ -81,7 +120,7 @@ export const demoPeriod = (
   }
   return {
     kind: "period",
-    rowsUsed: read.length,
+    rowsUsed: read.length + (sensor.length > ANALYTICS_ROW_CAP ? 0 : sensor.length),
     summary: periodSummary({
       period,
       start: window.start,
@@ -90,6 +129,8 @@ export const demoPeriod = (
       glucose: glucosePeriod(glucoseDays(glucose), profile),
       resting_hr: trendOf("resting_hr", read, window),
       hrv: trendOf("hrv", read, window),
+      sensor_glucose: sensorOf(sensor, profile),
+      sensor_lag: sensor.length > 0 ? SENSOR_LAG_NOTE : null,
     }),
   };
 };

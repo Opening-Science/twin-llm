@@ -16,7 +16,7 @@ import {
   PERIOD_REFUSED,
 } from "./day-copy";
 import { DAY_CODES, dayList, demoDay, mockDay } from "./demo-day";
-import { demoPeriod, type Period, PERIOD_CODES } from "./demo-period";
+import { demoPeriod, type Period, PERIOD_CODES, periodRead } from "./demo-period";
 
 /**
  * Routes behind "Show me my day". A person's days and a person's day are read
@@ -158,12 +158,12 @@ export const createPeriodHandler = (deps: DayDeps) =>
       const period = PERIODS.find((one) => one === query.get("period"));
       const end = query.get("end");
       const profile = profileOf(query.get("profile"));
-      return period !== undefined && end !== null && DAY.test(end) && profile !== null
+      return period !== undefined && isDay(end) && profile !== null
         ? { codes: PERIOD_CODES, period, end, profile }
         : null;
     },
     async (ref, { period, end, profile }, audit) => {
-      const rows = await deps.findValues(ref, PERIOD_CODES);
+      const rows = await deps.findValues(ref, PERIOD_CODES, periodRead(period, end));
       const result = demoPeriod(rows, period, end, profile);
       if (result.kind === "refused") {
         await audit({ refused: result.reason }, 0);

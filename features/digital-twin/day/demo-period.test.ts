@@ -46,6 +46,38 @@ describe("demoPeriod", () => {
     expect(result.rowsUsed).toBe(35 + 35 + 10);
   });
 
+  test("sensor glucose is its own line, with the lag note, never mixed with blood", () => {
+    const sensor: CohortRow[] = Array.from({ length: 14 }, (_, i) => ({
+      id: `cgm-${i}`,
+      loinc: "99504-3",
+      value: i === 0 ? 150 : 110,
+      unitUcum: "mg/dL",
+      effectiveAt: day(i),
+    }));
+    const result = demoPeriod(
+      [...ROWS, ...sensor],
+      "week",
+      "2026-11-16",
+      "without_diabetes",
+    );
+    if (result.kind !== "period") throw new Error("expected a period");
+    const line = (label: string) =>
+      result.summary.lines.find((one) => one.label === label)?.text;
+    // Only the week's seven sensor readings count, and blood is unchanged.
+    expect(line("Sensor glucose")).toContain("from 7 readings on 7 days");
+    expect(line("Blood glucose")).toContain("from 7 readings on 7 days");
+    expect(result.summary.notes.some((note) => note.includes("several minutes"))).toBe(
+      true,
+    );
+    expect(result.rowsUsed).toBe(35 + 35 + 10 + 7);
+  });
+
+  test("without a sensor reading there is no sensor line", () => {
+    const result = demoPeriod(ROWS, "week", "2026-11-16", "without_diabetes");
+    if (result.kind !== "period") throw new Error("expected a period");
+    expect(result.summary.lines.map((one) => one.label)).not.toContain("Sensor glucose");
+  });
+
   test("a month covers 30 days", () => {
     const result = demoPeriod(ROWS, "month", "2026-11-16", "with_diabetes");
     if (result.kind !== "period") throw new Error("expected a period");
