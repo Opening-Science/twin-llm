@@ -10,11 +10,13 @@ import {
   kioskShows,
 } from "./kiosk-copy";
 import { type KioskBeat } from "../day/beat-focus";
+import { KioskDayStrip } from "./kiosk-strip-view";
 
 /**
  * One beat of the day on the kiosk, drawn as the kiosk-day contract wrote it:
  * the time and what the person was doing, the value line and the body
- * sentence exactly as given, and where the twin turns. A window's beat reads
+ * sentence exactly as given, and where the twin turns, with the day strip
+ * showing where the beat falls between midnights. A window's beat reads
  * "Worth a look" as its event, with the eye the twin page uses and a note
  * under it. The day's notice, the placeholder note and UTC are always shown
  * with it (`docs/kiosk-day.md`, rules for the screen).
@@ -29,6 +31,7 @@ export const KioskBeatCard = ({
   return (
     <section className="kiosk-beat" aria-live="polite" aria-atomic="true">
       <p className="kiosk-beat-count">{kioskBeatCount(index, day.beats.length)}</p>
+      <KioskDayStrip day={day} current={index} />
       <h2 className="kiosk-beat-head">
         <span className="kiosk-beat-time">{beat.time}</span>
         <span>{beat.event}</span>
