@@ -19,6 +19,7 @@ import {
   ChatIcon,
   FlagIcon,
   FlaskIcon,
+  GridIcon,
   PlusIcon,
   SlidersIcon,
   StackIcon,
@@ -64,6 +65,7 @@ const SECTION_ICON: Readonly<
   Record<SectionKey, (props: { className?: string }) => ReactNode>
 > = {
   home: ChatIcon,
+  dashboard: GridIcon,
   twin: BodyIcon,
   customize: SlidersIcon,
   models: StackIcon,
