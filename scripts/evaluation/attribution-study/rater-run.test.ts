@@ -50,6 +50,9 @@ describe("runRater", () => {
       ),
     ).toBe(0);
     const sheet = await readFile(join(out, "sheet.csv"), "utf8");
+    expect(await readFile(join(out, "rubric.md"), "utf8")).toContain(
+      "## attribution_correct",
+    );
     const [header, ...rows] = parseCsv(sheet);
     const column = SHEET_COLUMNS.indexOf("attribution_correct");
     const filled = [

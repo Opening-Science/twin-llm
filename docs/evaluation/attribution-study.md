@@ -118,9 +118,9 @@ the registration is filed.
 
 `bun run attribution:rater -- --records <records.jsonl> --items <items.json>`
 draws a stratified sample of base answers (150 by default, in proportion to
-the strata, at least one each, seeded) and writes `sheet.csv` for the rater
+the strata, at least one each, seeded) and writes `sheet.csv` and `rubric.md` (what `y` means per outcome) for the rater
 and `key.json` to keep apart. The procedure is the one in
-[second-rater.md](second-rater.md); only the sheet differs.
+[second-rater.md](second-rater.md); only the sheet and the rubric differ.
 
 A row shows the question, every reading the model was given with its
 source and day, the selection rule, the keys the answer cited, the Answer

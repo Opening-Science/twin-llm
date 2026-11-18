@@ -4,7 +4,7 @@
  *   bun run attribution:rater -- --records <records.jsonl> --items <items.json> [--n 150] [--seed 6508] [--out <dir>]
  *   bun run attribution:rater -- --agreement --sheet <filled.csv> --key <key.json> --records <records.jsonl>
  *
- * The first writes `sheet.csv` (blind, for the rater) and `key.json` (the
+ * The first writes `sheet.csv` and `rubric.md` (blind, for the rater) and `key.json` (the
  * salt and the way back; keep it from the rater) to --out, by default beside
  * the records. The second prints Cohen's kappa between the rater and the
  * scorer per outcome and writes it to `agreement.md` beside the sheet.
@@ -23,6 +23,7 @@ import {
   raterSample,
   raterSheet,
   readFilledSheet,
+  rubricMarkdown,
   STUDY_RATER_VERSION,
 } from "./rater";
 import type { StudyRecord } from "./run";
@@ -119,8 +120,9 @@ export const runRater = async (
   await mkdir(out, { recursive: true });
   await writeFile(join(out, "sheet.csv"), sheet.csv);
   await writeFile(join(out, "key.json"), `${JSON.stringify(sheet.key, null, 2)}\n`);
+  await writeFile(join(out, "rubric.md"), rubricMarkdown());
   io.stdout.write(
-    `Rater sheet of ${sample.length} answers written to ${out} (sheet.csv for the rater; keep key.json apart)\n`,
+    `Rater sheet of ${sample.length} answers written to ${out} (sheet.csv and rubric.md for the rater; keep key.json apart)\n`,
   );
   return 0;
 };

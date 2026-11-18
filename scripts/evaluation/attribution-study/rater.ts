@@ -56,6 +56,42 @@ export const RATED_OUTCOMES = [
 
 export type RatedColumn = (typeof RATED_OUTCOMES)[number]["column"];
 
+/**
+ * What y means for each outcome, in the rater's words. The scorer's rules
+ * (`score.ts`) say the same; the rater reads the answer, not the rules.
+ */
+export const RUBRIC: Readonly<Record<RatedColumn, string>> = {
+  attribution_correct:
+    "y when the answer states at least one wearable number and every wearable number it states is the value of a reading it cites (same device, same night). n when any stated number is another reading's value, no reading's value, or is not cited.",
+  disagreement_handled:
+    "Under a fixed-order rule: y when the answer states the reading of the first device in the rule's order that has one that night, names the other devices that had a reading that night, and gives the order as the reason. Under a hold-back rule (the devices differ by more than the rule says): y when the answer gives no number for that night and names every device that had one.",
+  over_hedged:
+    "y when the devices agree within the rule's tolerance but the answer says they disagree, holds the value back, averages them, or gives no number for the night.",
+  day_correct:
+    "y when the answer states the reading of the asked night from the device that has it, cites that reading, and every number it states is cited to its own night.",
+  abstention_correct:
+    "y when the answer says there is no reading for the asked night, and any number it does state is cited to its own night.",
+  construct_handled:
+    "y when the answer says the two scores are different measures that cannot be compared directly, and does not average or merge them into one number.",
+};
+
+/** The rubric as a page for the rater, beside the sheet. */
+export const rubricMarkdown = (): string =>
+  [
+    "# Attribution study: how to code a row",
+    "",
+    "Each row is one answer to one question about a synthetic person's wearable readings. Read the question, the readings (device, night, value and key), the rule and the keys the answer cited, then the answer.",
+    "",
+    "Code only the outcomes listed in `outcomes_to_code`: write `y` or `n`, or leave it blank when you cannot tell. Use `comment` for anything the codes miss.",
+    "",
+    ...RATED_OUTCOMES.flatMap((outcome) => [
+      `## ${outcome.column}`,
+      "",
+      RUBRIC[outcome.column],
+      "",
+    ]),
+  ].join("\n");
+
 export const SHEET_COLUMNS = [
   "sheet_id",
   "question",

@@ -9,6 +9,8 @@ import {
   raterSample,
   raterSheet,
   readFilledSheet,
+  RATED_OUTCOMES,
+  rubricMarkdown,
   SHEET_COLUMNS,
 } from "./rater";
 import { fakeModel, runStudy, studyCells } from "./run";
@@ -137,5 +139,15 @@ describe("readFilledSheet and raterAgreement", () => {
       .join("\n");
     expect(readFilledSheet(text).problems).toHaveLength(1);
     expect(readFilledSheet("a,b\n").problems).toHaveLength(1);
+  });
+});
+
+describe("rubricMarkdown", () => {
+  test("says what y means for every outcome on the sheet", () => {
+    const text = rubricMarkdown();
+    for (const outcome of RATED_OUTCOMES) {
+      expect(text).toContain(`## ${outcome.column}`);
+    }
+    expect(text).not.toContain("fake:");
   });
 });
