@@ -1335,6 +1335,115 @@ The human shares stay at 25 % and 31 %. No other headline figure, and none
 for qwen3:8b, the pilot or the agents, changes. The tables above keep the
 figures as first reported; none of the conclusions drawn from them moves.
 
+## Model experiments, 18 Nov 2026
+
+Three questions on the models already on this machine, each on the held-out
+v1h set first and then on v1:
+
+1. Does the fine-tune beat its own base? `twinllm-qwen3-4b-pilot1` against
+   `twinllm-qwen3-4b-base`, the same Qwen3-4B-Instruct-2507 weights through
+   the same q4_K_M export ([disclosure-2026-10.md](disclosure-2026-10.md),
+   "Setup"), so the adapter is the only difference.
+2. Does the decline line make qwen3:8b skip tools on v1h too? `w1` against
+   `w3`, the chat's line since #329 (`--decline-wording`).
+3. Thinking on against off for qwen3:4b. Not run: see below.
+
+### Setup
+
+- Code: main at `43b5685` for every run, open-twin `2fd26911`.
+- Database: a throwaway Postgres 18.6 with pgvector on 127.0.0.1:5805,
+  built earlier the same night for the citation-rule runs (#612) as in
+  question-set.md "Refresh": the pinned cohort, the synthetic wearable
+  series (generator v2, seed 42) and the guideline catalogue with no full
+  text. Reused here after both live key checks passed against it:
+  `bun run eval:answer-key:live` (v1, 24 pass) and the v1h test with
+  `RUN_LIVE=1` and `V1H_COHORT_DIR` set (9 pass). Keys: v1
+  `77f3083fdb6f…`, v1h `e0a40d174bc5…` (rebuilt in #722).
+- Models: Ollama on this machine, all Q4_K_M, one at a time on the GPU.
+  Tools arm, sampling none set, timeout 300 s, every line of the
+  single-sample runs a fresh call. S4 skipped as `MISSING_ENV` (5 v1h lines, 12 v1 lines).
+
+| Run id                          | Model                            | Set | Decline line  | Answered | Errors    | Model time |
+| ------------------------------- | -------------------------------- | --- | ------------- | -------- | --------- | ---------- |
+| `2026-11-18-pilot1-v1h`         | `ollama:twinllm-qwen3-4b-pilot1` | v1h | chat's (`w3`) | 39       | 0         | 2.4 min    |
+| `2026-11-18-base-v1h`           | `ollama:twinllm-qwen3-4b-base`   | v1h | chat's (`w3`) | 38       | 1 TIMEOUT | 9.4 min    |
+| `2026-11-18-qwen3-8b-v1h-w1`    | `ollama:qwen3:8b`                | v1h | `w1`          | 39       | 0         | 4.1 min    |
+| `2026-11-18-qwen3-8b-v1h-w3`    | `ollama:qwen3:8b`                | v1h | `w3`          | 39       | 0         | 7.4 min    |
+| `2026-11-18-pilot1-v1`          | `ollama:twinllm-qwen3-4b-pilot1` | v1  | chat's (`w3`) | 134      | 0         | 7.9 min    |
+| `2026-11-18-base-v1`            | `ollama:twinllm-qwen3-4b-base`   | v1  | chat's (`w3`) | 134      | 0         | 11.0 min   |
+| `2026-11-18-qwen3-8b-v1-w1`     | `ollama:qwen3:8b`                | v1  | `w1`          | 133      | 1 TIMEOUT | 14.2 min   |
+| `2026-11-18-qwen3-8b-v1-w3`     | `ollama:qwen3:8b`                | v1  | `w3`          | 134      | 0         | 12.5 min   |
+| `2026-11-18-qwen3-8b-v1h-w1-r3` | `ollama:qwen3:8b`                | v1h | `w1`          | 87       | 0         | 4.4 min    |
+| `2026-11-18-qwen3-8b-v1h-w3-r3` | `ollama:qwen3:8b`                | v1h | `w3`          | 87       | 0         | 9.3 min    |
+
+The two `-r3` runs ask every v1h item three times (`--repeats 3`); 34 and
+30 of their lines are cache hits, replies of the single-sample runs; the
+rest are fresh calls. Model time is the sum of the fresh lines' total
+times. Paired tests are `bun run eval:compare` with the four main pairs in one call: item unit,
+exact McNemar, "p (Holm)" across the seven criteria of a pair and "family"
+across all 28 tests (harness.md, "Paired comparison").
+
+### 1. Fine-tune against its base
+
+Passes over scored answers, Wilson 95 % interval; human share of
+correctness and hallucination below.
+
+| Criterion                   | base v1h        | pilot1 v1h       | base v1           | pilot1 v1         |
+| --------------------------- | --------------- | ---------------- | ----------------- | ----------------- |
+| correctness                 | 3/30 (3–26 %)   | 17/18 (74–99 %)  | 24/106 (16–31 %)  | 58/85 (58–77 %)   |
+| hallucination               | 18/34 (37–69 %) | 34/34 (90–100 %) | 105/127 (75–88 %) | 102/112 (84–95 %) |
+| privacy                     | 23/27 (68–94 %) | 28/28 (88–100 %) | 19/22 (67–95 %)   | 21/22 (78–99 %)   |
+| query safety                | 20/32 (45–77 %) | 33/33 (90–100 %) | 67/118 (48–65 %)  | 94/118 (72–86 %)  |
+| clinical caution            | 29/31 (79–98 %) | 33/34 (85–99 %)  | 72/116 (53–70 %)  | 102/120 (78–90 %) |
+| readability                 | 22/38 (42–72 %) | 29/38 (61–87 %)  | 101/131 (69–83 %) | 114/133 (79–91 %) |
+| consistency                 | 3/4 (30–95 %)   | 5/5 (57–100 %)   | 3/7 (16–75 %)     | 7/7 (65–100 %)    |
+| correctness, human share    | 6 %             | 45 %             | 7 %               | 25 %              |
+| hallucination, human share  | 11 %            | 13 %             | 5 %               | 16 %              |
+| all calls right (keyed)     | 15/27 (37–72 %) | 9/28 (18–51 %)   | 46/96 (38–58 %)   | 50/96 (42–62 %)   |
+| unsourced numbers (answers) | 13 (6)          | 5 (3)            | 27 (10)           | 36 (17)           |
+| total time p50              | 5.3 s           | 4.2 s            | 3.9 s             | 3.6 s             |
+
+Paired, "base only–pilot1 only (Holm p; family p)":
+
+| Criterion        | v1h                 | v1                    |
+| ---------------- | ------------------- | --------------------- |
+| correctness      | 0–10 (0.014; 0.047) | 7–31 (< 0.001; 0.003) |
+| hallucination    | 0–8 (0.039; 0.17)   | 8–10 (1; 1)           |
+| privacy          | 0–4 (0.50; 1)       | 1–1 (1; 1)            |
+| query safety     | 0–10 (0.014; 0.047) | 8–27 (0.009; 0.047)   |
+| clinical caution | 1–2 (1; 1)          | 8–30 (0.003; 0.012)   |
+| readability      | 3–9 (0.50; 1)       | 15–24 (0.60; 1)       |
+| consistency      | 0–1 (1; 1)          | 0–4 (0.50; 1)         |
+
+The fine-tune beats its base on correctness and query safety on both sets,
+after the family adjustment, and on clinical caution on v1. Where the gain
+comes from matters more than its size:
+
+- **The base fails on the answer's form more than on its numbers.** Of the
+  base's 82 correctness fails on v1, 74 name `uncertainty.level`; on v1h,
+  23 of 27. The host sets uncertainty to high whenever an answer cites an
+  evidence key the prompt did not list, and the base cites LOINC codes and
+  tool names (`6690-2`, `loinc.6690-2.trend`) as keys: every one of its
+  hallucination fails names such a key (16 on v1h, 22 on v1), some with
+  an unsourced number as well. On Q-S1-H02 both models give the same slope
+  and the same fitted ends; the base fails, the pilot is left `human`.
+- **The base misses the expected tool.** Its query safety fails are
+  `guideline_search`, `compare_windows`, `baseline_deviation` and
+  `range_position` not called, and 18 of its `show_view` calls on v1h were
+  refused for lacking a window. The pilot was trained on these tools.
+- **The pilot's correctness rests on fewer scored answers.** 45 % of its v1h
+  correctness lines (15) and 25 % on v1 (29) are `human`, nearly all
+  because a keyed value is not in its short one-paragraph answer (14 of 15
+  and 28 of 29). The paired test leaves those out, so 10–0 on v1h is 13
+  scored items, not 32.
+- **Calls are not more exact.** All calls right: 9 of 28 keyed v1h answers
+  for the pilot against 15 for the base; the pilot more often reads another
+  window than the key's (13 against 6).
+
+The October pilot run (`2026-10-30-pilot1-v1`, git `7ed2d51`, copied into
+this checkout's runs) against today's on v1: 3–14 on correctness (Holm
+0.089), nothing else apart. The pilot has not moved much while main has.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
