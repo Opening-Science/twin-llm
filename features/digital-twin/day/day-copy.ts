@@ -1,3 +1,5 @@
+import { formatDate, formatNumber } from "@/infrastructure/format-measure";
+
 /**
  * Copy for "Show me my day" on the Digital Twin page, in one place so
  * `lint:claims` sees it. Every line says what the data is and where it comes
@@ -14,3 +16,126 @@ export const DAY_REFUSED = {
   "too-many": "Too many readings on this day to show.",
   units: "This day holds heart rate or glucose in another unit. Nothing is converted.",
 } as const;
+
+/** The panel under the twin. */
+export const MY_DAY_TITLE = "Show me my day";
+export const MY_DAY_NOTE = "Your day of heart rate and blood sugar, step by step.";
+/** The intro when the day holds a glucose sensor's readings. */
+export const MY_DAY_NOTE_SENSOR =
+  "Your day of heart rate, blood sugar and sensor glucose, step by step.";
+export const MY_DAY_DAYS_FAILED =
+  "Could not load this person's days, so only the illustrative day is offered.";
+export const MY_DAY_PICK = "Day";
+export const MY_DAY_PROFILE = "Glucose thresholds";
+export const MY_DAY_PROFILES = [
+  { value: "without_diabetes", label: "Without diabetes" },
+  { value: "with_diabetes", label: "With diabetes" },
+] as const;
+export const MY_DAY_MOCK_OPTION = "Illustrative day (mock)";
+export const MY_DAY_MOCK_NOTE =
+  "Illustrative mock: made-up values for a made-up person, not this person's readings.";
+export const MY_DAY_LOADING = "Loading the day…";
+export const MY_DAY_BEATS = "Beats of the day";
+export const MY_DAY_NO_BEATS = "No beats on this day.";
+export const MY_DAY_UTC = "Times are UTC.";
+export const MY_DAY_NOT_RECORDED =
+  "No activity is recorded for this day, so each beat reads “Reading”.";
+
+/** The thresholds stay placeholders until the reviewer confirms them. */
+export const myDayPlaceholder = (reviewer: string): string =>
+  `Thresholds are placeholders until ${reviewer} confirms them.`;
+
+/** One option of the day picker: the day and how many readings it holds. */
+export const myDayOption = (day: string, readings: number): string =>
+  `${formatDate(day)} · ${readings} ${readings === 1 ? "reading" : "readings"}`;
+
+/** Under a pressed beat: what the twin now shows. */
+export const myDayShows = (label: string): string => `The twin shows: ${label}.`;
+export const MY_DAY_PICK_HINT =
+  "Press a beat to turn the twin to it; press it again to let go.";
+/** Before the organ's name where the viewer says what lit it. */
+export const DAY_FOCUS_FROM = "From the day: ";
+
+/** "Worth a look": stretches past a threshold, said in words beside the eye icon. */
+export const WORTH_A_LOOK = "Worth a look";
+export const WORTH_A_LOOK_NOTE = "A moment to look at, not a verdict on the person.";
+export const WORTH_A_LOOK_NONE = "Nothing past the thresholds on this day.";
+
+const windowName = (
+  measure: "heart_rate" | "glucose",
+  specimen: "blood" | "sensor" | null,
+): string =>
+  measure === "heart_rate"
+    ? "Heart rate"
+    : specimen === "sensor"
+      ? "Sensor glucose"
+      : "Blood glucose";
+
+/** One window: when, which signal, and its furthest value past the threshold, rounded as the beat lines are. */
+export const worthALookLine = (
+  window: Readonly<{
+    from: string;
+    to: string;
+    measure: "heart_rate" | "glucose";
+    specimen: "blood" | "sensor" | null;
+    extreme: number;
+    unit: string;
+  }>,
+): string =>
+  `${window.from === window.to ? window.from : `${window.from} to ${window.to}`} · ${windowName(
+    window.measure,
+    window.specimen,
+  )} · furthest ${formatNumber(window.extreme, 0)} ${window.unit}`;
+
+/** The button that turns the twin to a window's beat. */
+export const worthALookShow = (from: string): string => `Show the ${from} beat`;
+
+/** Why a week or month was not summarised. */
+export const PERIOD_REFUSED = {
+  "too-many": "Too many readings in this period to summarise.",
+  units: "This period holds glucose in another unit. Nothing is converted.",
+} as const;
+
+/** The week or month card. */
+export const PERIOD_TITLE = "Week and month";
+export const PERIOD_PICK = "Period";
+export const PERIOD_OPTIONS = [
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+] as const;
+export const PERIOD_MOCK =
+  "The illustrative mock is a single day. Pick one of the person's days for a week or month ending on it.";
+export const PERIOD_LOADING = "Loading the period…";
+
+/** Stepping through the day. */
+export const STEP_PREVIOUS = "Previous beat";
+export const STEP_NEXT = "Next beat";
+export const STEP_LABEL = "Step through the day";
+export const STEP_KEYS = "On a beat, the arrow keys step to the next or previous one.";
+
+/** Where the step is: "Beat 3 of 26, 08:15." or the hint before any beat is pressed. */
+export const stepStatus = (
+  selected: number | null,
+  count: number,
+  time: string | null,
+): string =>
+  selected === null || time === null
+    ? `${count} ${count === 1 ? "beat" : "beats"}. Next beat starts at the first.`
+    : `Beat ${selected + 1} of ${count}, ${time}.`;
+
+/** A folded run of steady readings: one line per signal, values as the beat lines round them. */
+export const runLine = (
+  line: Readonly<{
+    name: string;
+    from: string;
+    to: string;
+    low: number;
+    high: number;
+    unit: string;
+  }>,
+): string =>
+  `${line.from === line.to ? line.from : `${line.from}–${line.to}`} · ${line.name}, ${
+    line.low === line.high ? line.low : `${line.low}–${line.high}`
+  } ${line.unit}`;
+export const runOpen = (count: number): string => `Show these ${count} steady readings`;
+export const runFold = (count: number): string => `Fold these ${count} steady readings`;

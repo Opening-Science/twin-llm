@@ -513,8 +513,9 @@
   .research-footer-dot {
     @apply hidden min-[100rem]:inline;
   }
+  /* One 24px line, so the only control in the footer is big enough to tap. */
   .research-footer-phone > summary {
-    @apply cursor-pointer list-none;
+    @apply cursor-pointer list-none leading-6;
   }
   .research-footer-phone > summary::-webkit-details-marker {
     display: none;
@@ -753,6 +754,14 @@
       color-mix(in oklab, var(--effort-ultra) 9%, transparent),
       transparent 70%
     );
+  }
+
+  /* The prompt field draws no ring of its own (a ring inside the box would sit
+     on the text), so the box around it carries the focus ring while it has
+     the keyboard. */
+  .surface:has(> textarea:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 
   .effort-ultra-text {
@@ -1101,8 +1110,9 @@
 
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
+  /* The summary and the guide link are 24px high, big enough to tap. */
   .setup-disclosure > summary {
-    @apply text-foreground cursor-pointer text-xs font-medium select-none;
+    @apply text-foreground cursor-pointer py-1 text-xs font-medium select-none;
   }
 
   .setup-code {
@@ -1110,7 +1120,7 @@
   }
 
   .setup-link {
-    @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
+    @apply text-foreground inline-block py-1 text-xs font-medium underline underline-offset-2;
   }
 
   /* Shell lines a person can copy and run, such as a Lab check's command.
@@ -1426,6 +1436,74 @@
   .twin-night > div,
   .twin-day > div {
     @apply w-full;
+  }
+
+  /* "Show me my day" under the twin: controls, notes, then the beats in time order. */
+  .twin-my-day {
+    @apply border-border mt-4 flex scroll-mt-16 flex-col gap-2 border-t pt-3;
+  }
+
+  .twin-my-day-controls {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  /* The beats scroll in their own box, so the step bar above stays in view.
+     The line runs down each beat's left edge; the padding keeps the dots unclipped. */
+  .twin-beats {
+    @apply flex max-h-[32rem] flex-col overflow-y-auto pl-1.5;
+  }
+
+  .twin-beat {
+    @apply border-border relative border-l py-0.5 pl-2;
+  }
+
+  .twin-beat-button {
+    @apply hover:bg-muted/60 focus-visible:ring-ring grid w-full cursor-pointer grid-cols-[3.25rem_minmax(0,1fr)] gap-2 rounded-md border border-transparent px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none;
+  }
+
+  /* A pressed beat gets a border as well as a fill, and a line naming what the twin shows. */
+  .twin-beat-button[aria-pressed="true"] {
+    @apply border-foreground/40 bg-muted;
+  }
+
+  /* A dot on the line marks each beat; the time beside it says when. */
+  .twin-beat::before {
+    content: "";
+    @apply bg-muted-foreground absolute top-4 -left-[3px] size-1.5 rounded-full;
+  }
+
+  /* A window's beat: a hollow diamond on the line and a dashed outline, beside the
+     eye icon and the words, so it reads in greyscale too. */
+  .twin-beat[data-worth="true"]::before {
+    @apply border-foreground bg-background top-3.5 -left-[5px] size-2.5 rotate-45 rounded-none border;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button {
+    @apply border-foreground/50 border-dashed;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button[aria-pressed="true"] {
+    @apply border-solid;
+  }
+
+  .twin-period {
+    @apply border-border flex flex-col gap-1.5 rounded-md border p-2.5;
+  }
+
+  .twin-period-lines {
+    @apply grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
+  .twin-step {
+    @apply flex flex-wrap items-center gap-2 py-1;
+  }
+
+  .twin-worth {
+    @apply border-border flex flex-col gap-1 rounded-md border p-2.5;
+  }
+
+  .twin-beat-time {
+    @apply text-muted-foreground pt-px font-mono text-xs tabular-nums;
   }
 
   .twin-environment .twin-live-lines {
