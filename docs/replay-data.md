@@ -224,4 +224,5 @@ order, from that person's days of that origin only. A date the history does not 
 A night 5 /min or more above the resting baseline is raised: alone it is Notable, the
 second in a row or later Worth a look, otherwise Usual. Without a baseline it is Not
 enough data. On the demo, 24 October is raised alone and 26–27 October in a row; person B
-has no baseline on any night.
+has no baseline on any night. Every evidence id names its day (`2026-10-27/night-resting-hr`),
+the night's own reading as well as the baseline's, so ten nights never share one id.

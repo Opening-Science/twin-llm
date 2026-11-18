@@ -1,6 +1,6 @@
 import { MAD_SCALE } from "../stats";
 import { seriesOf, type SeriesSelector } from "./at-time";
-import { type Baseline, personalBaseline } from "./baseline";
+import { type Baseline, evidenceRef, personalBaseline } from "./baseline";
 import { type AvailableReading, isAvailable, type Origin } from "./items";
 import { dayBefore, localDayBounds, minutesBetween } from "./local-time";
 import { type ReplayDay, type ReplayKey } from "./replay-day";
@@ -254,12 +254,15 @@ const statusOf = (now: DayContext, before: DayContext | null): StatusResult => {
   if (baseline.state !== "available") {
     return decide(now.day.origin, ELEVATED_NIGHTS, {
       status: "insufficient_data",
-      evidence: [resting.reading_id],
+      evidence: [evidenceRef({ day: now.day.day, id: resting.reading_id })],
       reason: `No personal baseline: ${baseline.text}`,
     });
   }
   const delta = resting.value - baseline.median;
-  const evidence = [resting.reading_id, ...baseline.evidence];
+  const evidence = [
+    evidenceRef({ day: now.day.day, id: resting.reading_id }),
+    ...baseline.evidence,
+  ];
   if (now.elevated !== true) {
     return decide(now.day.origin, ELEVATED_NIGHTS, {
       status: "usual",
@@ -272,7 +275,10 @@ const statusOf = (now: DayContext, before: DayContext | null): StatusResult => {
     status: repeated ? "worth_a_look" : "notable",
     evidence:
       repeated && before !== null && before.resting.state === "available"
-        ? [...evidence, `${before.day.day}/${before.resting.reading_id}`]
+        ? [
+            ...evidence,
+            evidenceRef({ day: before.day.day, id: before.resting.reading_id }),
+          ]
         : evidence,
     reason: repeated
       ? `+${delta} /min against the baseline, the second night or more in a row.`
@@ -367,7 +373,10 @@ const summaryOf = (
               unit: "/min",
               provenance: "derived",
               rule: "This night's resting heart rate less the personal baseline median.",
-              evidence: [resting.reading_id, ...baseline.evidence],
+              evidence: [
+                evidenceRef({ day: day.day, id: resting.reading_id }),
+                ...baseline.evidence,
+              ],
               at: null,
             },
     steps:
