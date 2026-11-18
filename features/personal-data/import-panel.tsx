@@ -13,6 +13,7 @@ import { byteSizeLabel, countLabel } from "./import-labels";
 import { IMPORT_MESSAGES } from "./import-messages";
 import type { ReviewPayload, SavePayload } from "./import-routes";
 import { ReviewView } from "./review-view";
+import { NewTabNote } from "@/infrastructure/ui-kit/new-tab-note";
 
 /**
  * Import → pick a format → choose a file → the server reads it and answers
@@ -220,6 +221,7 @@ export const ImportPanel = () => {
                   rel="noreferrer"
                 >
                   #{next.issue}
+                  <NewTabNote />
                 </a>
                 )
               </span>
