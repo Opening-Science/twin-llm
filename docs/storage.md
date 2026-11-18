@@ -52,6 +52,13 @@ That script (1) runs `migrate deploy` on `DATABASE_URL`, then (2) runs
 
 using `SHADOW_DATABASE_URL` from config. Exit `0` means no drift.
 
+Some SQL is invisible to that diff, so the script also checks it on the
+deployed database: pgvector and its HNSW indexes
+(`scripts/db/verify-pgvector.sh`), and the chat tables move's mirror
+triggers, partial indexes and marker, with a rolled-back probe that a new
+thread is copied and its delete removes the copies
+(`scripts/db/verify-chat-move.sh`).
+
 ## Baseline migration
 
 The whole schema starts from one migration, `prisma/migrations/20261025000000_baseline`.
