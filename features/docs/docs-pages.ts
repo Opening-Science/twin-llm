@@ -50,8 +50,17 @@ export const docImageFile = (
   return type ? { path: `images/${name}`, contentType: type } : null;
 };
 
-export const docTitle = (markdown: string, path: string): string =>
-  /^#\s+(.+?)\s*$/m.exec(markdown)?.[1] ?? path.replace(/\.md$/, "");
+/** A heading's Markdown as the words it shows: code spans and links lose their marks. */
+const plainHeading = (heading: string): string =>
+  heading
+    .replace(/(`+)(.+?)\1/g, (_, _ticks: string, code: string) => code.trim())
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+
+/** The page's H1 as plain text, for the index and search; the path when it has none. */
+export const docTitle = (markdown: string, path: string): string => {
+  const heading = /^#\s+(.+?)\s*$/m.exec(markdown)?.[1];
+  return heading === undefined ? path.replace(/\.md$/, "") : plainHeading(heading);
+};
 
 const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i;
 
