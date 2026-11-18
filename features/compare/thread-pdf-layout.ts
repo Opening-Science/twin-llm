@@ -149,11 +149,11 @@ export type Span = Readonly<{ text: string; style: PdfStyle }>;
 const MARK =
   /`([^`]+)`|\*\*([^*]+)\*\*|(^|[\s(])_([^_]+)_(?=$|[\s).,;:!?])|(^|[\s(])\*([^*]+)\*(?=$|[\s).,;:!?])/g;
 
-export const spansOf = (
-  line: string,
-  base: PdfStyle = "regular",
-  fold: Fold = WIN_ANSI,
-): Span[] => {
+/**
+ * Marks inside bold and italic are read too, as the print page nests
+ * `<code>` in `<strong>`: "**Take `x` daily**" is bold, then code, then bold.
+ */
+const marksOf = (line: string, base: PdfStyle): Span[] => {
   const spans: Span[] = [];
   let at = 0;
   const push = (text: string, style: PdfStyle) => {
@@ -164,13 +164,19 @@ export const spansOf = (
     const lead = emLead ?? starLead ?? "";
     push(line.slice(at, match.index + lead.length), base);
     if (code !== undefined) push(code, "mono");
-    else if (bold !== undefined) push(bold, "bold");
-    else push(em ?? star ?? "", base === "bold" ? "bold" : "italic");
+    else if (bold !== undefined) spans.push(...marksOf(bold, "bold"));
+    else spans.push(...marksOf(em ?? star ?? "", base === "bold" ? "bold" : "italic"));
     at = match.index + whole.length;
   }
   push(line.slice(at), base);
-  return spans.flatMap((span) => fold(span.text, span.style));
+  return spans;
 };
+
+export const spansOf = (
+  line: string,
+  base: PdfStyle = "regular",
+  fold: Fold = WIN_ANSI,
+): Span[] => marksOf(line, base).flatMap((span) => fold(span.text, span.style));
 
 // --- wrapping ---------------------------------------------------------------
 
@@ -353,7 +359,8 @@ const footerRuns = (
 
 /**
  * The pages of a thread export. A heading never ends a page alone: it moves
- * to the next page with the first line under it. Every page has a footer
+ * to the next page with any headings straight under it and the first line
+ * after them. Every page has a footer
  * with `footer` (the disclaimer) and "Page n of m".
  */
 export const layoutPdf = (
@@ -376,14 +383,31 @@ export const layoutPdf = (
   };
 
   const groups = blocks.flatMap((block) => groupsOf(block, width, measure, fold));
+
+  /** The headings in a row from `index`, with the first line after them. */
+  const keptTogether = (index: number): Line[] => {
+    const group = groups[index];
+    if (group === undefined) return [];
+    return group.heading
+      ? [...group.lines, ...keptTogether(index + 1)]
+      : group.lines.slice(0, 1);
+  };
+
+  /** Height of `lines` drawn one after another from the current position. */
+  const height = (lines: readonly Line[]) =>
+    lines.reduce(
+      (sum, line, index) =>
+        sum + (index === 0 ? step(line) : line.before + line.size * LEADING),
+      0,
+    );
+
   groups.forEach((group, groupIndex) => {
     group.lines.forEach((line, lineIndex) => {
-      let need = step(line);
-      // Keep a heading with the first line after it.
-      const next = groups[groupIndex + 1]?.lines[0];
-      if (group.heading && lineIndex === group.lines.length - 1 && next !== undefined) {
-        need += next.before + next.size * LEADING;
-      }
+      // A turn heading and the model heading under it are a run: the whole
+      // run moves with the first line after it.
+      const startsRun =
+        group.heading && lineIndex === 0 && groups[groupIndex - 1]?.heading !== true;
+      const need = startsRun ? height(keptTogether(groupIndex)) : step(line);
       if (y - need < bottom && !fresh) newPage();
       y -= step(line);
       pages.at(-1)?.push(...runsOf(line, y, measure));

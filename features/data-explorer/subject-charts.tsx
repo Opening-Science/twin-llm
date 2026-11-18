@@ -6,6 +6,7 @@ import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { Field } from "@/infrastructure/ui-kit/field";
 
+import { codeKind } from "./code-label";
 import { formatReading, type SubjectSeries } from "./subject-series";
 import { TimeLineChart } from "./time-line-chart";
 
@@ -55,8 +56,8 @@ export const SubjectCharts = ({
           ))}
         </Field>
         <p className="text-muted-foreground mt-3 font-mono text-xs">
-          LOINC {current.loinc} · {current.unit} · {formatDate(current.firstDay)} to{" "}
-          {formatDate(current.lastDay)}
+          {codeKind(current.loinc)} {current.loinc} · {current.unit} ·{" "}
+          {formatDate(current.firstDay)} to {formatDate(current.lastDay)}
         </p>
         {current.unitsForCode > 1 && (
           <p className="text-muted-foreground mt-1 text-sm">
