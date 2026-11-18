@@ -15,6 +15,7 @@ import {
   WORTH_A_LOOK_NONE,
   WORTH_A_LOOK_NOTE,
   MY_DAY_NOTE,
+  MY_DAY_NOTE_SENSOR,
 } from "./day-copy";
 import { beatFocus } from "./beat-focus";
 import { MOCK_CHOICE } from "./day-view";
@@ -104,7 +105,7 @@ describe("MyDayPanel", () => {
 
   test("lists each window with its line, rule and a way to show its beat", () => {
     const out = html(STATE);
-    expect(out).toContain("20:30 · Glucose · furthest 175 mg/dL");
+    expect(out).toContain("20:30 · Blood glucose · furthest 175 mg/dL");
     expect(out).toContain(DAY.worth_a_look[0]!.rule);
     expect(out).toContain(WORTH_A_LOOK_NOTE);
     expect(out).toContain("Show the 20:30 beat");
@@ -115,6 +116,7 @@ describe("MyDayPanel", () => {
     const sensorBeat = {
       ...DAY.beats[blood]!,
       value: 152,
+      specimen: "sensor" as const,
       line: "Sensor glucose up · about 152 mg/dL · derived",
     };
     const beats = [
@@ -124,7 +126,12 @@ describe("MyDayPanel", () => {
     ];
     const windows = [
       ...DAY.worth_a_look,
-      { ...DAY.worth_a_look[0]!, extreme: 152, rule: "Sensor glucose above 140 mg/dL" },
+      {
+        ...DAY.worth_a_look[0]!,
+        specimen: "sensor" as const,
+        extreme: 152,
+        rule: "Sensor glucose above 140 mg/dL",
+      },
     ];
     const out = html({
       ...STATE,
@@ -201,6 +208,14 @@ describe("MyDayPanel", () => {
     expect(out).toContain(MY_DAY_DAYS_FAILED);
     expect(out).toContain(MY_DAY_MOCK_OPTION);
     expect(html(STATE)).not.toContain(MY_DAY_DAYS_FAILED);
+  });
+
+  test("names sensor glucose in the intro when the day has it", () => {
+    expect(html(STATE)).toContain(MY_DAY_NOTE);
+    const beats = DAY.beats.map((beat) =>
+      beat.specimen === "blood" ? { ...beat, specimen: "sensor" as const } : beat,
+    );
+    expect(html({ ...STATE, day: { ...DAY, beats } })).toContain(MY_DAY_NOTE_SENSOR);
   });
 
   test("says it is loading before the days are in", () => {

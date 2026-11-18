@@ -16,6 +16,7 @@ import {
   MY_DAY_NO_BEATS,
   MY_DAY_NOT_RECORDED,
   MY_DAY_NOTE,
+  MY_DAY_NOTE_SENSOR,
   MY_DAY_PICK,
   MY_DAY_PICK_HINT,
   MY_DAY_PROFILE,
@@ -302,15 +303,14 @@ const WorthALook = ({ state, day }: Readonly<{ state: MyDayState; day: KioskDay 
     ) : (
       <ul className="flex flex-col gap-2">
         {day.worth_a_look.map((window, at) => {
-          // Blood and sensor glucose can both pass at the same time; the value tells them apart.
-          const atTime = (beat: KioskDay["beats"][number]) =>
-            beat.worth_a_look &&
-            beat.time === window.from &&
-            beat.measure === window.measure;
-          const exact = day.beats.findIndex(
-            (beat) => atTime(beat) && beat.value === window.extreme,
+          // Blood and sensor glucose can both pass at the same time; the specimen tells them apart.
+          const index = day.beats.findIndex(
+            (beat) =>
+              beat.worth_a_look &&
+              beat.time === window.from &&
+              beat.measure === window.measure &&
+              beat.specimen === window.specimen,
           );
-          const index = exact >= 0 ? exact : day.beats.findIndex(atTime);
           return (
             <li
               key={`${window.measure}-${window.from}-${at}`}
@@ -356,7 +356,11 @@ export const MyDayPanel = ({ state }: Readonly<{ state: MyDayState }>) => {
       <h3 id={TITLE_ID} className="text-base font-medium">
         {MY_DAY_TITLE}
       </h3>
-      <p className="text-muted-foreground text-xs">{MY_DAY_NOTE}</p>
+      <p className="text-muted-foreground text-xs">
+        {state.day?.beats.some((beat) => beat.specimen === "sensor")
+          ? MY_DAY_NOTE_SENSOR
+          : MY_DAY_NOTE}
+      </p>
       {state.days === null ? (
         <p className="text-muted-foreground text-xs">{MY_DAY_DAYS_FAILED}</p>
       ) : null}

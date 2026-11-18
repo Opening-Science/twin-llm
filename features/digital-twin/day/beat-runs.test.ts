@@ -29,6 +29,8 @@ const reading = (
     direction,
     value,
     unit,
+    specimen:
+      measure === "glucose" ? (name === "Sensor glucose" ? "sensor" : "blood") : null,
     line: `${name} ${direction} · about ${Math.round(value)} ${unit} · measured`,
     worth_a_look: false,
   };

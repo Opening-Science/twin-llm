@@ -5,8 +5,8 @@ import { type KioskBeat } from "./beat-focus";
  * with the same event, one after another, folds into one row; every other
  * beat is its own row. Only grouping: each beat is still there, by its index
  * in `day.beats`, and the run's lines give the lowest and highest value of
- * each signal as the beat lines round them. A signal is named as its beat
- * line names it, so blood and sensor glucose are never put in one line.
+ * each signal as the beat lines round them. Glucose goes by its specimen,
+ * so blood and sensor glucose are never put in one line.
  */
 
 export const MIN_RUN = 3;
@@ -33,11 +33,13 @@ const quiet = (beat: KioskBeat): boolean =>
   beat.unit !== null &&
   beat.measure !== "insulin";
 
-/** The name the server's line gives the signal: the words before its direction. */
-const signalName = (beat: KioskBeat): string => {
-  const at = beat.line.indexOf(` ${beat.direction} `);
-  return at > 0 ? beat.line.slice(0, at) : beat.measure;
-};
+/** The signal's name: heart rate, or glucose by its specimen, so blood and sensor never share a line. */
+const signalName = (beat: KioskBeat): string =>
+  beat.measure === "heart_rate"
+    ? "Heart rate"
+    : beat.specimen === "sensor"
+      ? "Sensor glucose"
+      : "Blood glucose";
 
 const runLines = (beats: readonly KioskBeat[]): readonly RunLine[] =>
   beats.reduce<RunLine[]>((lines, beat) => {
