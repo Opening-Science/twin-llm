@@ -12,7 +12,7 @@
  * `--check` also looks for every listed mesh on disk and exits 1, naming the
  * references only, when one is missing.
  */
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { ReferenceRow } from "../../features/vitronic/reference-list";
@@ -101,6 +101,8 @@ if (isMain) {
     writeFile: async (path, text) => {
       await mkdir(join(path, ".."), { recursive: true });
       await writeFile(path, text, { mode: 0o600 });
+      // mode applies only on create: a list already there keeps its old mode.
+      await chmod(path, 0o600);
     },
     missingMeshes,
     exists: (path) =>

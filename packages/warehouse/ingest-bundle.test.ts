@@ -688,3 +688,68 @@ describe("conditions and medication requests", () => {
     expect(store.medicationRequests).toEqual([]);
   });
 });
+
+describe("Google Health glucose by specimen (#700)", () => {
+  test("a continuous monitor's readings reach show_my_day as sensor glucose", async () => {
+    const { ingestBundle } = await import("./ingest-bundle");
+    const { runShowMyDay } = await import("@/packages/query-tools/tools");
+    // A synthetic bundle from open-twin's Google Health mapper (fixtures/google-health-glucose.test.ts).
+    const bundle: unknown = JSON.parse(
+      readFileSync(join(import.meta.dir, "fixtures/google-health-glucose.json"), "utf8"),
+    );
+    const subject = "c1000000-0000-4000-8000-000000000001";
+
+    const report = await ingestBundle(bundle, {
+      cohortId: "synthea-v4-seed42",
+      syntheaVersion: VERSION,
+    });
+    expect(report.inserted).toBe(4);
+    expect(store.observations.map((row) => [row.loinc, row.value])).toEqual([
+      ["99504-3", 95],
+      ["99504-3", 101],
+      ["2339-0", 104],
+      ["99504-3", 118],
+    ]);
+
+    const rows = store.observations.map((row) => ({
+      loinc: String(row.loinc),
+      value: Number(row.value),
+      unitUcum: String(row.unitUcum),
+      effectiveAt: row.effectiveAt as Date,
+    }));
+    const result = await runShowMyDay(
+      { actor: "local", sessionId: "turn", mode: "synthetic" },
+      { subject_ref: subject, day: "2026-11-16", profile: "without_diabetes" },
+      {
+        findSubject: async () => ({ isSynthetic: true, cohortId: "synthea-v4-seed42" }),
+        findObservations: async (query) =>
+          rows.filter((row) => query.loinc.includes(row.loinc)),
+        findCohortObservations: async () => [],
+        appendAudit: async () => undefined,
+      },
+    );
+    if (!("beats" in result)) throw new Error("expected a day, not a refusal");
+    expect(result.sensor_lag).not.toBeNull();
+    expect(
+      result.beats.map((beat) => [
+        beat.time,
+        beat.source !== "narrated" &&
+          beat.signal.measure === "glucose" &&
+          beat.signal.specimen,
+        beat.signal.value,
+      ]),
+    ).toEqual([
+      ["07:00", "sensor", 95],
+      ["07:05", "sensor", 101],
+      ["07:10", "sensor", 118],
+    ]);
+    // The finger prick in the same minute stays blood glucose, beside the sensor.
+    const { readingsFromRows } = await import("@/packages/query-tools/show-my-day");
+    expect(
+      readingsFromRows(rows).find((reading) => reading.time === "07:05"),
+    ).toMatchObject({
+      glucoseMgDl: 104,
+      sensorGlucoseMgDl: 101,
+    });
+  });
+});

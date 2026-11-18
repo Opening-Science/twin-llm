@@ -25,8 +25,9 @@ checklist); the table above is what each of them needs.
 
 - Every scan is synced into TwinLLM on the operator's machine (Digital Twin →
   subject → Sync). The mesh lands in gitignored `data/vitronic/<userId>/<sha256>.glb`
-  (or `VITRONIC_DATA_DIR`), sealed with the owner's keys; the measures in
-  `VitronicSnapshot`, sealed too ([vitronic.md](vitronic.md)).
+  (or `VITRONIC_DATA_DIR`); the measures in `VitronicSnapshot`
+  ([vitronic.md](vitronic.md)). In personal mode both are sealed with the
+  owner's keys, and the mesh file is then `<sha256>.glb.enc`.
 - A copy of the scanner's own export goes to the same machine's encrypted disk,
   outside every git checkout.
 - Nothing is uploaded anywhere else.
@@ -36,14 +37,16 @@ checklist); the table above is what each of them needs.
 The list is what makes the set usable after the scanner has moved: one row per
 scan, kept as `reference-scans.csv` in the vitronic data folder
 (`VITRONIC_DATA_DIR`, else `data/vitronic/`) on the operator's machine, inside
-the folder git already ignores. It holds identifiers only, never measure
-values. `bun run vitronic:reference-list` writes it from what TwinLLM has
-stored for the local user (`--user <id>` for another local actor): every
-subject except Self, subjects in the order they were created, each one's scans
-by scan number. The file is owner-only; the command prints counts and the path,
-never a row, and writes one audit row (`vitronic.reference.list`, counts only).
-With `--check` it also looks for every listed mesh in the user's folder and exits 1, naming the references only, when one is missing. Run it again after each session; the `note` column comes out empty, so keep
-notes in a copy.
+the folder git already ignores. It holds identifiers only, never measure values.
+`bun run vitronic:reference-list` writes it from what TwinLLM has stored for the
+local user (`--user <id>` for another local actor): every subject except Self,
+in scan-number order, so a later scan is added at the end and the earlier
+references keep their numbers. The file is owner-only; the command prints counts
+and the path, never a row, and writes one audit row (`vitronic.reference.list`,
+counts only). With `--check` it also looks for every listed mesh in the user's
+folder and exits 1, naming the references only, when one is missing. Run it
+again after each session; the `note` column comes out empty, so keep notes in a
+copy.
 
 | Column                | From                                                       |
 | --------------------- | ---------------------------------------------------------- |

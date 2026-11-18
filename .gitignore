@@ -77,6 +77,7 @@ apps/ark/rsid-genotypes/target/
 data/vitronic/
 # Meshes and point clouds anywhere: scans of people never go in git (#614)
 *.glb
+*.glb.enc
 *.ply
 *.e57
 # Guideline full text (operator-extracted UTF-8; never commit PDFs or body text)
