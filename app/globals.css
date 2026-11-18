@@ -513,8 +513,9 @@
   .research-footer-dot {
     @apply hidden min-[100rem]:inline;
   }
+  /* One 24px line, so the only control in the footer is big enough to tap. */
   .research-footer-phone > summary {
-    @apply cursor-pointer list-none;
+    @apply cursor-pointer list-none leading-6;
   }
   .research-footer-phone > summary::-webkit-details-marker {
     display: none;
@@ -753,6 +754,14 @@
       color-mix(in oklab, var(--effort-ultra) 9%, transparent),
       transparent 70%
     );
+  }
+
+  /* The prompt field draws no ring of its own (a ring inside the box would sit
+     on the text), so the box around it carries the focus ring while it has
+     the keyboard. */
+  .surface:has(> textarea:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 
   .effort-ultra-text {
@@ -1101,8 +1110,9 @@
 
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
+  /* The summary and the guide link are 24px high, big enough to tap. */
   .setup-disclosure > summary {
-    @apply text-foreground cursor-pointer text-xs font-medium select-none;
+    @apply text-foreground cursor-pointer py-1 text-xs font-medium select-none;
   }
 
   .setup-code {
@@ -1110,7 +1120,7 @@
   }
 
   .setup-link {
-    @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
+    @apply text-foreground inline-block py-1 text-xs font-medium underline underline-offset-2;
   }
 
   /* Shell lines a person can copy and run, such as a Lab check's command.
