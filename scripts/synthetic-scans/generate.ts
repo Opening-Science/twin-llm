@@ -9,8 +9,8 @@
  * The Observations are mapped by @open-twin/provider-vitronic, so the
  * warehouse holds scan measures in the same FHIR shape a real scan sync
  * produces. It reads only Synthea bundles (it refuses anything else), never a
- * scan of a person, and refuses the evaluation cohort unless
- * `--allow-eval-cohort`, as `wearables:generate` does. Prints counts only.
+ * scan of a person, and refuses the evaluation cohort, or a cohort no
+ * manifest names, unless `--allow-eval-cohort`. Prints counts only.
  */
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
@@ -84,6 +84,12 @@ export const runGenerateScans = async (
   const cohortId = cohortIdOf(
     await deps.readJson(join(dirname(args.input), "manifest.json")),
   );
+  if (cohortId === null && !args.allowEvalCohort) {
+    io.stderr.write(
+      `Refused: no manifest.json next to ${args.input} names the cohort, so it could be the evaluation cohort. Its scans belong only in throwaway databases; pass --allow-eval-cohort for those.\n`,
+    );
+    return 1;
+  }
   if (
     cohortId !== null &&
     EVALUATION_COHORT_IDS.includes(cohortId) &&

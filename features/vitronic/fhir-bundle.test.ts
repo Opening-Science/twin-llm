@@ -98,10 +98,21 @@ describe("buildVitronicFhirBundle", () => {
     ]);
   });
 
-  test("no proband id reaches the bundle", () => {
-    const text = JSON.stringify(
-      build({ properties: [...SYNTHETIC_PROPERTY_ROWS] }).bundle,
-    );
+  test("a proband id on the scan's rows does not reach the bundle", () => {
+    // A made-up proband id on every row the scanner sent.
+    const probandId = 48213;
+    const properties = SYNTHETIC_PROPERTY_ROWS.map((row) => ({
+      ...row,
+      proband_id: probandId,
+    }));
+    const height = [{ ...SYNTHETIC_HEIGHT_ROW, proband_id: probandId }];
+    const lists = { properties, height };
+    expect(JSON.stringify(lists)).toContain(String(probandId));
+    const { bundle, dropped } = build(lists);
+    expect(dropped).toEqual([]);
+    expect(observations(lists).length).toBe(properties.length + height.length);
+    const text = JSON.stringify(bundle);
+    expect(text).not.toContain(String(probandId));
     expect(text).not.toContain("proband");
   });
 
