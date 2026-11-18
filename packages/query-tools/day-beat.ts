@@ -23,6 +23,10 @@ import {
  *
  * Insulin is never measured here: it has no measured or derived form, only
  * a narrated one.
+ *
+ * A glucose value names its `specimen`: `blood` (a finger prick or a lab) or
+ * `sensor` (a continuous monitor reading the fluid between cells, several
+ * minutes behind the blood). The two are never compared with each other.
  */
 
 export const BEAT_SOURCES = ["measured", "derived", "narrated"] as const;
@@ -35,10 +39,19 @@ export type Direction = (typeof DIRECTIONS)[number];
 export const VIEW_DEPTHS = ["scan", "muscle", "skeleton", "organs"] as const;
 export type ViewDepth = (typeof VIEW_DEPTHS)[number];
 
+export const GLUCOSE_SPECIMENS = ["blood", "sensor"] as const;
+export type GlucoseSpecimen = (typeof GLUCOSE_SPECIMENS)[number];
+
 /** A value with its unit: only heart rate and glucose are ever read. */
 export type ValuedSignal = Readonly<
   | { measure: "heart_rate"; direction: Direction; value: number; unit: "/min" }
-  | { measure: "glucose"; direction: Direction; value: number; unit: "mg/dL" }
+  | {
+      measure: "glucose";
+      specimen: GlucoseSpecimen;
+      direction: Direction;
+      value: number;
+      unit: "mg/dL";
+    }
 >;
 
 /** A described change with no number: the only form insulin takes. */
@@ -89,6 +102,7 @@ const valuedSignal = z.discriminatedUnion("measure", [
   z
     .object({
       measure: z.literal("glucose"),
+      specimen: z.enum(GLUCOSE_SPECIMENS),
       direction: z.enum(DIRECTIONS),
       value: z.number().finite(),
       unit: z.literal("mg/dL"),
@@ -112,14 +126,17 @@ export const dayBeatSchema = z.discriminatedUnion("source", [
   z.object({ ...base, source: z.literal("narrated"), signal: narratedSignal }).strict(),
 ]);
 
+const signalName = (beat: DayBeat): string => {
+  if (beat.signal.measure === "heart_rate") return "Heart rate";
+  if (beat.signal.measure === "insulin") return "Insulin";
+  return beat.source !== "narrated" && beat.signal.specimen === "sensor"
+    ? "Sensor glucose"
+    : "Blood glucose";
+};
+
 /** How a beat's value reads on screen: a narrated beat never shows a number. */
 export const signalText = (beat: DayBeat): string => {
-  const name =
-    beat.signal.measure === "heart_rate"
-      ? "Heart rate"
-      : beat.signal.measure === "glucose"
-        ? "Blood glucose"
-        : "Insulin";
+  const name = signalName(beat);
   if (beat.source === "narrated")
     return `${name} ${beat.signal.direction} · narrated, not measured`;
   return `${name} ${beat.signal.direction} · about ${Math.round(beat.signal.value)} ${beat.signal.unit} · ${beat.source}`;

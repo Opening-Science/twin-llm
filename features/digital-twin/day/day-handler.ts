@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { GLUCOSE_PROFILES, type GlucoseProfile } from "@/packages/query-tools/day-beats";
+import { windowEndDate, windowStartDate } from "@/packages/query-tools/schemas";
 import { SUBJECT_SCOPE_VIOLATION } from "@/packages/query-tools/scope";
 import { demoSubjectInScope } from "@/packages/query-tools/synthetic-display";
 
@@ -14,7 +16,7 @@ import {
   PERIOD_REFUSED,
 } from "./day-copy";
 import { DAY_CODES, dayList, demoDay, mockDay } from "./demo-day";
-import { demoPeriod, type Period, PERIOD_CODES } from "./demo-period";
+import { demoPeriod, type Period, PERIOD_CODES, periodRead } from "./demo-period";
 
 /**
  * Routes behind "Show me my day". A person's days and a person's day are read
@@ -35,7 +37,9 @@ type SubjectContext = { params: Promise<unknown> };
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** A calendar day, YYYY-MM-DD; "2026-02-30" is not one. */
+const isDay = (value: string | null): value is string =>
+  value !== null && z.iso.date().safeParse(value).success;
 
 const profileOf = (value: string | null): GlucoseProfile | null =>
   value === null
@@ -122,12 +126,13 @@ export const createDayHandler = (deps: DayDeps) =>
       const query = new URL(request.url).searchParams;
       const day = query.get("day");
       const profile = profileOf(query.get("profile"));
-      return day !== null && DAY.test(day) && profile !== null
-        ? { codes: DAY_CODES, day, profile }
-        : null;
+      return isDay(day) && profile !== null ? { codes: DAY_CODES, day, profile } : null;
     },
     async (ref, { day, profile }, audit) => {
-      const rows = await deps.findValues(ref, DAY_CODES);
+      const rows = await deps.findValues(ref, DAY_CODES, {
+        from: windowStartDate(day),
+        to: windowEndDate(day),
+      });
       const result = demoDay(rows, ref, day, profile);
       if (result.kind === "refused") {
         await audit({ refused: result.reason }, 0);
@@ -153,12 +158,12 @@ export const createPeriodHandler = (deps: DayDeps) =>
       const period = PERIODS.find((one) => one === query.get("period"));
       const end = query.get("end");
       const profile = profileOf(query.get("profile"));
-      return period !== undefined && end !== null && DAY.test(end) && profile !== null
+      return period !== undefined && isDay(end) && profile !== null
         ? { codes: PERIOD_CODES, period, end, profile }
         : null;
     },
     async (ref, { period, end, profile }, audit) => {
-      const rows = await deps.findValues(ref, PERIOD_CODES);
+      const rows = await deps.findValues(ref, PERIOD_CODES, periodRead(period, end));
       const result = demoPeriod(rows, period, end, profile);
       if (result.kind === "refused") {
         await audit({ refused: result.reason }, 0);

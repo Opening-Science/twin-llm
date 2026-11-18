@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import EXAMPLE from "@/docs/kiosk-day.example.json";
 import { kioskDaySchema } from "@/packages/query-tools/kiosk-day";
 
-import { BEAT_FOCUS_PREFIX, beatFocus } from "./beat-focus";
+import { BEAT_FOCUS_PREFIX, beatFocus, beatFocusMove } from "./beat-focus";
 
 const DAY = kioskDaySchema.parse(EXAMPLE);
 const beatAt = (event: string) => {
@@ -42,5 +42,22 @@ describe("beatFocus", () => {
     const beat = DAY.beats[0]!;
     expect(beatFocus({ ...beat, view: { ...beat.view, depth: "scan" } }).depth).toBe(0);
     expect(beatFocus({ ...beat, view: { ...beat.view, depth: "muscle" } }).depth).toBe(1);
+  });
+});
+
+describe("beatFocusMove", () => {
+  test("a newly pressed beat is applied", () => {
+    expect(beatFocusMove("day:1", null, false)).toBe("apply");
+    expect(beatFocusMove("day:2", "day:1", true)).toBe("apply");
+  });
+
+  test("letting go clears only a beat's glow", () => {
+    expect(beatFocusMove(null, "day:1", true)).toBe("clear");
+    expect(beatFocusMove(null, null, false)).toBe("none");
+  });
+
+  test("a pick that replaces the applied glow lets the beat go", () => {
+    expect(beatFocusMove("day:1", "day:1", false)).toBe("let-go");
+    expect(beatFocusMove("day:1", "day:1", true)).toBe("none");
   });
 });

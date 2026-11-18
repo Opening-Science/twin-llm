@@ -42,11 +42,13 @@ const ROWS: readonly CohortRow[] = [
 const fakeDeps = (overrides: Partial<DayDeps> = {}) => {
   const audits: AppendInput[] = [];
   const asked: string[] = [];
+  const spans: (Readonly<{ from: Date; to: Date }> | undefined)[] = [];
   const deps: DayDeps = {
     resolveActorId: async () => "local",
     findSubject: async (ref) => SUBJECTS[ref] ?? null,
-    findValues: async (ref) => {
+    findValues: async (ref, _codes, span) => {
       asked.push(ref);
+      spans.push(span);
       return ROWS;
     },
     appendAudit: async (input) => {
@@ -54,7 +56,7 @@ const fakeDeps = (overrides: Partial<DayDeps> = {}) => {
     },
     ...overrides,
   };
-  return { deps, audits, asked };
+  return { deps, audits, asked, spans };
 };
 
 const context = (ref: string) => ({ params: Promise.resolve({ subjectRef: ref }) });
@@ -133,6 +135,17 @@ describe("GET /api/digital-twin/day/:subjectRef", () => {
     });
   });
 
+  test("reads only the asked UTC day", async () => {
+    const { deps, spans } = fakeDeps();
+    await getDay(deps, "syn-a", "day=2026-11-15");
+    expect(spans).toEqual([
+      {
+        from: new Date("2026-11-15T00:00:00.000Z"),
+        to: new Date("2026-11-15T23:59:59.999Z"),
+      },
+    ]);
+  });
+
   test("a day without readings is refused with a sentence and audited with 0 rows", async () => {
     const { deps, audits } = fakeDeps();
     const response = await getDay(deps, "syn-a", "day=2026-11-01");
@@ -144,6 +157,7 @@ describe("GET /api/digital-twin/day/:subjectRef", () => {
   test("a bad day or profile is refused before any read", async () => {
     const { deps, audits, asked } = fakeDeps();
     expect((await getDay(deps, "syn-a", "day=yesterday")).status).toBe(400);
+    expect((await getDay(deps, "syn-a", "day=2026-02-30")).status).toBe(400);
     expect((await getDay(deps, "syn-a", "day=2026-11-15&profile=x")).status).toBe(400);
     expect(asked).toEqual([]);
     expect(audits).toEqual([]);
@@ -196,6 +210,17 @@ describe("GET /api/digital-twin/period/:subjectRef", () => {
       args: { period: "week", end: "2026-11-16", profile: "without_diabetes" },
       rowCount: 1,
     });
+  });
+
+  test("reads the week and the 35 days its trends compare, no more", async () => {
+    const { deps, spans } = fakeDeps();
+    await getPeriod(deps, "syn-a", "period=week&end=2026-11-16");
+    expect(spans).toEqual([
+      {
+        from: new Date("2026-10-13T00:00:00.000Z"),
+        to: new Date("2026-11-16T23:59:59.999Z"),
+      },
+    ]);
   });
 
   test("a bad period or end is refused before any read", async () => {

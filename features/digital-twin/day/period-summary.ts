@@ -28,6 +28,9 @@ export type PeriodSource = Readonly<{
   glucose: GlucosePeriod;
   resting_hr: WearableTrendResult | ToolRefusal;
   hrv: WearableTrendResult | ToolRefusal;
+  /** Null when the period has no sensor reading; then the card has no sensor line. */
+  sensor_glucose?: GlucosePeriod | ToolRefusal | null;
+  sensor_lag?: string | null;
 }>;
 
 const percent = (share: number): string => `${formatNumber(share * 100, 0)}%`;
@@ -37,9 +40,9 @@ const rangeText = (glucose: GlucosePeriod): string =>
     ? `up to ${glucose.range.high} ${glucose.range.unit}`
     : `${glucose.range.low}–${glucose.range.high} ${glucose.range.unit}`;
 
-const glucoseText = (glucose: GlucosePeriod): string => {
+const glucoseText = (glucose: GlucosePeriod, name = "blood glucose"): string => {
   if (glucose.n === 0 || glucose.average_mg_dl === null) {
-    return "No blood glucose readings in this period.";
+    return `No ${name} readings in this period.`;
   }
   const readings = `${glucose.n} ${glucose.n === 1 ? "reading" : "readings"}`;
   const days = `${glucose.days} ${glucose.days === 1 ? "day" : "days"}`;
@@ -58,6 +61,7 @@ const REFUSED: Readonly<Record<string, string>> = {
   NO_ROWS: "No readings in this period.",
   WINDOW_TOO_SHORT: "Fewer than 7 days of readings, so no trend.",
   MIXED_UNITS: "Readings in more than one unit; nothing is converted.",
+  ROW_CAP_EXCEEDED: "Too many readings in this period to summarise.",
 };
 
 /** The fitted line over the period, in words: up, down or level, never better or worse. */
@@ -95,6 +99,17 @@ export const periodSummary = (source: PeriodSource): PeriodSummary => ({
   title: title(source.period, source.start, source.end),
   lines: [
     { label: "Blood glucose", text: glucoseText(source.glucose) },
+    ...(source.sensor_glucose
+      ? [
+          {
+            label: "Sensor glucose",
+            text: isToolRefusal(source.sensor_glucose)
+              ? (REFUSED[source.sensor_glucose.code] ??
+                "No sensor summary for this period.")
+              : glucoseText(source.sensor_glucose, "sensor glucose"),
+          },
+        ]
+      : []),
     { label: "Resting heart rate", text: trendText(source.resting_hr, "/min", 0) },
     { label: "Heart rate variability", text: trendText(source.hrv, "ms", 0) },
     {
@@ -104,5 +119,6 @@ export const periodSummary = (source: PeriodSource): PeriodSummary => ({
   ],
   notes: [
     `Glucose range: ${source.profile === "with_diabetes" ? "with diabetes" : "without diabetes"}, placeholder thresholds. Times are UTC.`,
+    ...(source.sensor_lag ? [source.sensor_lag] : []),
   ],
 });

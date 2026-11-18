@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { type GlucoseProfile } from "@/packages/query-tools/day-beats";
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
@@ -160,6 +160,12 @@ export const useMyDay = ({
   const beat = selected === null ? undefined : day?.beats[selected];
   // Stable while the same beat stays picked, so the twin turns once per pick.
   const focus = useMemo(() => (beat ? beatFocus(beat) : null), [beat]);
+  // Stable per day, so the twin's effect does not rerun on every render.
+  const onBeat = useCallback(
+    (index: number | null) =>
+      setPicked(index === null || url === null ? null : { key: url, value: index }),
+    [url],
+  );
   return {
     days: listed,
     choice,
@@ -177,7 +183,6 @@ export const useMyDay = ({
       error: periodNow?.error ?? null,
       onPeriod: setPeriod,
     },
-    onBeat: (index) =>
-      setPicked(index === null || url === null ? null : { key: url, value: index }),
+    onBeat,
   };
 };

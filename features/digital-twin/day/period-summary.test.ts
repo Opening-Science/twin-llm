@@ -6,6 +6,7 @@ import { type WearableTrendResult } from "@/packages/query-tools/wearable-analyt
 import { periodSummary, type PeriodSource } from "./period-summary";
 
 const GLUCOSE: GlucosePeriod = {
+  specimen: "blood",
   n: 31,
   days: 7,
   average_mg_dl: 103.2,

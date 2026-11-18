@@ -2,13 +2,26 @@ import { describe, expect, test } from "bun:test";
 
 import { type DayBeat, dayBeatSchema, signalText } from "./day-beat";
 
+const BLOOD_GLUCOSE = {
+  measure: "glucose",
+  specimen: "blood",
+  direction: "up",
+  value: 135,
+  unit: "mg/dL",
+} as const;
+
 const MEASURED: DayBeat = {
   time: "08:15",
   event: "Walk, glucose peak",
   source: "measured",
-  signal: { measure: "glucose", direction: "up", value: 135, unit: "mg/dL" },
+  signal: BLOOD_GLUCOSE,
   body: { text: "Sugar from food passes into the blood.", organ: "bloodvasculature" },
   view: { focus: "bloodvasculature", depth: "organs" },
+};
+
+const SENSOR: DayBeat = {
+  ...MEASURED,
+  signal: { ...BLOOD_GLUCOSE, specimen: "sensor", value: 128 },
 };
 
 const NARRATED: DayBeat = {
@@ -68,9 +81,17 @@ describe("dayBeatSchema", () => {
   test("refuses a unit that does not belong to the measure", () => {
     const result = dayBeatSchema.safeParse({
       ...MEASURED,
-      signal: { measure: "glucose", direction: "up", value: 135, unit: "/min" },
+      signal: { ...BLOOD_GLUCOSE, unit: "/min" },
     });
     expect(result.success).toBe(false);
+  });
+
+  test("refuses a glucose value without its specimen, or with another one", () => {
+    const { specimen: _specimen, ...withoutSpecimen } = BLOOD_GLUCOSE;
+    for (const signal of [withoutSpecimen, { ...BLOOD_GLUCOSE, specimen: "urine" }]) {
+      expect(dayBeatSchema.safeParse({ ...MEASURED, signal }).success).toBe(false);
+    }
+    expect(dayBeatSchema.parse(SENSOR)).toEqual(SENSOR);
   });
 
   test("refuses a seventh field and a bad time", () => {
@@ -82,6 +103,10 @@ describe("dayBeatSchema", () => {
 describe("signalText", () => {
   test("a measured value is shown with its unit and source", () => {
     expect(signalText(MEASURED)).toBe("Blood glucose up · about 135 mg/dL · measured");
+  });
+
+  test("a sensor value says sensor, never blood", () => {
+    expect(signalText(SENSOR)).toBe("Sensor glucose up · about 128 mg/dL · measured");
   });
 
   test("a narrated beat never shows a number", () => {
