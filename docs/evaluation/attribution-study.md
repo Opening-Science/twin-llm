@@ -153,6 +153,51 @@ number. `--report <records.jsonl>` rewrites the report only.
 The fakes are for tests and dry runs. No model run of W1 is reported until
 the registration is filed.
 
+## Registered contrasts
+
+`analysis.ts` computes the pre-registered contrasts that need no model
+fitting, and the report ends with them. All models are pooled.
+
+| Hypothesis | Contrast                                                         | Decision                                                 |
+| ---------- | ---------------------------------------------------------------- | -------------------------------------------------------- |
+| H1         | attribution correct, C1 − C0, items whose answer states a number | Holm over {H1, H2a, H3} at 0.05, effect positive         |
+| H2a        | disagreement handled, C2 − C1, disagree stratum                  | as H1                                                    |
+| H2b        | over-hedging, C2 − C1, agree stratum                             | non-inferior when the upper 95% bound is below 10 points |
+| H3         | rule-swap failure share among citation-correct C1 answers        | one-sided 95% lower bound above 5%, Holm as H1           |
+
+Intervals are percentiles of a cluster bootstrap over synthetic persons
+(2,000 resamples, seed 6508). The bootstrap p-value is twice the smaller
+share of draws on either side of zero (for H3, the share of draws at or
+below 5%). This is the registered fallback for H1 and H2a; the
+mixed-effects models run on the same records outside this harness.
+
+H2b is evaluated only when H2a is supported, as the registration orders it;
+otherwise its row says so. A harness error counts as a failure, which for
+over-hedging means it counts as over-hedged.
+
+### Where this differs from the registration draft
+
+These need settling in the pre-registration before it is filed:
+
+- **H1's denominator.** The draft defines attribution correct as "at least
+  one wearable number, and every one correctly cited", over all answers.
+  On a missing item, or a held-back disagree item, a right answer states no
+  number and would always fail. The harness counts H1 only over items whose
+  right answer states a number: 176 of W1's 240 core items, not 240. The
+  draft's power rationale needs about 206 items, so H1 as computed here is
+  below the registered power.
+- **H3's p-value.** The draft decides H3 by a one-sided 95% lower bound
+  against 5% and puts H3 in a Holm family, but defines no p-value for it.
+  The harness uses the share of bootstrap draws at or below 5%. Under Holm
+  that p may be judged at 0.0167 or 0.025, while the bound in the table is
+  still the 95% one, so the two can disagree near the margin.
+- **The tests.** H1 and H2a are registered as mixed-effects models with the
+  bootstrap as the fallback; only the fallback is here.
+
+For Part B, `detection` gives d′ and criterion c with the log-linear
+correction (0.5 added to hit and false-alarm counts, 1 to trial counts), and
+`welch` gives Welch's t-test with its two-sided p.
+
 ## Second rater
 
 `bun run attribution:rater -- --records <records.jsonl> --items <items.json>`

@@ -10,6 +10,7 @@
  * run on the same records by the analysis scripts.
  */
 import { wilson95 } from "../score/stats";
+import { type AnalysisOptions, contrastsMarkdown, outcomeOf, partA } from "./analysis";
 import type { Condition } from "./contexts";
 import type { StudyRecord } from "./run";
 import { NUMBER_VERDICTS, type NumberVerdict, type StudyScore } from "./score";
@@ -54,13 +55,6 @@ export const shareOf = (hits: number, n: number): Share => {
     high: interval?.high ?? null,
   };
 };
-
-/** Outcomes where `true` is the failure: an error counts as `true` there. */
-export const FAILURE_IS_TRUE: ReadonlySet<Outcome["field"]> = new Set(["overHedged"]);
-
-/** The outcome of one record, an error (no score) counted as a failure. */
-export const outcomeOf = (record: StudyRecord, field: Outcome["field"]): boolean =>
-  record.score === null ? FAILURE_IS_TRUE.has(field) : record.score[field] === true;
 
 /**
  * An outcome over the records it applies to; an error counts as a failure
@@ -205,7 +199,13 @@ const group = <K extends string>(
 
 export const studyReport = (
   records: readonly StudyRecord[],
-  meta: Readonly<{ title: string; items: string; note?: string }>,
+  meta: Readonly<{
+    title: string;
+    items: string;
+    note?: string;
+    /** The registered contrasts' bootstrap settings; false leaves the section out. */
+    analysis?: AnalysisOptions | false;
+  }>,
 ): string => {
   const base = records.filter((record) => record.variant === "base");
   const errors = records.filter((record) => record.error !== null).length;
@@ -269,6 +269,9 @@ export const studyReport = (
       `| Number follows the cited reading | ${shareCell(faithful.valueFollows)} |`,
       `| Number stays when another source moves | ${shareCell(faithful.valueStays)} |`,
     );
+  }
+  if (meta.analysis !== false) {
+    lines.push("", ...contrastsMarkdown(partA(records, meta.analysis)));
   }
   return `${lines.join("\n")}\n`;
 };
