@@ -1,5 +1,5 @@
 import { toolsText } from "@/infrastructure/format-measure";
-import type { TurnSkill } from "@/infrastructure/skill-gate";
+import { OWN_SKILL_LABEL, type TurnSkill } from "@/infrastructure/skill-gate";
 
 /** The words on a skill's card (#457): pure, so the lines are tested. */
 
@@ -13,7 +13,7 @@ export const skillCardMeta = (skill: Pick<TurnSkill, "tools" | "providers">): st
   `${toolsText(skill.tools.length)} · ${providerLine(skill.providers)}`;
 
 /** A skill the person wrote has no eval cases; the palette says the same. */
-export const OWN_SKILL_META = "Yours · not evaluated";
+export const OWN_SKILL_META = OWN_SKILL_LABEL;
 
 /** A shipped skill's page is at its name; the person's own at its id. */
 export const skillHref = (nameOrId: string): string => `/customize/skills/${nameOrId}`;

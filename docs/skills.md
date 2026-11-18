@@ -274,9 +274,10 @@ Built-ins live in `features/commands/registry.ts`. A skill may not take a built-
   nothing is stored until Save note. Refused in incognito chats
   ([twin-notes.md](twin-notes.md)).
 - `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
-  it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
-  turn, never calls `/api/chat`, and the card is not part of the history any model is
-  sent (`features/compare/prompt-bar.tsx`, `twin-card.tsx`).
+  it, or sending `/twin` on its own with Enter or the send button, clears the prompt and
+  asks no model: it starts no turn, never calls `/api/chat`, and the card is not part of
+  the history any model is sent (`features/compare/prompt-bar.tsx`, `twin-card.tsx`).
+  `/compact` and `/connect` sent on their own run the same way.
 
 Which twin the card shows (`features/compare/twin-card.tsx`):
 
