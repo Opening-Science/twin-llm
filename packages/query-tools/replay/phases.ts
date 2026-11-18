@@ -11,7 +11,7 @@ import {
   type ReplayNarration,
   replayNarrationSchema,
 } from "./items";
-import { localDayBounds } from "./local-time";
+import { localDayBounds, localInstant } from "./local-time";
 import { recoveryAfter } from "./recovery";
 import { type ReplayDay } from "./replay-day";
 import {
@@ -280,7 +280,8 @@ export const storyPhases = (
   const bounds = localDayBounds(day.day, day.time_zone);
   const start = bounds.start.getTime();
   const end = bounds.end.getTime();
-  const noon = start + 12 * 60 * MINUTE;
+  // Local noon, not twelve hours after midnight: on a clock-change day those differ by an hour.
+  const noon = localInstant(day.day, "12:00", day.time_zone).getTime();
 
   const heart = seriesOf(day, { stream: "heart_rate" }).filter(isAvailable);
   const steps = seriesOf(day, { stream: "steps" }).filter(isAvailable);
