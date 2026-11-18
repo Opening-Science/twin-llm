@@ -16,6 +16,8 @@ import {
   getOuraData,
   TokenHandler,
 } from "@open-twin/provider-oura";
+import { buildBundleFromVitronicResponse } from "@open-twin/provider-vitronic";
+import { MEASUREMENT_SCHEMAS } from "@open-twin/provider-vitronic/api/schemas/shared";
 import {
   createWhoopOAuthState,
   exchangeWhoopCode,
@@ -67,6 +69,19 @@ describe("open-twin pin smoke", () => {
     expect(typeof refreshWhoopToken).toBe("function");
     expect(typeof WhoopTokenHandler).toBe("function");
     expect(Array.isArray(WHOOP_SCOPES)).toBe(true);
+  });
+
+  test("provider-vitronic exports the bundle builder and its measurement schemas", () => {
+    expect(typeof buildBundleFromVitronicResponse).toBe("function");
+    expect(Object.keys(MEASUREMENT_SCHEMAS).sort()).toEqual([
+      "angle",
+      "axis",
+      "cross_section",
+      "distance",
+      "height",
+      "marker",
+      "properties",
+    ]);
   });
 
   test("anchor-layer data matches its sha256 sidecar and holds 67 biomarkers", () => {
