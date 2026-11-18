@@ -1498,6 +1498,30 @@ part of `2026-11-18-qwen3-8b-v1-cite`; the other two are
 qwen3:8b; `w3` was chosen on the held-out decline set (#327), so a change
 should be weighed against what it gained there.
 
+The whole of v1 was then asked under `w1` (`2026-11-18-qwen3-8b-v1-w1`; 47
+of its 49 S1 lines are the `-s1-w1` replies again, from the cache, and its git sha is
+`2f920a83`, which differs from `876d0f60` only in this page). Against the
+`w3` run, item unit, McNemar with Holm, "`w1` only–`w3` only (Holm p)":
+
+| Criterion        | `w1`              | `w3`              | Paired          |
+| ---------------- | ----------------- | ----------------- | --------------- |
+| correctness      | 23/102 (16–32 %)  | 11/111 (6–17 %)   | 13–2 (0.044)    |
+| hallucination    | 110/132 (76–89 %) | 117/129 (84–95 %) | 6–14 (0.46)     |
+| query safety     | 57/118 (39–57 %)  | 30/118 (18–34 %)  | 27–3 (< 0.0001) |
+| clinical caution | 75/120 (54–71 %)  | 61/120 (42–60 %)  | 25–12 (0.24)    |
+| readability      | 108/128 (77–90 %) | 108/133 (74–87 %) | 17–14 (1.00)    |
+| no tool          | 64 of 134         | 103 of 134        |                 |
+
+Under `w1` qwen3:8b is back at its October level on tool calls, query
+safety and correctness (no tool on 65 of 134, query safety 53/118 and
+correctness 22/103 then), and S5 clinical caution stays 16/16: it still
+declines every dose and medicine question. So the drop in those since
+October comes from the decline line, not from the citation rule. Its
+hallucination drop (127/128 in October) does not: `w1` scores lower still,
+most of it in S2 (10/18), and why was not looked into. With `w1` it also
+calls the right code more often than in October (all calls right on 40 of
+96 keyed answers, against 28).
+
 ### Notes
 
 - With only catalogue entries to go on, qwen3:4b still fills in content no
