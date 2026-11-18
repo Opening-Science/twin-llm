@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -298,5 +298,26 @@ describe("characters in the brand fonts", () => {
 
   test("one no font has gets the style's stand-in or a question mark", () => {
     expect(fold("≤ 心", "regular")).toEqual([{ text: "<= ?", style: "regular" }]);
+  });
+});
+
+describe("the build", () => {
+  /** The arguments of every `join(…)` in thread-pdf.ts. */
+  const joins = [
+    ...readFileSync(join(import.meta.dir, "thread-pdf.ts"), "utf8").matchAll(
+      /\bjoin\(((?:[^()]|\([^()]*\))*)\)/g,
+    ),
+  ].map((match) => match[1] ?? "");
+
+  /** `process.cwd()` and string literals only: the bundler can scope those. */
+  const STATIC = /^\s*(?:process\.cwd\(\)|"[^"]*")(?:\s*,\s*"[^"]*")*\s*,?\s*$/;
+
+  test("a font path made at run time does not trace the whole project", () => {
+    expect(joins.length).toBeGreaterThan(0);
+    expect(
+      joins.filter(
+        (args) => !STATIC.test(args) && !args.includes("turbopackIgnore: true"),
+      ),
+    ).toEqual([]);
   });
 });
