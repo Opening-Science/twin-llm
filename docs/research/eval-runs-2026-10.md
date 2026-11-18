@@ -1472,9 +1472,31 @@ worse on query safety and hallucination after Holm: it now calls no tool on
 answers. Its replies say what they would look up, list no evidence and say
 the data is not available. The single-step prompt grew from about 7,100 to
 8,400 tokens, well inside the 16k context the chat asks for, so truncation
-does not explain it. Why it stopped calling tools was not looked into.
+does not explain it; the decline line does (next section).
 qwen3:8b still writes no reasoning passage (median 238 output tokens per
 line, against 2,907 for qwen3:4b), so it is again the faster model by far.
+
+### qwen3:8b and the decline line
+
+The October v1 runs of qwen3:8b called no tool on 56 to 65 of 134 lines
+(`-v1`, `-v1-r279`, `-v1-tools320`); its 2 Nov General agent run already
+called none on 97. Between them the chat's decline line became `w3`
+(#329). S1 was asked again on qwen3:8b at this commit with the two earlier
+wordings (`--decline-wording`, harness.md), one fresh call per line:
+
+| S1, qwen3:8b      | No tool  | Query safety    | Clinical caution | Correctness   | Hallucination   |
+| ----------------- | -------- | --------------- | ---------------- | ------------- | --------------- |
+| `w3`, the default | 28 of 49 | 14/49 (18–42 %) | 10/49 (11–34 %)  | 1/47 (0–11 %) | 38/48 (66–88 %) |
+| `w1` (#274)       | 13 of 49 | 28/49 (43–70 %) | 26/49 (39–66 %)  | 3/39 (3–20 %) | 37/49 (62–85 %) |
+| `w2` (narrower)   | 11 of 49 | 26/49 (39–66 %) | 24/49 (36–63 %)  | 0/42 (0–8 %)  | 38/49 (64–87 %) |
+
+Under `w3` qwen3:8b leaves out the tool on twice as many S1 lines as under
+either earlier wording, the October level (13 of 49) comes back with `w1`,
+and query safety and clinical caution roughly halve. The `w3` row is the S1
+part of `2026-11-18-qwen3-8b-v1-cite`; the other two are
+`2026-11-18-qwen3-8b-s1-w1` and `-w2`. One sample each, S1 only, and only
+qwen3:8b; `w3` was chosen on the held-out decline set (#327), so a change
+should be weighed against what it gained there.
 
 ### Notes
 
