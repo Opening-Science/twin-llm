@@ -83,6 +83,8 @@ bun run voice:serve  # http://127.0.0.1:8095
 ```
 
 Then set `VOICE_SIDECAR_URL=http://127.0.0.1:8095` in `.env.local` and restart the app.
+`bun run doctor` then has a Voice section: whether the engines are set up, whether the URL
+is set and on this machine, and whether the sidecar answers with its engines and voices.
 
 `voice:setup` writes into `~/.local/share/twinllm-voice` (`--home` or `VOICE_HOME` to
 change it) and needs git, cmake, a C++ compiler, curl and uv. Everything it fetches is
