@@ -7,7 +7,8 @@ full length and turning slowly, the title above it and the research line below.
 It reads no person's data. The body is the ANNY demo mesh ([anatomy.md](anatomy.md)),
 never a scan, so the page needs no sign-in, no unlock and no sidebar. It is always
 dark, whatever the machine's theme. On a landscape screen the same portrait column
-stands in the centre.
+stands in the centre. Type and spacing follow the screen's height, so a 4K panel
+(2160 × 3840) at a scale of one reads like a 1080 × 1920 one, only sharper.
 
 ## The day
 
