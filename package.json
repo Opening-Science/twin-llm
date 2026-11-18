@@ -81,6 +81,7 @@
     "rhythm-bench:rr-grid": "bun scripts/rhythm-bench/rr-grid-run.ts",
     "wearables:generate": "bun scripts/synthetic-wearables/generate.ts",
     "wearables:two-source": "bun scripts/synthetic-wearables/two-source.ts",
+    "attribution:w1": "bun scripts/synthetic-wearables/w1.ts",
     "genome:synth": "bun scripts/genome-synth/generate.ts",
     "heart-brain": "bun scripts/heart-brain/run.ts",
     "heart-brain:timing": "bun scripts/heart-brain/timing-run.ts",
