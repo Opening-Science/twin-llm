@@ -168,6 +168,19 @@ describe("scoreStudyAnswer", () => {
     expect(scoreStudyAnswer(agree, reply([], "I don't know.")).overHedged).toBe(true);
   });
 
+  test("agree: naming a slightly different reading from another source is not hedging", () => {
+    const agree = item({ stratum: "agree", metrics: [OURA, hrv("whoop", day, 47.1)] });
+    expect(
+      scoreStudyAnswer(
+        agree,
+        reply(
+          [OURA.key],
+          "Your HRV was 45 ms from Oura. WHOOP's reading was slightly different; Oura comes first in the fixed order.",
+        ),
+      ).overHedged,
+    ).toBe(false);
+  });
+
   test("missing: saying there is no reading, with no number passed off as the day's", () => {
     const missing = item({
       stratum: "missing",

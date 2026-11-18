@@ -164,6 +164,10 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
     exempt: "the DNA model sidecar, refused unless its address is loopback",
   },
   "packages/carbon-x/fake-carbon-x.ts": { exempt: "a test double on loopback" },
+  "infrastructure/speech/sidecar-client.ts": {
+    exempt: "the speech sidecar, refused unless its address is loopback",
+  },
+  "infrastructure/speech/fake-speech-sidecar.ts": { exempt: "a test double on loopback" },
   "packages/vitronic/base-url.ts": {
     exempt:
       "the BodyLoop scanner on the local network: the request carries the pairing token and ids, the scan comes in. Not in the design's table (privacy-design 2.5)",
@@ -181,6 +185,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
 
   // The browser calling this app.
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
+  "features/digital-twin/day/use-my-day.ts": { exempt: SAME_ORIGIN },
   "features/app-shell/export-notice.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },

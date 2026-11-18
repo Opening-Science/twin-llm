@@ -70,8 +70,10 @@ both the Fitbit and the Pixel Watch note, at the lower evidence level.
 `counterfactual.ts`, under C1 on agree and disagree items:
 `perturb_cited` moves the expected reading by one display unit (two if one
 breaks the stratum or identifiability), `perturb_other` moves another
-source's reading of that day, and `rule_swap` reverses Oura and WHOOP in the
-fixed order (or turns `hold_back` into `fixed_order`).
+source's reading of that day, and `rule_swap` sets `fixed_order` in the
+reversed order (Google Health, WHOOP, Oura), so the source the rule picks
+changes on every item and a held-back value must be stated. A swap that
+would ask for the same answer is not run.
 
 ## Scoring
 
@@ -94,6 +96,37 @@ reading of its measure that no other number is the value of (`wrong_source`,
 The phrase lists (`HEDGE`, `RULE_REASON`, `NO_READING`, `DIFFERENT_SCORES`)
 are heuristics; P6 validates them with a second rater.
 
+## User study stimuli (Part B)
+
+`bun run attribution:stimuli` writes the user study's stimuli to
+`.attribution-study/stimuli-seed<seed>/` (seed 6510 by default):
+`stimuli.json` and one static preview page per arm, `D0.html`, `D1.html`
+and `D2.html`. The pages have no script and make no request; they are for
+reading the wording and the display per arm before the stimuli go to the
+ethics committee and the survey platform. Code: `stimuli.ts`,
+`stimulus-page.ts`.
+
+- **Persona.** "Alex", 21 synthetic nights of resting heart rate (WHOOP,
+  Google Health) and HRV (Oura, WHOOP, Google Health), from a latent value
+  plus W1's assumed error model. Google Health records every night, the
+  others miss about one in three. The data panel lists every reading.
+- **Detection trials (16).** The chip claims the source the fixed order shows
+  that night, as the app's chip does, so its rule line is true. The answer
+  states that source's reading (8, `correct`), another source's reading of
+  that night (4, `wrong_source`), or the claimed source's reading of the
+  night before or after (4, `wrong_day`); balanced over the two measures.
+  All are constructed and say so.
+- **Calibration trials (6).** Correct answers: three on a source and measure
+  the accuracy review validated, three on one it found no evidence for. W1's
+  measures have no "limited" pair.
+- **Arms.** D0 the answer alone; D1 adds the chip and, when other sources had
+  a reading, the rule line; D2 adds the accuracy note and its level. The
+  answer text is the same in every arm.
+- A stated number is never shown as the same number as another reading a
+  participant checks it against (every source's that night, the claimed
+  source's on the nights next to it). A persona that cannot fill every trial
+  is drawn again, at most 50 times; `attempt` records which draw was used.
+
 ## Running
 
 `bun run attribution:study -- --items <items.json> --model <model>` runs
@@ -102,6 +135,12 @@ every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
 the first listed reading for the day and cites it), `fake:cite_other`
 (states it, cites another source's reading), or `ollama:<tag>` on this
 machine, called as the chat calls it (no thinking pass, the app's context length, the model's default sampling; `--temperature 0` for the sensitivity pass, named in the model id). A failed call is tried three times, then recorded as an error and
+counted as a failure (on the agree stratum, as over-hedged). Each call
+sends a seed hashed from model, item, condition and repeat (`callSeed`), so
+a rerun of a cell asks Ollama for the same draw, and redirects are refused.
+Each answer is a line of `records.jsonl` with its full prompt, seed, answer
+and score; `report.md` gives every outcome per condition with
+
 counted as a failure. Each answer is a line of `records.jsonl` with its full
 prompt, answer and score; `report.md` gives every outcome per condition with
 the Wilson 95% interval, citation precision and recall, the verdict counts,
@@ -131,6 +170,29 @@ Intervals are percentiles of a cluster bootstrap over synthetic persons
 share of draws on either side of zero (for H3, the share of draws at or
 below 5%). This is the registered fallback for H1 and H2a; the
 mixed-effects models run on the same records outside this harness.
+
+H2b is evaluated only when H2a is supported, as the registration orders it;
+otherwise its row says so. A harness error counts as a failure, which for
+over-hedging means it counts as over-hedged.
+
+### Where this differs from the registration draft
+
+These need settling in the pre-registration before it is filed:
+
+- **H1's denominator.** The draft defines attribution correct as "at least
+  one wearable number, and every one correctly cited", over all answers.
+  On a missing item, or a held-back disagree item, a right answer states no
+  number and would always fail. The harness counts H1 only over items whose
+  right answer states a number: 176 of W1's 240 core items, not 240. The
+  draft's power rationale needs about 206 items, so H1 as computed here is
+  below the registered power.
+- **H3's p-value.** The draft decides H3 by a one-sided 95% lower bound
+  against 5% and puts H3 in a Holm family, but defines no p-value for it.
+  The harness uses the share of bootstrap draws at or below 5%. Under Holm
+  that p may be judged at 0.0167 or 0.025, while the bound in the table is
+  still the 95% one, so the two can disagree near the margin.
+- **The tests.** H1 and H2a are registered as mixed-effects models with the
+  bootstrap as the fallback; only the fallback is here.
 
 For Part B, `detection` gives d′ and criterion c with the log-linear
 correction (0.5 added to hit and false-alarm counts, 1 to trial counts), and

@@ -29,6 +29,23 @@ import type { Condition } from "./contexts";
 import type { StudyRecord } from "./run";
 import type { StudyScore } from "./score";
 
+type ScoredOutcome = keyof Pick<
+  StudyScore,
+  | "attributionCorrect"
+  | "disagreementHandled"
+  | "overHedged"
+  | "dayCorrect"
+  | "abstentionCorrect"
+  | "constructHandled"
+>;
+
+/** Outcomes where `true` is the failure: an error counts as `true` there. */
+export const FAILURE_IS_TRUE: ReadonlySet<ScoredOutcome> = new Set(["overHedged"]);
+
+/** The outcome of one record, an error (no score) counted as a failure. */
+export const outcomeOf = (record: StudyRecord, field: ScoredOutcome): boolean =>
+  record.score === null ? FAILURE_IS_TRUE.has(field) : record.score[field] === true;
+
 export const DEFAULT_RESAMPLES = 2000;
 export const DEFAULT_ANALYSIS_SEED = 6508;
 
@@ -92,8 +109,7 @@ const byPerson = (
 const rate = (records: readonly StudyRecord[], outcome: Outcome): number | null =>
   records.length === 0
     ? null
-    : records.filter((record) => record.score?.[outcome] === true).length /
-      records.length;
+    : records.filter((record) => outcomeOf(record, outcome)).length / records.length;
 
 /** Rate under `b` minus rate under `a`; null when either is empty. */
 const difference =
@@ -230,10 +246,16 @@ export const holm = (
 export type PartA = Readonly<{
   h1: Estimate;
   h2a: Estimate;
-  h2b: Estimate & Readonly<{ nonInferior: boolean | null }>;
+  /** `evaluated` is false unless H2a is supported, as the registration orders it. */
+  h2b: Estimate & Readonly<{ nonInferior: boolean | null; evaluated: boolean }>;
   h3: Estimate;
   holm: Readonly<Record<string, HolmResult>>;
+  /** Holm rejects and the effect is in the predicted direction. */
+  supported: Readonly<Record<"H1" | "H2a" | "H3", boolean>>;
 }>;
+
+/** H3 predicts a failure share above this. */
+export const H3_THRESHOLD = 0.05;
 
 /** Every Part A contrast from base records (and rule-swap variants for H3). */
 export const partA = (
@@ -263,16 +285,26 @@ export const partA = (
     "C2",
     options,
   );
-  const h3 = ruleSwapFailure(records, options);
+  const h3 = ruleSwapFailure(records, options, H3_THRESHOLD);
+  const holmed = holm({ H1: h1.p, H2a: h2a.p, H3: h3.p });
+  const beyond = (name: string, estimate: number | null, threshold: number) =>
+    holmed[name]?.reject === true && estimate !== null && estimate > threshold;
+  const supported = {
+    H1: beyond("H1", h1.estimate, 0),
+    H2a: beyond("H2a", h2a.estimate, 0),
+    H3: beyond("H3", h3.estimate, H3_THRESHOLD),
+  };
   return {
     h1,
     h2a,
     h2b: {
       ...hedging,
       nonInferior: hedging.high === null ? null : hedging.high < margin,
+      evaluated: supported.H2a,
     },
     h3,
-    holm: holm({ H1: h1.p, H2a: h2a.p, H3: h3.p }),
+    holm: holmed,
+    supported,
   };
 };
 
@@ -286,13 +318,19 @@ const pText = (value: number | null): string =>
 export const contrastsMarkdown = (result: PartA): readonly string[] => {
   // Supported only when Holm rejects and the effect is in the predicted
   // direction (pre-registration, inference criteria).
-  const decision = (name: string, estimate: number | null) => {
+  const decision = (name: "H1" | "H2a" | "H3") => {
     const holmed = result.holm[name];
-    const supported = holmed?.reject === true && estimate !== null && estimate > 0;
     return holmed === undefined
       ? "–"
-      : `${pText(holmed.adjusted)} (${supported ? "supported" : "not supported"})`;
+      : `${pText(holmed.adjusted)} (${result.supported[name] ? "supported" : "not supported"})`;
   };
+  const h2b = !result.h2b.evaluated
+    ? "not evaluated: H2a not supported"
+    : result.h2b.nonInferior === null
+      ? "–"
+      : result.h2b.nonInferior
+        ? "non-inferior"
+        : "not shown";
   return [
     "## Registered contrasts (bootstrap)",
     "",
@@ -300,10 +338,10 @@ export const contrastsMarkdown = (result: PartA): readonly string[] => {
     "",
     "| Hypothesis | Estimate | Interval | Bootstrap p | Holm-adjusted |",
     "| --- | --- | --- | --- | --- |",
-    `| H1: attribution correct, C1 − C0 | ${points(result.h1.estimate)} | [${points(result.h1.low)}, ${points(result.h1.high)}] | ${pText(result.h1.p)} | ${decision("H1", result.h1.estimate)} |`,
-    `| H2a: disagreement handled, C2 − C1 | ${points(result.h2a.estimate)} | [${points(result.h2a.low)}, ${points(result.h2a.high)}] | ${pText(result.h2a.p)} | ${decision("H2a", result.h2a.estimate)} |`,
-    `| H2b: over-hedging, C2 − C1 (non-inferior below 10) | ${points(result.h2b.estimate)} | [${points(result.h2b.low)}, ${points(result.h2b.high)}] | – | ${result.h2b.nonInferior === null ? "–" : result.h2b.nonInferior ? "non-inferior" : "not shown"} |`,
-    `| H3: rule-swap failure share (lower bound against 5) | ${points(result.h3.estimate)} | ≥ ${points(result.h3.low)} | ${pText(result.h3.p)} | ${decision("H3", result.h3.estimate)} |`,
+    `| H1: attribution correct, C1 − C0 | ${points(result.h1.estimate)} | [${points(result.h1.low)}, ${points(result.h1.high)}] | ${pText(result.h1.p)} | ${decision("H1")} |`,
+    `| H2a: disagreement handled, C2 − C1 | ${points(result.h2a.estimate)} | [${points(result.h2a.low)}, ${points(result.h2a.high)}] | ${pText(result.h2a.p)} | ${decision("H2a")} |`,
+    `| H2b: over-hedging, C2 − C1 (non-inferior below 10) | ${points(result.h2b.estimate)} | [${points(result.h2b.low)}, ${points(result.h2b.high)}] | – | ${h2b} |`,
+    `| H3: rule-swap failure share (lower bound against 5) | ${points(result.h3.estimate)} | ≥ ${points(result.h3.low)} | ${pText(result.h3.p)} | ${decision("H3")} |`,
   ];
 };
 

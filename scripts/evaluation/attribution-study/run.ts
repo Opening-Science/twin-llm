@@ -27,7 +27,8 @@ export const STUDY_RUNNER = "twin-llm/attribution-study/1";
 
 export type AnswerModel = Readonly<{
   id: string;
-  answer: (prompt: StudyPrompt) => Promise<string>;
+  /** `seed` fixes the model's sampling for this call, so a rerun gives the same answer. */
+  answer: (prompt: StudyPrompt, seed: number) => Promise<string>;
 }>;
 
 export type StudyRecord = Readonly<{
@@ -41,6 +42,8 @@ export type StudyRecord = Readonly<{
   condition: Condition;
   model: string;
   repeat: number;
+  /** The sampling seed sent with the call (`callSeed`). */
+  seed: number;
   systemSha256: string;
   prompt: StudyPrompt;
   answer: string | null;
@@ -74,6 +77,20 @@ const baseId = (study: StudyItem): string =>
 
 export const MAX_RETRIES = 2;
 
+/**
+ * The sampling seed of one call: a hash of model, item, condition and
+ * repeat, so repeats differ from each other and a rerun of the same cell
+ * asks the model for the same draw. Retries keep the cell's seed.
+ */
+export const callSeed = (
+  model: string,
+  itemId: string,
+  condition: Condition,
+  repeat: number,
+): number =>
+  Number.parseInt(sha256(`${model}|${itemId}|${condition}|${repeat}`).slice(0, 8), 16) &
+  0x7fffffff;
+
 /** One record per cell, model and repeat, in that order; `onRecord` sees each as it lands. */
 export const runStudy = async (
   input: Readonly<{
@@ -91,10 +108,11 @@ export const runStudy = async (
         let answer: string | null = null;
         let error: string | null = null;
         let attempts = 0;
+        const seed = callSeed(model.id, study.item.id, condition, repeat);
         while (answer === null && attempts <= MAX_RETRIES) {
           attempts += 1;
           try {
-            answer = await model.answer(prompt);
+            answer = await model.answer(prompt, seed);
             error = null;
           } catch (caught) {
             error = caught instanceof Error ? caught.message : String(caught);
@@ -111,6 +129,7 @@ export const runStudy = async (
           condition,
           model: model.id,
           repeat,
+          seed,
           systemSha256: sha256(prompt.system),
           prompt,
           answer,
@@ -148,9 +167,11 @@ export const ollamaModel = (model: string, options: OllamaOptions = {}): AnswerM
       temperature === undefined
         ? `ollama:${model}`
         : `ollama:${model}@temperature=${temperature}`,
-    answer: async (prompt) => {
+    answer: async (prompt, seed) => {
       const response = await fetchImpl(url, {
         method: "POST",
+        // A redirect could lead off this machine; Ollama never sends one.
+        redirect: "error",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           model,
@@ -160,6 +181,7 @@ export const ollamaModel = (model: string, options: OllamaOptions = {}): AnswerM
           think: false,
           options: {
             num_ctx: DEFAULT_OLLAMA_NUM_CTX,
+            seed,
             ...(temperature === undefined ? {} : { temperature }),
           },
           messages: [

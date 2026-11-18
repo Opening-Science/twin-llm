@@ -10,7 +10,7 @@
  * run on the same records by the analysis scripts.
  */
 import { wilson95 } from "../score/stats";
-import { type AnalysisOptions, contrastsMarkdown, partA } from "./analysis";
+import { type AnalysisOptions, contrastsMarkdown, outcomeOf, partA } from "./analysis";
 import type { Condition } from "./contexts";
 import type { StudyRecord } from "./run";
 import { NUMBER_VERDICTS, type NumberVerdict, type StudyScore } from "./score";
@@ -57,9 +57,10 @@ export const shareOf = (hits: number, n: number): Share => {
 };
 
 /**
- * An outcome over the records it applies to; an error counts as a failure.
- * Attribution is scored where a right answer states a number (the expected
- * outcome is `state`); every other outcome on its own stratum.
+ * An outcome over the records it applies to; an error counts as a failure
+ * (for over-hedging, a failure is `true`). Attribution is scored where a
+ * right answer states a number (the expected outcome is `state`); every
+ * other outcome on its own stratum.
  */
 export const outcomeShare = (
   records: readonly StudyRecord[],
@@ -70,7 +71,7 @@ export const outcomeShare = (
     stratum === null ? record.expected.kind === "state" : record.stratum === stratum,
   );
   return shareOf(
-    applies.filter((record) => record.score?.[outcome.field] === true).length,
+    applies.filter((record) => outcomeOf(record, outcome.field)).length,
     applies.length,
   );
 };

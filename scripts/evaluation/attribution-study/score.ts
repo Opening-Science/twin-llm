@@ -173,7 +173,7 @@ const verdictFor = (
 };
 
 export const HEDGE =
-  /\b(?:disagree\w*|differ\w*|conflict\w*|inconsisten\w*|held back|hold(?:ing)? (?:it |the value )?back|withh[oe]ld\w*|averag\w*|mean of)\b/i;
+  /\b(?:disagree\w*|conflict\w*|inconsisten\w*|held back|hold(?:ing)? (?:it |the value )?back|withh[oe]ld\w*|averag\w*|mean of)\b/i;
 export const RULE_REASON = /\b(?:fixed order|order|first (?:source|in)|priority|rule)\b/i;
 export const NO_READING =
   /\b(?:no (?:reading|data|record|value|measurement)s?|missing|not (?:available|recorded|record)|(?:does|do|did)n[’']?t (?:have|record)|(?:does|do|did) not (?:have|record)|isn[’']?t (?:available|there)|unavailable)\b/i;
