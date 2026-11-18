@@ -1,6 +1,8 @@
 import { readConnectorSummaries } from "@/features/connectors/connector-summaries";
 import { connectorSetupViews } from "@/features/connectors/connector-setup";
+import { threadsForViewer } from "@/features/app-shell/load-threads";
 import { DashboardScreen } from "@/features/dashboard/dashboard-screen";
+import { RecentChats } from "@/features/dashboard/recent-chats";
 import { DayGlanceCard } from "@/features/digital-twin/day/day-glance-card";
 import {
   getGoogleHealthConnectionStatus,
@@ -95,12 +97,17 @@ export default async function DashboardPage() {
   if (clerkId && !appUserId && isAuthDisabled()) {
     appUserId = (await ensureAppUser(clerkId)).id;
   }
-  const wearables = await loadWearables(clerkId, appUserId);
+  // The gate above has passed, so thread titles may be opened, as the sidebar does.
+  const [wearables, threads] = await Promise.all([
+    loadWearables(clerkId, appUserId),
+    threadsForViewer(appUserId),
+  ]);
   return (
     <DashboardScreen
       slots={{
         wearables: <WearablesOverview {...wearables} />,
         twin: <DayGlanceCard />,
+        chat: <RecentChats threads={threads} />,
       }}
     />
   );
