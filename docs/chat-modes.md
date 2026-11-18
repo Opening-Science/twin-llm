@@ -90,7 +90,7 @@ chat Auto is offered only when its model runs on this machine.
 In the Specialists mode each specialist answering has its model as a choice, its own by
 default and any plain model the catalog offers (`setSpecialistModel`,
 `specialistModelChoices`); in an incognito chat a model the pair cannot run on here is
-greyed. This was the Manual mode until #610 folded it in; Manual's other use, models
+greyed. A pair runs here when its specialist and its model both do (`rowRunsHere`). This was the Manual mode until #610 folded it in; Manual's other use, models
 answering as themselves, is Basic for one and Compare for several. A specialist on
 another model is still one specialist: its box stays ticked, and unticking it removes it
 on whichever model it was. That row's id is `agent:<specialist>@<model id>`, such as
