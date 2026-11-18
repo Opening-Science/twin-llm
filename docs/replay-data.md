@@ -61,3 +61,22 @@ carry a hormone amount. Insulin is narrated only: no reading stream holds it.
 
 A synthetic demonstration keeps these four labels, so it can show what a measured value
 looks like, but `origin` and the day's `notice` say on every item that it is made up.
+
+## Demo days
+
+`demo-days.ts` builds deterministic synthetic days; no randomness, so the same call gives
+the same day. `demoReplayDay(subject, day)` returns null for a person or day the demo
+does not have, never a stand-in.
+
+| Person               | Days                          | Shows                                                                                                                                                  |
+| -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `synthetic-replay-a` | 20–29 Oct 2026, Europe/Berlin | Ten distinct nights. 25 Oct is the autumn clock change (25 hours, 100 quarter-hours). One night elevated alone (24th), then two in a row (26th, 27th). |
+|                      | 27 Oct, the reference day     | Evidence for all sixteen phases of #860; sensor glucose missing 10:00–10:45; a blood value the person entered; heart rate every minute 18:30–19:14.    |
+|                      | 22 Oct                        | Nothing recorded.                                                                                                                                      |
+|                      | 23 Oct                        | The ring stops syncing at 20:00: later heart rate is stale.                                                                                            |
+|                      | 28 Oct                        | No glucose sensor worn and no activity recorded.                                                                                                       |
+|                      | 29 Sep–19 Oct                 | Nightly values only: history for a personal baseline.                                                                                                  |
+| `synthetic-replay-b` | 26–29 Oct 2026                | No history: no baseline can be formed.                                                                                                                 |
+
+Heart rate, steps and sensor glucose come every 15 minutes; meals and "Winding down" are
+tags the demo person entered.
