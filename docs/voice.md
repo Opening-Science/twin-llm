@@ -70,6 +70,24 @@ per code:
 | `SPEECH_BAD_AUDIO`     | That recording could not be read. Try again.                       |
 | `SPEECH_NOTHING_HEARD` | Nothing was heard. Hold the button while you speak.                |
 
+## The app's routes
+
+The browser never talks to the sidecar. It calls the app, which checks the request and
+passes it on (`features/voice/`). All three need a signed-in person; the two that carry
+speech sit behind the unlock gate like the chat.
+
+| Route                                  | In                   | Out                                                        |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------- |
+| `GET /api/voice/status`                | nothing              | `{ on, languages }`; `on` is false while voice is off      |
+| `POST /api/voice/transcribe?language=` | the WAV              | `{ text, language, timings: { audioMs, sttMs, totalMs } }` |
+| `POST /api/voice/speak`                | `{ text, language }` | `audio/wav`                                                |
+
+`totalMs` is the whole request as the app saw it, so the three timings say how long the
+person spoke, how long the sidecar took and what the route added. A failure is
+`{ code, error }` with the sentence from the table above: 503 while voice is off or down,
+504 on a timeout, 502 for the sidecar's own failure, 400 for a recording it cannot read and
+422 when nothing was heard.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`

@@ -23,9 +23,11 @@ import {
   KIOSK_START,
   KIOSK_SUBTITLE,
   KIOSK_TITLE,
+  kioskHintText,
   kioskShows,
 } from "./kiosk-copy";
 import { kioskFocus } from "./kiosk-focus";
+import { kioskHint } from "./kiosk-hint";
 import { ATTRACT, type KioskEvent, kioskSession } from "./kiosk-session";
 import { kioskTourStops, TOUR_STEP_MS, tourBeat } from "./kiosk-tour";
 import { keyboardTrigger, type KioskTrigger } from "./kiosk-trigger";
@@ -90,14 +92,18 @@ export const KioskScreen = ({
   }, [triggers, press, back]);
 
   // Only a playing day has a clock to watch; the attract loop needs none.
+  // The same tick keeps the hint's countdown current.
+  const [nowMs, setNowMs] = useState(0);
   useEffect(() => {
     if (!playing) return;
-    const timer = window.setInterval(
-      () => dispatch({ type: "tick", nowMs: Date.now() }),
-      TICK_MS,
-    );
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setNowMs(now);
+      dispatch({ type: "tick", nowMs: now });
+    }, TICK_MS);
     return () => window.clearInterval(timer);
   }, [playing]);
+  const hint = kioskHint(session, count, nowMs);
 
   // Back in the attract loop, focus leaves whatever the last visitor reached,
   // and the tour starts again from its first place.
@@ -124,7 +130,14 @@ export const KioskScreen = ({
       </div>
       <div className="kiosk-panel">
         {index !== null && focus ? (
-          <KioskBeatCard day={day} index={index} focusLabel={focus.label} />
+          <>
+            {hint ? (
+              <p className="kiosk-hint" data-kind={hint.kind}>
+                {kioskHintText(hint)}
+              </p>
+            ) : null}
+            <KioskBeatCard day={day} index={index} focusLabel={focus.label} />
+          </>
         ) : (
           <div className="kiosk-attract">
             <p className="kiosk-attract-call">{KIOSK_ATTRACT}</p>
