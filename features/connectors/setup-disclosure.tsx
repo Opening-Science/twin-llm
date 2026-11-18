@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { ConnectorSetupView, EnvCheck } from "./connector-setup";
+import { NewTabNote } from "@/infrastructure/ui-kit/new-tab-note";
 
 /**
  * The "Setup" disclosure on every connector card: env names with set / missing,
@@ -86,6 +87,7 @@ export const SetupDisclosure = ({ setup, open = false, note }: SetupDisclosurePr
         )}
         <a href={setup.doc} target="_blank" rel="noreferrer" className="setup-link">
           Setup guide
+          <NewTabNote />
         </a>
       </div>
     </details>

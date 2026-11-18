@@ -35,22 +35,32 @@ checklist); the table above is what each of them needs.
 ## The list
 
 The list is what makes the set usable after the scanner has moved: one row per
-scan, kept as `data/vitronic/reference-scans.csv` on the operator's machine,
-inside the folder git already ignores. It holds identifiers only, never measure
-values:
+scan, kept as `reference-scans.csv` in the vitronic data folder
+(`VITRONIC_DATA_DIR`, else `data/vitronic/`) on the operator's machine, inside
+the folder git already ignores. It holds identifiers only, never measure values.
+`bun run vitronic:reference-list` writes it from what TwinLLM has stored for the
+local user (`--user <id>` for another local actor): every subject except Self,
+in scan-number order, so a later scan is added at the end and the earlier
+references keep their numbers. The file is owner-only; the command prints counts
+and the path, never a row, and writes one audit row (`vitronic.reference.list`,
+counts only). With `--check` it also looks for every listed mesh in the user's
+folder and exits 1, naming the references only, when one is missing. Run it
+again after each session; the `note` column comes out empty, so keep notes in a
+copy.
 
-| Column          | From                                                      |
-| --------------- | --------------------------------------------------------- |
-| `reference`     | A running number, `R01`, `R02`, …                         |
-| `subject_label` | `VitronicSubject.label` (not a name)                      |
-| `consent`       | `consentRecordedAt` and `consentBy`                       |
-| `viatar_id`     | The scanner's scan number                                 |
-| `scanned_at`    | `Viatar.meta.crtime`                                      |
-| `preset`        | `presetName`                                              |
-| `repeat`        | 1, 2, 3 … within one person's session                     |
-| `glb_sha256`    | `VitronicSnapshot.glbSha256`                              |
-| `complete`      | Mesh and markers both stored (`synced`, not `incomplete`) |
-| `note`          | Anything unusual: a movement, a re-scan, a preset change  |
+| Column                | From                                                       |
+| --------------------- | ---------------------------------------------------------- |
+| `reference`           | A running number across the list, `R01`, `R02`, …          |
+| `subject_label`       | `VitronicSubject.label` (not a name)                       |
+| `consent_recorded_at` | `VitronicSubject.consentRecordedAt`                        |
+| `consent_by`          | `VitronicSubject.consentBy`                                |
+| `viatar_id`           | The scanner's scan number                                  |
+| `synced_at`           | When TwinLLM stored the scan (`VitronicSnapshot.syncedAt`) |
+| `preset`              | `presetName`                                               |
+| `repeat`              | 1, 2, 3 … within one subject, by scan number               |
+| `glb_sha256`          | `VitronicSnapshot.glbSha256`                               |
+| `complete`            | Mesh and markers both stored (`synced`, not `incomplete`)  |
+| `note`                | Empty; for the operator                                    |
 
 ## Checklist
 
@@ -65,12 +75,12 @@ Before the session:
 During the session:
 
 - [ ] Each scan synced in Digital Twin and shown as synced, not incomplete
-- [ ] Each scan's row added to the list straight away
+- [ ] `bun run vitronic:reference-list` run after the session, and the counts it prints checked against the scans made
 - [ ] Repeat scans of a person made without leaving the scanner
 
 Before 15 December:
 
-- [ ] Every row's `glb_sha256` matches a file under `data/vitronic/` (`.glb` or `.glb.enc`)
+- [ ] `bun run vitronic:reference-list -- --check` finds every listed mesh: `<glb_sha256>.glb`, or `<glb_sha256>.glb.enc` once sealed in personal mode
 - [ ] The scanner's own export copied to the encrypted disk
 - [ ] The list and the set backed up together, off GitHub
 - [ ] #614 closed with the number of people and scans only, no labels or ids

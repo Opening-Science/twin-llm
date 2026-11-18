@@ -21,6 +21,12 @@ turns. The twin goes to the beat's layer and lights its organ, through the same
 day panel's eye and a note beside it, never a colour alone. The notice, the placeholder
 note and "Times are UTC" stay on screen with every beat.
 
+Above the beat a strip runs from midnight to midnight with a tick per beat time: the
+current one tall and solid, a worth-a-look time as a ring over a hatched band
+(`kiosk-strip.ts`). Shapes, not colours, tell them apart. The strip only places the
+times the day already wrote, and screen readers skip it because the beat says the same
+in words.
+
 ## A visit
 
 With nobody at the screen the kiosk runs its attract loop: the twin turns and the screen
@@ -31,10 +37,11 @@ liver; `kiosk-tour.ts`), so a passer-by sees what the day is about.
 A press starts the day on its first beat; each press after that goes on a beat, and the
 left arrow goes back one. A press on the last beat ends the day, and so does a minute
 with no press (`IDLE_RESET_MS` in `features/digital-twin/kiosk/kiosk-session.ts`).
-Either way the kiosk is back in the attract loop exactly as it started. A line above the
-beat says what a press does ("Press anywhere for the next moment", and on the last beat
-"Press to finish"); in the last ten seconds before the reset it counts down instead, in
-a box, so nobody is surprised when the day goes away (`kiosk-hint.ts`).
+Either way the kiosk is back in the attract loop exactly as it started, the tour on its
+first place again. A line above the beat says what a press does ("Press anywhere for the
+next moment", and on the last beat "Press to finish"); in the last ten seconds before the
+reset it counts down instead, in a box, so nobody is surprised when the day goes away
+(`kiosk-hint.ts`).
 
 Nothing of a visit is kept. The session lives in memory only, no kiosk file touches
 browser storage or cookies (a test reads them to check), and focus is let go on the way
