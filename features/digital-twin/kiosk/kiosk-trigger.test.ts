@@ -9,13 +9,11 @@ describe("keyPress", () => {
     ).toEqual(["press", "press", "press", "press", "back", "back"]);
   });
 
+  test("Escape sends the kiosk back to the start", () => {
+    expect(keyPress("Escape")).toBe("reset");
+  });
+
   test("any other key does nothing", () => {
-    expect(["a", "Escape", "Tab", "Home", "Shift"].map(keyPress)).toEqual([
-      null,
-      null,
-      null,
-      null,
-      null,
-    ]);
+    expect(["a", "Tab", "Home", "Shift"].map(keyPress)).toEqual([null, null, null, null]);
   });
 });
