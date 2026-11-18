@@ -680,6 +680,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes digital-twin.day)",
   },
+  "GET /api/digital-twin/period/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.period)",
+  },
   "GET /api/digital-twin/day": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
@@ -707,6 +712,19 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: NOT_PERSONAL,
+  },
+  "GET /api/voice/status": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "says whether the speech sidecar answers; no personal data",
+  },
+  "POST /api/voice/transcribe": {
+    kind: "exempt",
+    why: "passes a recording to the speech sidecar on this machine and returns its text; reads no stored data and keeps nothing",
+  },
+  "POST /api/voice/speak": {
+    kind: "exempt",
+    why: "passes text to the speech sidecar on this machine and returns the audio; reads no stored data and keeps nothing",
   },
   "POST /api/gbd/imports": {
     kind: "exempt",
@@ -1118,6 +1136,8 @@ describe("locked personal data (#142)", () => {
       "POST /api/vitronic/subjects/[subjectId]/files",
       "POST /api/vitronic/subjects/[subjectId]/sync",
       "POST /api/vitronic/sync",
+      "POST /api/voice/speak",
+      "POST /api/voice/transcribe",
       "POST /api/whoop/sync",
       "PUT /api/vitronic/subjects/[subjectId]/default",
     ]);
@@ -1209,6 +1229,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/synthea/layout.tsx": { open: "the public Synthea generator" },
   "app/synthea/page.tsx": { open: "the public Synthea generator" },
   "app/synthea/docs/page.tsx": { open: "the public Synthea generator" },
+  "app/kiosk/page.tsx": { open: "the synthetic demo body; reads no person's data" },
 };
 
 /** Server actions: each gated function refuses while locked (directly or through `via`). */

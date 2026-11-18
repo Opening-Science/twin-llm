@@ -3,21 +3,22 @@ import "server-only";
 import { ANALYTICS_ROW_CAP } from "@/packages/query-tools/refusals";
 import {
   DAY_THRESHOLDS,
-  type DayReading,
   dayBeats,
   type GlucoseProfile,
   redWindows,
 } from "@/packages/query-tools/day-beats";
-import MOCK_DAY from "@/packages/query-tools/fixtures/mock-day.json";
 import { type KioskDay, toKioskDay } from "@/packages/query-tools/kiosk-day";
+import { MOCK_DAY_REF, mockKioskDay } from "@/packages/query-tools/mock-kiosk-day";
 import {
   GLUCOSE_LOINCS,
   HEART_RATE_LOINC,
   readingsFromRows,
+  SENSOR_GLUCOSE_LOINC,
 } from "@/packages/query-tools/show-my-day";
 import { utcDay } from "@/packages/query-tools/stats";
 
 import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type DayListEntry } from "./day-view";
 
 /**
  * One Demo person's day for "Show me my day", built from the rows the Demo
@@ -29,16 +30,18 @@ import { type CohortRow } from "../biomarkers/cohort-handler";
  * mock, and never mixed with a person's readings.
  */
 
-/** The codes a day reads: heart rate and blood glucose, as `show_my_day` reads them. */
-export const DAY_CODES: readonly string[] = [HEART_RATE_LOINC, ...GLUCOSE_LOINCS];
+/** The codes a day reads: heart rate, blood and sensor glucose, as `show_my_day` reads them. */
+export const DAY_CODES: readonly string[] = [
+  HEART_RATE_LOINC,
+  ...GLUCOSE_LOINCS,
+  SENSOR_GLUCOSE_LOINC,
+];
 
 const UNIT_OF = (loinc: string): string =>
   loinc === HEART_RATE_LOINC ? "/min" : "mg/dL";
 
 /** The subject_ref the mock day carries; never a warehouse subject. */
-export const MOCK_DAY_REF = "synthetic-mock-day";
-
-export type DayListEntry = Readonly<{ day: string; readings: number }>;
+export { MOCK_DAY_REF };
 
 export type DemoDayResult =
   | Readonly<{ kind: "day"; day: KioskDay }>
@@ -93,23 +96,10 @@ export const demoDay = (
   };
 };
 
-const MOCK_READINGS: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
-
-/** The illustrative mock day (`fixtures/mock-day.json`): made-up values, activity recorded. */
+/**
+ * The illustrative mock day (`fixtures/mock-day.json`): made-up values,
+ * activity recorded, blood and sensor glucose side by side. Built by the
+ * same `mockKioskDay` the kiosk plays.
+ */
 export const mockDay = (profile: GlucoseProfile): KioskDay =>
-  toKioskDay({
-    subject_ref: MOCK_DAY_REF,
-    day: MOCK_DAY.day,
-    profile,
-    beats: dayBeats(MOCK_READINGS, profile),
-    red_windows: redWindows(MOCK_READINGS, profile),
-    thresholds: { status: DAY_THRESHOLDS.status, reviewer: DAY_THRESHOLDS.reviewer },
-    activity: "recorded",
-    timezone: "UTC",
-  });
+  mockKioskDay(profile, "both");
