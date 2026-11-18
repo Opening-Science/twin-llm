@@ -3,6 +3,7 @@ import {
   REMOTE_GPU_SOURCE,
   type CatalogModel,
   type VllmSource,
+  widestMeasuredFirst,
 } from "./model-catalog";
 
 /**
@@ -61,9 +62,12 @@ const EMPTY_REMOTE_GPU_CATALOG: RemoteGpuCatalog = {
 };
 
 /**
- * Lists `GET {url}/models` on every vLLM server and merges them in URL order. Two ports can serve the same weights under different names, so each
- * id remembers which URL listed it; if two URLs list the same id, the first
- * wins. One dead tunnel never hides the others.
+ * Lists `GET {url}/models` on every vLLM server and merges them: the widest
+ * reported window first across every server, as the models page says, then
+ * the rows that report none. Two ports can serve the same weights under
+ * different names, so each id remembers which URL listed it; if two URLs list
+ * the same id, the first in URL order wins. One dead tunnel never hides the
+ * others.
  */
 export const listRemoteGpuModels = async (
   deps: Readonly<{
@@ -80,7 +84,7 @@ export const listRemoteGpuModels = async (
       listOneRemoteGpu(url.replace(/\/+$/, ""), { ...deps, source }),
     ),
   );
-  return listings.reduce<RemoteGpuCatalog>(
+  const listed = listings.reduce<RemoteGpuCatalog>(
     (merged, listing) =>
       "skip" in listing
         ? { ...merged, skipped: [...merged.skipped, listing.skip] }
@@ -97,4 +101,5 @@ export const listRemoteGpuModels = async (
           ),
     EMPTY_REMOTE_GPU_CATALOG,
   );
+  return { ...listed, models: widestMeasuredFirst(listed.models) };
 };
