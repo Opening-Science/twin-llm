@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { DASHBOARD_INTRO, DASHBOARD_SECTIONS, REPLAY_MY_DAY } from "./dashboard-sections";
+import {
+  DASHBOARD_INTRO,
+  DASHBOARD_SECTIONS,
+  RECENT_CHATS,
+  recentChatMeta,
+  REPLAY_MY_DAY,
+} from "./dashboard-sections";
 
 describe("dashboard sections", () => {
   test("wearables first, then the twin, then chat, each opening its own page", () => {
@@ -40,5 +46,16 @@ describe("dashboard sections", () => {
       href: null,
       status: "Coming",
     });
+  });
+
+  test("recent chats: how many, the words when there are none, and each one's line", () => {
+    expect(RECENT_CHATS.shown).toBe(5);
+    expect(RECENT_CHATS.empty).toBe(
+      "No conversations yet. Ask a question and it shows here and in the sidebar.",
+    );
+    expect(RECENT_CHATS.label).toBe("Recent conversations");
+    expect(recentChatMeta("2026-11-17T09:00:00.000Z", 1)).toBe("17 Nov 2026 · 1 model");
+    expect(recentChatMeta("2026-11-16T12:00:00.000Z", 3)).toBe("16 Nov 2026 · 3 models");
+    expect(recentChatMeta("2026-11-15T12:00:00.000Z", 0)).toBe("15 Nov 2026");
   });
 });

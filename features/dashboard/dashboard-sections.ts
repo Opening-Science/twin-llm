@@ -1,3 +1,5 @@
+import { formatDate } from "@/infrastructure/format-measure";
+
 /**
  * The dashboard's sections, in order, and the words around them. Each
  * section is a first look at one part of the app and links to the page that
@@ -55,3 +57,17 @@ export const REPLAY_MY_DAY = {
   href: null,
   status: "Coming",
 } as const;
+
+export const RECENT_CHATS = {
+  shown: 5,
+  label: "Recent conversations",
+  empty: "No conversations yet. Ask a question and it shows here and in the sidebar.",
+} as const;
+
+/** "17 Nov 2026 · 1 model": the last activity's day and how many models answered, when any did. */
+export const recentChatMeta = (updatedAt: string, modelCount: number): string => {
+  const day = formatDate(new Date(updatedAt));
+  return modelCount === 0
+    ? day
+    : `${day} · ${modelCount} ${modelCount === 1 ? "model" : "models"}`;
+};
