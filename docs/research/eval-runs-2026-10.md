@@ -1439,7 +1439,7 @@ columns, Wilson 95 % intervals; "no tool" counts every answered line):
 | qwen3:8b v1h, now   | 5/28 (8–36 %)   | 16/28 (39–73 %) | 0/28 (0–12 %)   | 27 of 39           | 8 (5)                       |
 
 The 30 Oct and 1 Nov rows are those runs rescored with the current scorers.
-One answer states a value without a tool: qwen3:4b v1, Q-S2-08 repeat 2,
+One answer states a value no tool returned: qwen3:4b v1, Q-S2-08 repeat 2,
 gives 0 after its calls returned no reading. On v1h both models state 0.051
 for Q-S2-H04, which no returned row holds ("not in rows": derived, not
 without a tool). No other answer in the four runs does either.
