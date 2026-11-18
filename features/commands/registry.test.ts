@@ -4,6 +4,7 @@ import { TOOLS_IN_WORDS, toolDoes, toolTitle } from "@/infrastructure/tool-title
 
 import {
   BUILT_IN_COMMANDS,
+  builtInDraft,
   type Command,
   matchCommands,
   paletteCommands,
@@ -143,5 +144,20 @@ describe("skillDraft", () => {
     expect(skillDraft("/connect oura", skills)).toBeNull();
     expect(skillDraft("how did I sleep? /sleep", skills)).toBeNull();
     expect(skillDraft("/sleep last nights", [])).toBeNull();
+  });
+});
+
+describe("builtInDraft", () => {
+  test("a box holding only a built-in is that command, however it is sent", () => {
+    expect(builtInDraft("/twin")?.name).toBe("twin");
+    expect(builtInDraft("  /compact \n")?.name).toBe("compact");
+    expect(builtInDraft("/Connect")?.name).toBe("connect");
+  });
+
+  test("a built-in with text after it, a skill or an unknown word is not one", () => {
+    expect(builtInDraft("/twin show my heart")).toBeNull();
+    expect(builtInDraft("/sleep")).toBeNull();
+    expect(builtInDraft("/twins")).toBeNull();
+    expect(builtInDraft("what is /twin")).toBeNull();
   });
 });
