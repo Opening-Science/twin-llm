@@ -1,17 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { type DayReading } from "./day-beats";
+import { DAY_THRESHOLDS, type DayReading } from "./day-beats";
 import { glucosePeriod } from "./day-period";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { MOCK_DAY_DATE, mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const MOCK: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const MOCK: readonly DayReading[] = mockDayReadings("blood");
 
 const glucose = (time: string, value: number | null): DayReading => ({
   time,
@@ -25,10 +19,11 @@ describe("glucosePeriod on the mock day", () => {
   test("without diabetes: average 105.7 mg/dL, one reading of 14 above 140", () => {
     // Hand-checked: the 14 glucose readings sum to 1480; only 175 at 20:30 is above 140.
     const period = glucosePeriod(
-      [{ day: MOCK_DAY.day, readings: MOCK }],
+      [{ day: MOCK_DAY_DATE, readings: MOCK }],
       "without_diabetes",
     );
     expect(period).toEqual({
+      specimen: "blood",
       n: 14,
       days: 1,
       average_mg_dl: 105.7,
@@ -41,7 +36,7 @@ describe("glucosePeriod on the mock day", () => {
 
   test("with diabetes: every reading inside 70–180 mg/dL", () => {
     const period = glucosePeriod(
-      [{ day: MOCK_DAY.day, readings: MOCK }],
+      [{ day: MOCK_DAY_DATE, readings: MOCK }],
       "with_diabetes",
     );
     expect(period.range).toEqual({
@@ -91,5 +86,40 @@ describe("glucosePeriod over several days", () => {
     expect(period.average_mg_dl).toBeNull();
     expect(period.share_of_readings).toBeNull();
     expect(period.by_day).toEqual([]);
+  });
+});
+
+describe("glucosePeriod by specimen", () => {
+  const both = (
+    time: string,
+    blood: number | null,
+    sensor: number | null,
+  ): DayReading => ({
+    ...glucose(time, blood),
+    sensorGlucoseMgDl: sensor,
+  });
+  const DAYS = [
+    {
+      day: "2026-11-10",
+      readings: [
+        both("08:00", 100, 96),
+        both("08:05", null, 150),
+        both("08:10", 160, null),
+      ],
+    },
+  ];
+
+  test("blood reads only the blood values", () => {
+    const period = glucosePeriod(DAYS, "without_diabetes");
+    expect([period.specimen, period.n, period.average_mg_dl]).toEqual(["blood", 2, 130]);
+    expect(period.share_of_readings).toEqual({ below: null, within: 0.5, above: 0.5 });
+  });
+
+  test("sensor reads only the sensor values, never a blood one", () => {
+    const period = glucosePeriod(DAYS, "without_diabetes", DAY_THRESHOLDS, "sensor");
+    expect([period.specimen, period.n, period.average_mg_dl]).toEqual(["sensor", 2, 123]);
+    expect(period.by_day).toEqual([
+      { day: "2026-11-10", n: 2, average_mg_dl: 123, below: null, above: 1 },
+    ]);
   });
 });
