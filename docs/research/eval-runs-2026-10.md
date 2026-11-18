@@ -1444,6 +1444,60 @@ The October pilot run (`2026-10-30-pilot1-v1`, git `7ed2d51`, copied into
 this checkout's runs) against today's on v1: 3–14 on correctness (Holm
 0.089), nothing else apart. The pilot has not moved much while main has.
 
+### 2. Decline line on qwen3:8b
+
+| Criterion           | `w1` v1h        | `w3` v1h        | `w1` v1           | `w3` v1           |
+| ------------------- | --------------- | --------------- | ----------------- | ----------------- |
+| correctness         | 4/21 (8–40 %)   | 1/26 (1–19 %)   | 22/96 (16–32 %)   | 13/107 (7–20 %)   |
+| hallucination       | 23/32 (55–84 %) | 31/38 (67–91 %) | 117/131 (83–94 %) | 115/131 (81–92 %) |
+| query safety        | 19/33 (41–73 %) | 12/33 (22–53 %) | 55/117 (38–56 %)  | 31/118 (19–35 %)  |
+| clinical caution    | 31/34 (77–97 %) | 21/34 (45–76 %) | 73/119 (52–70 %)  | 69/119 (49–66 %)  |
+| readability         | 31/38 (67–91 %) | 29/38 (61–87 %) | 106/128 (75–88 %) | 108/131 (75–88 %) |
+| no tool, all lines  | 14 of 39        | 23 of 39        | 74 of 134         | 91 of 134         |
+| declined outside S5 | 4               | 2               | 36                | 4                 |
+| S5 declined         | 6 of 6          | 6 of 6          | 16 of 16          | 16 of 16          |
+
+Paired, "`w3` only–`w1` only (Holm p; family p)": on v1h nothing separates
+(query safety 1–6, 0.75; clinical caution 2–9, 0.46; correctness 1–3, 1);
+on v1 query safety 1–24 (< 0.001; < 0.001), correctness 3–11 (0.34; 1),
+clinical caution 13–18 (1; 1).
+
+- **v1h shows the same lean, too small to test.** Under `w3` qwen3:8b
+  calls no tool on 23 of 39 v1h lines against 14 under `w1`; outside S5 that
+  is 17 against 8 lines. With 32 items no criterion clears Holm.
+- **v1 repeats the finding of the citation-rule runs** earlier the same
+  night (`2026-11-18-qwen3-8b-v1-cite` and `-v1-w1`, at `876d0f60`): query
+  safety 55 against 31 of 118, no tool 74 against 91 lines (64 and 103
+  then).
+- **`w1` buys tool calls with over-declines.** Under `w1` qwen3:8b declined
+  36 v1 answers outside S5 (15 in S6, 10 in S1, 6 in S2, 5 in S3), under
+  `w3` 4. That is why clinical caution does not move on v1: `w1` fails S6
+  with `next_step` `consult_clinician` where the key expects `more_data`
+  (14 of 33 S6 lines against 1), `w3` fails S1 and S2 by answering without
+  looking. Both wordings decline every S5 dose and medicine question.
+- **One sample is about as noisy as the v1h effect.** The citation-rule
+  `w3` v1h run (`2026-11-18-qwen3-8b-v1h-cite`, copied in and rescored
+  against the current key) against this `w3` v1h run, the same wording
+  sampled twice at two commits of main: query safety 3–5, clinical
+  caution 3–5, hallucination 4–2 discordant items, no tool on 27 against
+  23 lines.
+- **Three samples per item firm it up.** v1h asked again under each line
+  with `--repeats 3` (`2026-11-18-qwen3-8b-v1h-w1-r3`, `-w3-r3`; the first
+  repeat of each item is the single-sample run's reply, from the cache), 87
+  answered lines each. No tool outside S5: 18 lines under `w1`, 40 under
+  `w3`; declined outside S5: 9 and 6. Folded to items by majority, clinical
+  caution goes 0–6 for `w1` (p 0.031, Holm 0.22) and query safety 0–4
+  (Holm 0.75); as lines, a liberal test since an item's repeats are not
+  independent, 4–23 (Holm 0.002) and 2–17 (Holm 0.004). Hallucination
+  leans the other way, 4–0 items and 10–2 lines for `w3` (Holm 0.75 and
+  0.19).
+
+So on qwen3:8b neither line is good: `w1` over-declines on v1, `w3` skips
+the tools. On v1h the direction holds over three samples, but at the item
+level it does not clear Holm. `w3` was chosen on S7h for having the most
+good decline pairs over both models; nothing here was run on S7h, so this
+is evidence to weigh against that choice, not a reason to change it.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
