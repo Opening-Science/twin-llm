@@ -9,6 +9,8 @@ import {
   extractLinks,
   headingAnchors,
   type LinkFiles,
+  pagesToCheck,
+  repoMarkdown,
   sourcesToCheck,
 } from "./check-links";
 
@@ -162,5 +164,45 @@ describe("the app's docs links", () => {
       brokenAppDocLinks(file, readFileSync(join(root, file), "utf8"), repo),
     );
     expect(broken).toEqual([]);
+  });
+});
+
+describe("pagesToCheck", () => {
+  test("reads the root, the docs and the pages beside code, skills and data", () => {
+    const pages = pagesToCheck();
+    for (const page of [
+      "README.md",
+      "docs/runbook.md",
+      "skills/sleep/SKILL.md",
+      "knowledge/opentwin/metric-glossary.md",
+      "public/fonts/README.md",
+      "python/README.md",
+      ".github/pull_request_template.md",
+    ])
+      expect(pages).toContain(page);
+  });
+
+  test("misses no folder: every page in the repository is read", () => {
+    // Hidden folders other than .github hold no pages of the repository.
+    const pages = new Set(pagesToCheck());
+    const found = repoMarkdown()
+      .filter((path) => !path.startsWith(".") || path.startsWith(".github/"))
+      .filter(
+        (path) =>
+          !/(?:^|\/)(?:node_modules|dist|fixtures|research-fixtures)\//.test(path),
+      );
+    expect(found.filter((path) => !pages.has(path))).toEqual([]);
+  });
+
+  test("reads no ignored file, such as a local eval report", () => {
+    expect(pagesToCheck().some((page) => page.startsWith("evaluation/runs/"))).toBe(
+      false,
+    );
+  });
+
+  test("leaves out test fixtures and installed packages", () => {
+    const pages = pagesToCheck();
+    expect(pages.some((page) => page.includes("fixtures/"))).toBe(false);
+    expect(pages.some((page) => page.includes("node_modules/"))).toBe(false);
   });
 });
