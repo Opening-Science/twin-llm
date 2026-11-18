@@ -10,7 +10,25 @@ import { join } from "node:path";
  */
 const REPO = join(import.meta.dir, "../..");
 
-const SCAN_FILE = /\.(glb|glb\.enc|gltf|ply|obj|stl|fbx|usdz|e57|pcd|las|laz)$/i;
+const SCAN_EXTENSIONS = [
+  "glb",
+  "glb.enc",
+  "gltf",
+  "ply",
+  "obj",
+  "stl",
+  "fbx",
+  "usdz",
+  "e57",
+  "pcd",
+  "las",
+  "laz",
+] as const;
+
+const SCAN_FILE = new RegExp(
+  `\\.(${SCAN_EXTENSIONS.map((extension) => extension.replace(".", "\\.")).join("|")})$`,
+  "i",
+);
 const MEASUREMENT_EXPORT = /(^|\/)(measurements|viatar[-_]?\d*|bodyloop[^/]*)\.json$/i;
 
 const tracked = (): string[] =>
@@ -38,6 +56,23 @@ describe("no scans in git", () => {
       { cwd: REPO },
     );
     expect(ignored.exitCode).toBe(0);
+  });
+
+  test("every scan format the tree refuses is ignored anywhere, in any case", () => {
+    const mixed = (extension: string) =>
+      [...extension]
+        .map((char, index) => (index % 2 === 0 ? char.toUpperCase() : char))
+        .join("");
+    const paths = SCAN_EXTENSIONS.flatMap((extension) =>
+      [extension, extension.toUpperCase(), mixed(extension)].map(
+        (variant) => `elsewhere/scan.${variant}`,
+      ),
+    );
+    const ignored = Bun.spawnSync(["git", "check-ignore", "--", ...paths], { cwd: REPO })
+      .stdout.toString()
+      .split("\n")
+      .filter((line) => line !== "");
+    expect(paths.filter((path) => !ignored.includes(path))).toEqual([]);
   });
 
   test("a sealed mesh is ignored wherever it lands", () => {

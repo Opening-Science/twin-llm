@@ -25,6 +25,7 @@ import {
   layoutPdf,
   type Measure,
   PAGE,
+  type PdfPage,
   pdfText,
   spansOf,
   wrapSpans,
@@ -117,6 +118,20 @@ describe("inline marks", () => {
       { text: "snake_case_key stays", style: "regular" },
     ]);
   });
+
+  test("code inside bold or italic is code, and its backticks go", () => {
+    expect(spansOf("**Take `metformin` daily**")).toEqual([
+      { text: "Take ", style: "bold" },
+      { text: "metformin", style: "mono" },
+      { text: " daily", style: "bold" },
+    ]);
+    expect(spansOf("then _read `oura.sleep` first_")).toEqual([
+      { text: "then ", style: "regular" },
+      { text: "read ", style: "italic" },
+      { text: "oura.sleep", style: "mono" },
+      { text: " first", style: "italic" },
+    ]);
+  });
 });
 
 describe("wrapping", () => {
@@ -183,6 +198,37 @@ describe("pages", () => {
     for (const runs of pages) {
       const body = runs.filter((run) => run.muted !== true);
       expect(body.at(-1)?.size).toBe(10);
+    }
+  });
+
+  /** A turn after `filler` lines: its heading, the model's heading, the answer. */
+  const turnAfter = (filler: number, prompt: string) =>
+    layoutPdf(
+      blocksOf(
+        `# Title\n\n${"Filler line.\n\n".repeat(filler)}## 1. ${prompt}\n\n### Qwen3 4B\n\nThe answer.\n`,
+      ),
+      "f",
+      half,
+    );
+
+  /** Index of the page each run's text is on. */
+  const pageOf = (pdf: PdfPage[], text: string) =>
+    pdf.findIndex((runs) => runs.some((run) => run.text.includes(text)));
+
+  test("a turn heading moves to the next page with its model heading", () => {
+    for (let filler = 0; filler <= 80; filler += 1) {
+      const pdf = turnAfter(filler, "How did I sleep?");
+      expect(pageOf(pdf, "How did I sleep?")).toBe(pageOf(pdf, "Qwen3 4B"));
+      expect(pageOf(pdf, "Qwen3 4B")).toBe(pageOf(pdf, "The answer."));
+    }
+  });
+
+  test("a heading over several lines is not split across pages", () => {
+    const prompt = `${"Long question words ".repeat(8)}end of question?`;
+    for (let filler = 0; filler <= 80; filler += 1) {
+      const pdf = turnAfter(filler, prompt);
+      expect(pageOf(pdf, "1. Long")).toBe(pageOf(pdf, "end of question?"));
+      expect(pageOf(pdf, "end of question?")).toBe(pageOf(pdf, "The answer."));
     }
   });
 

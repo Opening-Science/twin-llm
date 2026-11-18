@@ -325,6 +325,59 @@ describe("a specialist on a model the person picks (#610, was Manual)", () => {
   });
 });
 
+describe("a pair runs here when both halves do (#846)", () => {
+  const PAGE_CATALOG: readonly CatalogModel[] = [
+    agent("auto", "Auto", SMALL),
+    agent("gp", "General", LARGE),
+    SMALL,
+    LARGE,
+  ];
+  // As the home page builds it: the catalog's own ids, so never a pair id.
+  const local = ctx({
+    catalog: PAGE_CATALOG,
+    incognito: true,
+    localModelIds: PAGE_CATALOG.map(({ id }) => id),
+  });
+
+  test("the specialist's other local model is offered", () => {
+    expect(
+      specialistModelChoices("agent:gp", local).map(({ id, reason }) => [id, reason]),
+    ).toEqual([
+      ["qwen3:4b", null],
+      ["qwen3:8b", null],
+    ]);
+  });
+
+  test("moving the specialist to it sends the pair", () => {
+    const start = setMode(initialModeState(local, null), "specialists");
+    const moved = setSpecialistModel(start, local, "", "agent:gp", "qwen3:4b");
+    expect(pickedModels(moved, local, "").map(({ id }) => id)).toEqual([
+      "agent:gp@qwen3:4b",
+    ]);
+    expect(modeProblem(moved, local, "")).toBeNull();
+  });
+
+  test("a thread whose last turn was the pair reopens on it", () => {
+    const state = initialModeState(local, ["agent:gp@qwen3:4b"]);
+    expect(state.mode).toBe("specialists");
+    expect(state.specialists).toEqual(["agent:gp@qwen3:4b"]);
+  });
+
+  test("a pair whose model is not here stays greyed", () => {
+    const partly = ctx({
+      catalog: PAGE_CATALOG,
+      incognito: true,
+      localModelIds: ["agent:gp", "qwen3:8b"],
+    });
+    expect(
+      specialistModelChoices("agent:gp", partly).map(({ id, reason }) => [id, reason]),
+    ).toEqual([
+      ["qwen3:4b", "Not on this machine, so not for incognito chats."],
+      ["qwen3:8b", null],
+    ]);
+  });
+});
+
 describe("each row names its model and tools (#610)", () => {
   test("a specialist names its model and its skill's tools", () => {
     expect(rowSubline(agent("sleep", "Sleep", LARGE, "sleep"))).toBe(

@@ -81,9 +81,19 @@ export type ModeState = Readonly<{
 
 // --- rows -------------------------------------------------------------------------
 
-/** A row runs here: always outside incognito, else only a model on this machine. */
-export const rowRunsHere = (id: string, context: ModeContext): boolean =>
-  !context.incognito || context.localModelIds.includes(id);
+/**
+ * A row runs here: always outside incognito, else only a model on this
+ * machine. The catalog lists no pairs, so a pair runs here when its
+ * specialist and its model both do.
+ */
+export const rowRunsHere = (id: string, context: ModeContext): boolean => {
+  if (!context.incognito) return true;
+  const pair = parsePairedModelId(id);
+  return pair === null
+    ? context.localModelIds.includes(id)
+    : context.localModelIds.includes(`${AGENT_ID_PREFIX}${pair.agentId}`) &&
+        context.localModelIds.includes(pair.modelId);
+};
 
 export const specialistRows = (catalog: readonly CatalogModel[]): CatalogModel[] =>
   catalog.filter((row) => row.agent !== undefined && row.id !== AUTO_MODEL_ID);
