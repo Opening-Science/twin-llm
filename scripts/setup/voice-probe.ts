@@ -34,6 +34,7 @@ export const probeVoice = async (
       ? null
       : await doFetch(`${url.replace(/\/+$/, "")}/health`, {
           signal: AbortSignal.timeout(3000),
+          redirect: "error",
         })
           .then(async (response) =>
             response.ok ? speechHealthSchema.safeParse(await response.json()) : null,

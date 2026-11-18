@@ -70,6 +70,25 @@ describe("voice in the doctor", () => {
     );
   });
 
+  test("does not follow a redirect from the health check", async () => {
+    const sidecar = await startFakeSpeechSidecar();
+    running.push(sidecar);
+    const redirecting = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: () => Response.redirect(`${sidecar.baseUrl}/health`, 302),
+    });
+    try {
+      const probe = await probeVoice(
+        { VOICE_SIDECAR_URL: `http://127.0.0.1:${redirecting.port}` },
+        home,
+      );
+      expect(probe.health).toBeNull();
+    } finally {
+      void redirecting.stop(true);
+    }
+  });
+
   test("VOICE_HOME moves the folder it looks in", async () => {
     const elsewhere = join(home, "elsewhere");
     mkdirSync(elsewhere, { recursive: true });
