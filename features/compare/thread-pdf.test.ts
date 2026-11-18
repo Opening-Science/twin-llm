@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -25,6 +25,7 @@ import {
   layoutPdf,
   type Measure,
   PAGE,
+  type PdfPage,
   pdfText,
   spansOf,
   wrapSpans,
@@ -186,6 +187,37 @@ describe("pages", () => {
     }
   });
 
+  /** A turn after `filler` lines: its heading, the model's heading, the answer. */
+  const turnAfter = (filler: number, prompt: string) =>
+    layoutPdf(
+      blocksOf(
+        `# Title\n\n${"Filler line.\n\n".repeat(filler)}## 1. ${prompt}\n\n### Qwen3 4B\n\nThe answer.\n`,
+      ),
+      "f",
+      half,
+    );
+
+  /** Index of the page each run's text is on. */
+  const pageOf = (pdf: PdfPage[], text: string) =>
+    pdf.findIndex((runs) => runs.some((run) => run.text.includes(text)));
+
+  test("a turn heading moves to the next page with its model heading", () => {
+    for (let filler = 0; filler <= 80; filler += 1) {
+      const pdf = turnAfter(filler, "How did I sleep?");
+      expect(pageOf(pdf, "How did I sleep?")).toBe(pageOf(pdf, "Qwen3 4B"));
+      expect(pageOf(pdf, "Qwen3 4B")).toBe(pageOf(pdf, "The answer."));
+    }
+  });
+
+  test("a heading over several lines is not split across pages", () => {
+    const prompt = `${"Long question words ".repeat(8)}end of question?`;
+    for (let filler = 0; filler <= 80; filler += 1) {
+      const pdf = turnAfter(filler, prompt);
+      expect(pageOf(pdf, "1. Long")).toBe(pageOf(pdf, "end of question?"));
+      expect(pageOf(pdf, "end of question?")).toBe(pageOf(pdf, "The answer."));
+    }
+  });
+
   test("a list item has its bullet left of the text", () => {
     const [runs] = layoutPdf(blocksOf("- one\n- two"), "f", half);
     const bullets = (runs ?? []).filter((run) => run.text === "•");
@@ -298,5 +330,26 @@ describe("characters in the brand fonts", () => {
 
   test("one no font has gets the style's stand-in or a question mark", () => {
     expect(fold("≤ 心", "regular")).toEqual([{ text: "<= ?", style: "regular" }]);
+  });
+});
+
+describe("the build", () => {
+  /** The arguments of every `join(…)` in thread-pdf.ts. */
+  const joins = [
+    ...readFileSync(join(import.meta.dir, "thread-pdf.ts"), "utf8").matchAll(
+      /\bjoin\(((?:[^()]|\([^()]*\))*)\)/g,
+    ),
+  ].map((match) => match[1] ?? "");
+
+  /** `process.cwd()` and string literals only: the bundler can scope those. */
+  const STATIC = /^\s*(?:process\.cwd\(\)|"[^"]*")(?:\s*,\s*"[^"]*")*\s*,?\s*$/;
+
+  test("a font path made at run time does not trace the whole project", () => {
+    expect(joins.length).toBeGreaterThan(0);
+    expect(
+      joins.filter(
+        (args) => !STATIC.test(args) && !args.includes("turbopackIgnore: true"),
+      ),
+    ).toEqual([]);
   });
 });
