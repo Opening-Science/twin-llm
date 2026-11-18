@@ -709,8 +709,9 @@ recipient.
   lab values. Download anyway?") with Download and Cancel, audited as
   `thread.export.check` with kinds and counts; nothing leaves, so it writes no ledger
   row. Only Download sends `?confirm=1`, which checks again, writes the `export-file` row
-  and its paired `thread.export` audit row with kinds and counts, and makes the file; a
-  request with neither is refused before anything is read. Cancel writes nothing, since
+  and its paired `thread.export` audit row with kinds and counts, and makes the file. If
+  that step refuses or fails, the notice stays open with the route's sentence and no
+  file is saved. A request with neither is refused before anything is read. Cancel writes nothing, since
   nothing left. The person's own rsIDs and genome sites (#356) give no file on a
   local-only app too: the notice shows the fixed sentence with Close only and the row is
   `blocked`. A guideline or knowledge search query sent to an Ollama on another machine
