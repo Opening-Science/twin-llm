@@ -20,6 +20,7 @@ export const PERSONAL_READ_PURPOSES = [
   "wearables-detail",
   "genome-report",
   "connectors-page",
+  "dashboard-page",
   "sync-oura",
   "sync-whoop",
   "sync-google-health",
