@@ -99,13 +99,14 @@ export const builtInDraft = (draft: string): Command | null => {
   return BUILT_IN_COMMANDS.find((command) => command.name === name) ?? null;
 };
 
-const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/;
+const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/i;
 
 export type SkillDraft = Readonly<{ skill: Command; prompt: string }>;
 
 /**
  * A draft that starts with a listed skill (`/sleep last 30 nights`): the
- * skill and the rest of the text. With nothing after the name the prompt is
+ * skill and the rest of the text. The name matches in any case, as in the
+ * palette (`/Sleep` is `/sleep`). With nothing after the name the prompt is
  * the skill's own description, so the model still has a question. Anything
  * else, including an unknown `/word`, is an ordinary prompt: null.
  */
@@ -116,7 +117,7 @@ export const skillDraft = (
   const match = SKILL_DRAFT.exec(draft.trim());
   if (match === null) return null;
   const skill = skills.find(
-    (command) => command.kind === "skill" && command.name === match[1],
+    (command) => command.kind === "skill" && command.name === match[1]?.toLowerCase(),
   );
   if (skill === undefined) return null;
   const rest = (match[2] ?? "").trim();
