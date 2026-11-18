@@ -39,6 +39,19 @@ describe("readConnectorSummaries", () => {
     expect(JSON.stringify(rows)).not.toContain(SUMMARY.narrative);
   });
 
+  test("the Dashboard page writes its own row, under its own purpose", async () => {
+    const rows: PersonalRead[] = [];
+    await readConnectorSummaries(
+      deps(rows, true),
+      "user_synthetic_1",
+      "app-user-1",
+      "dashboard-page",
+    );
+    expect(rows).toEqual([
+      { actor: "user_synthetic_1", purpose: "dashboard-page", rowCount: 2 },
+    ]);
+  });
+
   test("synthetic mode writes no row", async () => {
     const rows: PersonalRead[] = [];
     await readConnectorSummaries(deps(rows, false), "user_synthetic_1", "app-user-1");
