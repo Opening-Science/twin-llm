@@ -101,7 +101,7 @@ every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
 `--counterfactual` for the reruns. A model is `fake:first_listed` (states
 the first listed reading for the day and cites it), `fake:cite_other`
 (states it, cites another source's reading), or `ollama:<tag>` on this
-machine. A failed call is tried three times, then recorded as an error and
+machine, called as the chat calls it (no thinking pass, the app's context length, the model's default sampling; `--temperature 0` for the sensitivity pass, named in the model id). A failed call is tried three times, then recorded as an error and
 counted as a failure. Each answer is a line of `records.jsonl` with its full
 prompt, answer and score; `report.md` gives every outcome per condition with
 the Wilson 95% interval, citation precision and recall, the verdict counts,

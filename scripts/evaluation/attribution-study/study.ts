@@ -3,6 +3,7 @@
  *
  *   bun run attribution:study -- --items .attribution-study/dev-seed6509/items.json --model fake:first_listed
  *   bun run attribution:study -- --items <items.json> --model ollama:qwen3:4b --repeats 3 --counterfactual
+ *   bun run attribution:study -- --items <items.json> --model ollama:qwen3:4b --temperature 0
  *   bun run attribution:study -- --report <records.jsonl>
  *
  * Runs every item (and, with --counterfactual, its variants) under the
@@ -35,14 +36,16 @@ const flag = (argv: readonly string[], name: string): string | undefined => {
   return index === -1 ? undefined : argv[index + 1];
 };
 
-export const modelFor = (spec: string): AnswerModel | string => {
+export const modelFor = (spec: string, temperature?: number): AnswerModel | string => {
   if (spec.startsWith("fake:")) {
     const policy = spec.slice(5);
     return (FAKE_POLICIES as readonly string[]).includes(policy)
       ? fakeModel(policy as (typeof FAKE_POLICIES)[number])
       : `fake policies: ${FAKE_POLICIES.join(", ")}.`;
   }
-  if (spec.startsWith("ollama:") && spec.length > 7) return ollamaModel(spec.slice(7));
+  if (spec.startsWith("ollama:") && spec.length > 7) {
+    return ollamaModel(spec.slice(7), temperature === undefined ? {} : { temperature });
+  }
   return "--model is fake:<policy> or ollama:<tag>.";
 };
 
@@ -63,7 +66,12 @@ export const parseStudyArgs = (argv: readonly string[]): StudyArgs | string => {
   if (report !== undefined) return { kind: "report", records: report };
   const items = flag(argv, "--items");
   if (items === undefined) return "--items <items.json> is required.";
-  const model = modelFor(flag(argv, "--model") ?? "");
+  const rawTemperature = flag(argv, "--temperature");
+  const temperature = rawTemperature === undefined ? undefined : Number(rawTemperature);
+  if (temperature !== undefined && !(temperature >= 0 && temperature <= 2)) {
+    return "--temperature must be a number from 0 to 2.";
+  }
+  const model = modelFor(flag(argv, "--model") ?? "", temperature);
   if (typeof model === "string") return model;
   const conditions = (flag(argv, "--conditions") ?? CONDITIONS.join(",")).split(",");
   if (!conditions.every((c) => (CONDITIONS as readonly string[]).includes(c))) {

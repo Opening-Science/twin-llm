@@ -14,7 +14,10 @@
  */
 import { createHash } from "node:crypto";
 
-import { DEFAULT_OLLAMA_BASE_URL } from "../../../infrastructure/ollama-context";
+import {
+  DEFAULT_OLLAMA_BASE_URL,
+  DEFAULT_OLLAMA_NUM_CTX,
+} from "../../../infrastructure/ollama-context";
 import type { W1Item } from "../../synthetic-wearables/w1-items";
 import { type Condition, CONDITIONS, type StudyPrompt, studyPrompt } from "./contexts";
 import { type StudyItem, type Variant } from "./counterfactual";
@@ -125,18 +128,26 @@ export const runStudy = async (
 };
 
 /** A model on the local Ollama; the URL must be this machine's. */
-export const ollamaModel = (
-  model: string,
-  baseUrl: string = DEFAULT_OLLAMA_BASE_URL,
-  fetchImpl: typeof fetch = fetch,
-): AnswerModel => {
-  const root = new URL(baseUrl);
+export type OllamaOptions = Readonly<{
+  baseUrl?: string;
+  fetch?: typeof fetch;
+  /** Unset keeps the model's default sampling, as the chat does; 0 for the sensitivity pass. */
+  temperature?: number;
+}>;
+
+export const ollamaModel = (model: string, options: OllamaOptions = {}): AnswerModel => {
+  const root = new URL(options.baseUrl ?? DEFAULT_OLLAMA_BASE_URL);
   if (!["localhost", "127.0.0.1", "[::1]"].includes(root.hostname)) {
     throw new Error("The study runs on a local Ollama only.");
   }
   const url = new URL("/api/chat", root.origin);
+  const fetchImpl = options.fetch ?? fetch;
+  const { temperature } = options;
   return {
-    id: `ollama:${model}`,
+    id:
+      temperature === undefined
+        ? `ollama:${model}`
+        : `ollama:${model}@temperature=${temperature}`,
     answer: async (prompt) => {
       const response = await fetchImpl(url, {
         method: "POST",
@@ -144,6 +155,13 @@ export const ollamaModel = (
         body: JSON.stringify({
           model,
           stream: false,
+          // As the chat sends it (`ollama-chat-model.ts`): no thinking pass,
+          // the app's context length.
+          think: false,
+          options: {
+            num_ctx: DEFAULT_OLLAMA_NUM_CTX,
+            ...(temperature === undefined ? {} : { temperature }),
+          },
           messages: [
             { role: "system", content: prompt.system },
             { role: "user", content: prompt.user },
