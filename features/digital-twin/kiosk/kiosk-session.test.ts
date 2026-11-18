@@ -74,6 +74,11 @@ describe("kioskSession", () => {
     expect(Object.isFrozen(ATTRACT)).toBe(true);
   });
 
+  test("a reset goes straight back to the start, from any beat or from the loop", () => {
+    expect(run([press(0), press(1), { type: "reset" }])).toBe(ATTRACT);
+    expect(run([{ type: "reset" }])).toBe(ATTRACT);
+  });
+
   test("a day without beats never leaves the attract loop", () => {
     expect(run([press(0), press(1)], 0)).toBe(ATTRACT);
   });

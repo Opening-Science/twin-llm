@@ -96,6 +96,37 @@ reading of its measure that no other number is the value of (`wrong_source`,
 The phrase lists (`HEDGE`, `RULE_REASON`, `NO_READING`, `DIFFERENT_SCORES`)
 are heuristics; P6 validates them with a second rater.
 
+## User study stimuli (Part B)
+
+`bun run attribution:stimuli` writes the user study's stimuli to
+`.attribution-study/stimuli-seed<seed>/` (seed 6510 by default):
+`stimuli.json` and one static preview page per arm, `D0.html`, `D1.html`
+and `D2.html`. The pages have no script and make no request; they are for
+reading the wording and the display per arm before the stimuli go to the
+ethics committee and the survey platform. Code: `stimuli.ts`,
+`stimulus-page.ts`.
+
+- **Persona.** "Alex", 21 synthetic nights of resting heart rate (WHOOP,
+  Google Health) and HRV (Oura, WHOOP, Google Health), from a latent value
+  plus W1's assumed error model. Google Health records every night, the
+  others miss about one in three. The data panel lists every reading.
+- **Detection trials (16).** The chip claims the source the fixed order shows
+  that night, as the app's chip does, so its rule line is true. The answer
+  states that source's reading (8, `correct`), another source's reading of
+  that night (4, `wrong_source`), or the claimed source's reading of the
+  night before or after (4, `wrong_day`); balanced over the two measures.
+  All are constructed and say so.
+- **Calibration trials (6).** Correct answers: three on a source and measure
+  the accuracy review validated, three on one it found no evidence for. W1's
+  measures have no "limited" pair.
+- **Arms.** D0 the answer alone; D1 adds the chip and, when other sources had
+  a reading, the rule line; D2 adds the accuracy note and its level. The
+  answer text is the same in every arm.
+- A stated number is never shown as the same number as another reading a
+  participant checks it against (every source's that night, the claimed
+  source's on the nights next to it). A persona that cannot fill every trial
+  is drawn again, at most 50 times; `attempt` records which draw was used.
+
 ## Running
 
 `bun run attribution:study -- --items <items.json> --model <model>` runs

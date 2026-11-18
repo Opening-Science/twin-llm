@@ -30,7 +30,7 @@ import { beatFocus } from "../day/beat-focus";
 import { kioskHint } from "./kiosk-hint";
 import { ATTRACT, type KioskEvent, kioskSession } from "./kiosk-session";
 import { kioskTourStops, TOUR_STEP_MS, tourBeat } from "./kiosk-tour";
-import { keyboardTrigger, type KioskTrigger } from "./kiosk-trigger";
+import { type KioskInput, keyboardTrigger, type KioskTrigger } from "./kiosk-trigger";
 
 const KioskTwin = dynamic(() => import("./kiosk-twin").then((mod) => mod.KioskTwin), {
   ssr: false,
@@ -76,7 +76,14 @@ export const KioskScreen = ({
     ATTRACT,
   );
   const press = useCallback(() => dispatch({ type: "press", nowMs: Date.now() }), []);
-  const back = useCallback(() => dispatch({ type: "back", nowMs: Date.now() }), []);
+  // Counts staff resets, so one pressed during the attract loop restarts the tour too.
+  const [resets, setResets] = useState(0);
+  const send = useCallback((input: KioskInput) => {
+    if (input === "reset") {
+      setResets((count) => count + 1);
+      dispatch({ type: "reset" });
+    } else dispatch({ type: input, nowMs: Date.now() });
+  }, []);
   const playing = session.phase === "day";
   const index = playing ? session.beat : null;
   const stops = useMemo(() => kioskTourStops(day), [day]);
@@ -87,9 +94,9 @@ export const KioskScreen = ({
   const focus = useMemo(() => (beat ? beatFocus(beat) : null), [beat]);
 
   useEffect(() => {
-    const stops = triggers.map((trigger) => trigger(press, back));
+    const stops = triggers.map((trigger) => trigger(send));
     return () => stops.forEach((stop) => stop());
-  }, [triggers, press, back]);
+  }, [triggers, send]);
 
   // Only a playing day has a clock to watch; the attract loop needs none.
   // The same tick keeps the hint's countdown current.
@@ -105,15 +112,15 @@ export const KioskScreen = ({
   }, [playing]);
   const hint = kioskHint(session, count, nowMs);
 
-  // Back in the attract loop, focus leaves whatever the last visitor reached,
-  // and the tour starts again from its first place.
+  // Back in the attract loop (or reset by staff), focus leaves whatever the
+  // last visitor reached, and the tour starts again from its first place.
   useEffect(() => {
     if (playing) return;
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setTourStep(0);
     const timer = window.setInterval(() => setTourStep((step) => step + 1), TOUR_STEP_MS);
     return () => window.clearInterval(timer);
-  }, [playing]);
+  }, [playing, resets]);
 
   return (
     <div className="kiosk dark" data-phase={session.phase}>
