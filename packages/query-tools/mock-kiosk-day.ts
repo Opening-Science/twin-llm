@@ -15,12 +15,30 @@ import { MOCK_DAY_DATE, type MockDayGlucose, mockDayReadings } from "./mock-day"
 /** The subject_ref the mock day carries; never a warehouse subject. */
 export const MOCK_DAY_REF = "synthetic-mock-day";
 
+const MEASURED = " · measured";
+
+/**
+ * A mock reading was never measured, so its line says so. `source` keeps the
+ * contract's value: the beat still stands for one reading.
+ */
+const illustrative = (day: KioskDay): KioskDay => ({
+  ...day,
+  beats: day.beats.map((beat) =>
+    beat.source === "measured" && beat.line.endsWith(MEASURED)
+      ? {
+          ...beat,
+          line: `${beat.line.slice(0, -MEASURED.length)} · illustrative, not measured`,
+        }
+      : beat,
+  ),
+});
+
 export const mockKioskDay = (
   profile: GlucoseProfile,
   glucose: MockDayGlucose = "blood",
 ): KioskDay => {
   const readings = mockDayReadings(glucose);
-  return toKioskDay({
+  const day = toKioskDay({
     subject_ref: MOCK_DAY_REF,
     day: MOCK_DAY_DATE,
     profile,
@@ -30,4 +48,5 @@ export const mockKioskDay = (
     activity: "recorded",
     timezone: "UTC",
   });
+  return illustrative(day);
 };
