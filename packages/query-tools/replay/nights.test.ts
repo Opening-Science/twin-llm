@@ -9,6 +9,7 @@ import {
 } from "./demo-days";
 import { localClock } from "./local-time";
 import { type NightSummary, nightSummaries } from "./nights";
+import { replayDaySchema } from "./replay-day";
 
 const A = {
   subject_ref: DEMO_PERSON_A,
@@ -202,10 +203,25 @@ describe("baselines need history; people stay apart", () => {
   });
 
   test("on recorded data the elevated-night rule does not classify yet", () => {
-    const recorded = nightSummaries(HISTORY, { ...A, origin: "recorded" }, [
+    // Person A's days as if recorded: real values and a baseline, so the rule
+    // would classify the raised night if it were approved for recordings.
+    const recordedHistory = demoReplayDays(DEMO_PERSON_A).map((one) =>
+      replayDaySchema.parse(
+        JSON.parse(
+          JSON.stringify({ ...one, notice: null }).replaceAll(
+            '"origin":"synthetic_demo"',
+            '"origin":"recorded"',
+          ),
+        ),
+      ),
+    );
+    const [night] = nightSummaries(recordedHistory, { ...A, origin: "recorded" }, [
       "2026-10-27",
     ]);
-    expect(recorded[0]?.availability).toBe("none");
-    expect(recorded[0]?.status.status).toBe("insufficient_data");
+    expect(night?.availability).toBe("complete");
+    expect(value(night?.resting_heart_rate ?? { state: "unavailable" })).toBe(62);
+    expect(night?.baselines.resting_heart_rate.state).toBe("available");
+    expect(night?.status.status).toBe("not_classified");
+    expect(night?.status.reason).toContain("not approved for recorded data");
   });
 });
