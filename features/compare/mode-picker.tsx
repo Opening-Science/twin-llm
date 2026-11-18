@@ -15,6 +15,7 @@ import {
   boxDisabled,
   canAddSpecialist,
   type ChatMode,
+  compareRows,
   MODE_COPY,
   type ModeContext,
   modeSummary,
@@ -25,6 +26,7 @@ import {
   plainModelRows,
   rowRunsHere,
   rowSubline,
+  setCompareModel,
   setMode,
   setSpecialistModel,
   specialistModel,
@@ -40,9 +42,9 @@ import {
  * The mode and models picker (SPEC 7.4): opens upward from the mode pill.
  * A segmented "Mode" control, the mode's line, then for Basic one radio
  * group of models, for Specialists the ones answering with their models and
- * an add button, and for Compare two checkbox groups. A box whose change
- * would break the rule is disabled and says why; in incognito, rows not on
- * this machine stay listed, greyed.
+ * an add button, and for Compare two checkbox groups, a ticked specialist
+ * with its model. A box whose change would break the rule is disabled and
+ * says why; in incognito, rows not on this machine stay listed, greyed.
  */
 
 export const AGENTS_HREF = "/customize/agents";
@@ -135,21 +137,29 @@ type PanelProps = Readonly<{
 }>;
 
 /**
- * One specialist answering: its box, its name, the model it runs on as a
- * choice (its own by default, any plain model the catalog offers), and its
- * tools.
+ * One specialist answering, in Specialists or Compare: its box, its name, the
+ * model it runs on as a choice (its own by default, any plain model the
+ * catalog offers), and its tools. In Compare a specialist kept on two models
+ * from a reopened thread has a choice for each.
  */
 const AnsweringRow = ({
-  pick,
+  list,
+  picks,
   row,
   state,
   context,
   prompt,
   onChange,
-}: PanelProps & Readonly<{ pick: string; row: CatalogModel }>) => {
+}: PanelProps &
+  Readonly<{
+    list: "specialists" | "compare";
+    picks: readonly string[];
+    row: CatalogModel;
+  }>) => {
   const reasonId = useId();
-  const reason = boxDisabled(state, "specialists", row.id, context, prompt);
+  const reason = boxDisabled(state, list, row.id, context, prompt);
   const tools = specialistTools(row);
+  const setModel = list === "specialists" ? setSpecialistModel : setCompareModel;
   return (
     <li className="flex items-start gap-2 rounded-md px-2 py-1.5 text-sm">
       <input
@@ -159,32 +169,37 @@ const AnsweringRow = ({
         checked
         disabled={reason !== null}
         aria-describedby={reason === null ? undefined : reasonId}
-        onChange={() =>
-          onChange(toggleRow(state, "specialists", row.id, context, prompt))
-        }
+        onChange={() => onChange(toggleRow(state, list, row.id, context, prompt))}
       />
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{row.name}</span>
-        <label className="text-muted-foreground flex items-center gap-1 text-xs">
-          on
-          <select
-            aria-label={`Model for ${row.name}`}
-            value={specialistModel(pick, context) ?? ""}
-            onChange={(event) =>
-              onChange(
-                setSpecialistModel(state, context, prompt, pick, event.target.value),
-              )
-            }
-            className="border-input bg-background text-foreground max-w-[11rem] truncate rounded-md border px-1 py-0.5 text-xs"
+        {picks.map((pick) => (
+          <label
+            key={pick}
+            className="text-muted-foreground flex items-center gap-1 text-xs"
           >
-            {specialistModelChoices(pick, context).map((choice) => (
-              <option key={choice.id} value={choice.id} disabled={choice.reason !== null}>
-                {choice.name}
-              </option>
-            ))}
-          </select>
-          {tools === null ? null : <span>· {tools}</span>}
-        </label>
+            on
+            <select
+              aria-label={`Model for ${row.name}`}
+              value={specialistModel(pick, context) ?? ""}
+              onChange={(event) =>
+                onChange(setModel(state, context, prompt, pick, event.target.value))
+              }
+              className="border-input bg-background text-foreground max-w-[11rem] truncate rounded-md border px-1 py-0.5 text-xs"
+            >
+              {specialistModelChoices(pick, context).map((choice) => (
+                <option
+                  key={choice.id}
+                  value={choice.id}
+                  disabled={choice.reason !== null}
+                >
+                  {choice.name}
+                </option>
+              ))}
+            </select>
+            {tools === null ? null : <span>· {tools}</span>}
+          </label>
+        ))}
         {reason === null ? null : (
           <span id={reasonId} className="text-muted-foreground block text-xs">
             {reason}
@@ -222,7 +237,13 @@ const SpecialistsPanel = (props: PanelProps) => {
           <legend className="text-eyebrow px-2 pb-1">Answering</legend>
           <ul className="flex flex-col">
             {answering.map(({ pick, row }) => (
-              <AnsweringRow key={row.id} pick={pick} row={row} {...props} />
+              <AnsweringRow
+                key={row.id}
+                list="specialists"
+                picks={[pick]}
+                row={row}
+                {...props}
+              />
             ))}
           </ul>
         </fieldset>
@@ -250,6 +271,36 @@ const SpecialistsPanel = (props: PanelProps) => {
         </div>
       ) : null}
     </div>
+  );
+};
+
+/**
+ * Compare's specialists: a ticked one has its model as a choice, as in
+ * Specialists (#859); the others are plain boxes.
+ */
+const CompareSpecialists = (props: PanelProps) => {
+  const rows = specialistRows(props.context.catalog);
+  const picked = compareRows(props.state, props.context, props.prompt);
+  return rows.length === 0 ? null : (
+    <fieldset className="min-w-0">
+      <legend className="text-eyebrow px-2 pb-1">Specialists</legend>
+      <ul className="flex flex-col">
+        {rows.map((row) => {
+          const picks = picked.filter((id) => specialistOf(id) === row.id);
+          return picks.length === 0 ? (
+            <RowBox key={row.id} row={row} list="compare" {...props} />
+          ) : (
+            <AnsweringRow
+              key={row.id}
+              list="compare"
+              picks={picks}
+              row={row}
+              {...props}
+            />
+          );
+        })}
+      </ul>
+    </fieldset>
   );
 };
 
@@ -317,12 +368,7 @@ export const ModePicker = ({
           <SpecialistsPanel {...shared} />
         ) : (
           <div className="flex max-h-[18rem] flex-col gap-3 overflow-y-auto overscroll-contain">
-            <RowGroup
-              legend="Specialists"
-              rows={specialistRows(context.catalog)}
-              list="compare"
-              {...shared}
-            />
+            <CompareSpecialists {...shared} />
             <RowGroup
               legend="Models"
               rows={plainModelRows(context.catalog)}
