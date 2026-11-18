@@ -2,16 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { DAY_THRESHOLDS, type DayReading } from "./day-beats";
 import { recoveries } from "./day-recovery";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const MOCK: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const MOCK: readonly DayReading[] = mockDayReadings("blood");
 
 const heart = (
   time: string,
