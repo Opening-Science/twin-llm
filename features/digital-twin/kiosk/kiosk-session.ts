@@ -7,7 +7,7 @@
  * - `day`: someone pressed. The day plays beat by beat, a press going on.
  *
  * A press on the last beat ends the day, and so does a stretch with no press
- * (`IDLE_RESET_MS`). Either way the session goes back to exactly
+ * (`IDLE_RESET_MS`) or a reset (staff at the kiosk pressing Escape). Either way the session goes back to exactly
  * `ATTRACT`, the value it started from: nothing of the visit is kept.
  */
 
@@ -18,7 +18,8 @@ export type KioskSession =
 export type KioskEvent =
   | Readonly<{ type: "press"; nowMs: number }>
   | Readonly<{ type: "back"; nowMs: number }>
-  | Readonly<{ type: "tick"; nowMs: number }>;
+  | Readonly<{ type: "tick"; nowMs: number }>
+  | Readonly<{ type: "reset" }>;
 
 export const ATTRACT: KioskSession = Object.freeze({ phase: "attract" });
 
@@ -30,6 +31,7 @@ export const kioskSession = (
   event: KioskEvent,
   beatCount: number,
 ): KioskSession => {
+  if (event.type === "reset") return ATTRACT;
   if (session.phase === "attract") {
     // A day without beats has nothing to play, so a press leaves the loop running.
     return event.type === "press" && beatCount > 0
