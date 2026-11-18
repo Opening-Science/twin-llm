@@ -164,6 +164,7 @@ const heartFrames = (one: DayPlan): readonly Keyframe[] =>
           [RUN.from, 150],
           [at("18:30"), 162],
           [RUN.to, 160],
+          [RUN.to + 1, 142],
           [at("19:00"), 92],
           [at("19:15"), 74],
         ] as const)
