@@ -79,6 +79,7 @@ export const planTurn = (
           { id, name: findCatalogRow(id, catalog)?.name ?? id },
           catalog,
           prompt,
+          ids.length,
         ),
       })),
       skill,
