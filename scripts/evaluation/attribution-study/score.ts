@@ -10,10 +10,12 @@
  *
  * Each traced number gets a verdict against the citations:
  * - `correct` when its cell is cited;
- * - else, when the answer cites a cell of the measure, the verdict of the
- *   nearest cited cell against the number's (`citationVerdict`: wrong source,
- *   day, or both), the cited cell on the same day first;
- * - else `uncited`.
+ * - else, when the answer cites a cell of the measure that no other number
+ *   is the value of, the verdict of the nearest such cell against the
+ *   number's (`citationVerdict`: wrong source, day, or both), the one on the
+ *   same day first;
+ * - else `uncited`: a citation already used by its own number does not
+ *   stand for a second number.
  *
  * Per answer (definitions in P6 section 7.1):
  * - `attributionCorrect` (H1): at least one wearable number, none untraced,
@@ -192,24 +194,38 @@ export const scoreStudyAnswer = (item: W1Item, text: string): StudyScore => {
   const cited = cells.filter((cell) => citedKeys.includes(cell.key));
   const answer = parsed.answerText;
 
-  const numbers: ScoredNumber[] =
+  const traced =
     item.measure === null
       ? []
-      : statedSpans(answer).flatMap(({ stated, number, tail }): ScoredNumber[] => {
+      : statedSpans(answer).flatMap(({ stated, number, tail }) => {
           const trace = traceStated(stated, item.measure!, cells);
           const unit = unitOf(tail, item.measure!);
-          if (trace.kind === "none" && unit === null) return [];
-          const cell = trace.kind === "one" ? trace.cell : null;
-          return [
-            {
-              stated: `${number}${unit ?? ""}`,
-              verdict: verdictFor(trace, cited),
-              key: cell?.key ?? null,
-              source: cell?.source ?? null,
-              day: cell?.day ?? null,
-            },
-          ];
+          return trace.kind === "none" && unit === null
+            ? []
+            : [{ trace, written: `${number}${unit ?? ""}` }];
         });
+  // A citation another number already matches is that number's; a number
+  // whose own reading is not cited is compared with the citations left over,
+  // and is uncited when none is.
+  const claimed = new Set(
+    traced.flatMap(({ trace }) =>
+      trace.kind === "one" && cited.some((other) => other.key === trace.cell.key)
+        ? [trace.cell.key]
+        : [],
+    ),
+  );
+  const free = cited.filter((cell) => !claimed.has(cell.key));
+  const numbers: ScoredNumber[] = traced.map(({ trace, written }) => {
+    const cell = trace.kind === "one" ? trace.cell : null;
+    return {
+      stated: written,
+      verdict:
+        cell !== null && claimed.has(cell.key) ? "correct" : verdictFor(trace, free),
+      key: cell?.key ?? null,
+      source: cell?.source ?? null,
+      day: cell?.day ?? null,
+    };
+  });
 
   const onAsked = numbers.filter((number) => number.day === item.askedDay);
   const statedSources = [...new Set(onAsked.map((number) => number.source))];

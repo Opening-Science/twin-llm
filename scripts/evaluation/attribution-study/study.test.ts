@@ -35,6 +35,19 @@ describe("modelFor", () => {
     expect(modelFor("ollama:qwen3:4b")).toMatchObject({ id: "ollama:qwen3:4b" });
     expect(modelFor("fake:nope")).toBeString();
     expect(modelFor("openai:gpt")).toBeString();
+    expect(modelFor("ollama:qwen3:4b", 0)).toMatchObject({
+      id: "ollama:qwen3:4b@temperature=0",
+    });
+    expect(
+      parseStudyArgs([
+        "--items",
+        "x",
+        "--model",
+        "ollama:qwen3:4b",
+        "--temperature",
+        "hot",
+      ]),
+    ).toBe("--temperature must be a number from 0 to 2.");
   });
 });
 

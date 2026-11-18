@@ -98,6 +98,15 @@ describe("scoreStudyAnswer", () => {
     expect(score.stated).toBe("whoop");
   });
 
+  test("a second number does not borrow a citation its own number uses", () => {
+    const score = scoreStudyAnswer(
+      item(),
+      reply([OURA.key], "Oura had 45 ms and WHOOP had 61.2 ms."),
+    );
+    expect(score.numbers.map((number) => number.verdict)).toEqual(["correct", "uncited"]);
+    expect(score.attributionCorrect).toBe(false);
+  });
+
   test("the day before's number cited as the asked day is a wrong day", () => {
     const score = scoreStudyAnswer(item(), reply([OURA.key], "Your HRV was 39 ms."));
     expect(score.numbers[0]?.verdict).toBe("wrong_day");
