@@ -202,6 +202,26 @@ describe("statuses", () => {
     expect(recovery.status.reason).toContain("read 1 minute(s) apart");
   });
 
+  test("standing still in the hour after a run or walk is not a raised heart rate while still", () => {
+    const after = (time: string, minutes: number) => {
+      const from = localInstant(DEMO_REFERENCE_DAY, time, DEMO_TIME_ZONE).getTime();
+      return (one: Readonly<{ at: string }>): boolean =>
+        Date.parse(one.at) >= from && Date.parse(one.at) < from + minutes * 60_000;
+    };
+    const stood = replayDaySchema.parse({
+      ...REFERENCE,
+      readings: REFERENCE.readings.map((one) =>
+        one.stream === "steps" && (after("18:45", 60)(one) || after("13:15", 60)(one))
+          ? { ...one, value: 10 }
+          : one,
+      ),
+    });
+    const still = phasesOf(stood).filter((one) => one.phase === "elevated_still");
+    expect(still.map((one) => [clock(one.from), clock(one.to)])).toEqual([
+      ["15:00", "15:45"],
+    ]);
+  });
+
   test("a run with one reading after it and then two hours of nothing is not enough data", () => {
     const runEnd = localInstant(DEMO_REFERENCE_DAY, "18:45", DEMO_TIME_ZONE).getTime();
     const gapped = replayDaySchema.parse({
