@@ -306,7 +306,7 @@ const SearchDialog = ({
         <div
           role="tablist"
           aria-label={copy.resultTypes}
-          className="mt-3 -ml-1 flex gap-1"
+          className="mt-3 -ml-1 flex flex-wrap gap-1"
         >
           {SEARCH_TABS.map((value) => (
             <button
