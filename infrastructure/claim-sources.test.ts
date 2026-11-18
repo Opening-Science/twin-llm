@@ -208,6 +208,27 @@ describe("answerClaims", () => {
     expect(claim?.unknown).toEqual(["made-up-2023"]);
   });
 
+  test("an id inside inline code is not read, as the answer does not mark it", () => {
+    const [claim] = answerClaims(
+      reply("Ids look like `[PMC9999999]` in the text you see here."),
+      parts,
+    );
+    expect(claim).toMatchObject({ status: "uncited", unknown: [] });
+  });
+
+  test("table cells are read as the answer renders them, header and separator left out", () => {
+    const claims = answerClaims(
+      reply(
+        "| Measure | Finding |\n| --- | --- |\n| Sleep | Sleep studies report longer nights [PMC1234567]. |\n| Ventilation | Not covered by any search here [esc-ccs-2019]. |",
+      ),
+      parts,
+    );
+    expect(claims.map((claim) => [claim.text, claim.status])).toEqual([
+      ["Sleep studies report longer nights.", "cited"],
+      ["Not covered by any search here.", "invented"],
+    ]);
+  });
+
   test("a reply without headings is read whole", () => {
     expect(
       answerClaims("The guideline covers ventilation [ean-als-2024].", parts),
