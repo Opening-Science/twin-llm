@@ -1498,6 +1498,37 @@ level it does not clear Holm. `w3` was chosen on S7h for having the most
 good decline pairs over both models; nothing here was run on S7h, so this
 is evidence to weigh against that choice, not a reason to change it.
 
+### 3. Thinking on against off
+
+Not run. The harness has no switch for it: every Ollama call goes through
+`ollamaChatModel`, which sends `think: false`
+(`features/chat/ollama-chat-model.ts`), and `bun run eval` takes no effort
+or thinking flag. The chat turns thinking on only for Thorough and above
+(`infrastructure/chat-effort.ts`). A fair test needs a harness flag that
+passes `thinkingProviderOptions` for the run, records it in `meta.json` and
+puts it in the cache key; that is a code change, not a run. The fine-tunes
+have no thinking mode at all.
+
+### Limits
+
+- One sample per line, except the two `-r3` runs. The noise check above
+  says a v1h difference of a few items on one criterion is within what
+  resampling alone gives; the fine-tune pair was not resampled.
+- No human review. The pilot's lead rests on scored answers only, and its
+  correctness has the highest human share of these runs.
+- The pilot was trained on synthetic conversations over these tools and the
+  same response format (cohort `synthea-v4-seed1001`; these sets read
+  `synthea-v4-seed42`). The gain over the base is largely format and tool
+  choice the training taught; how close its training questions are to
+  v1 and v1h was not checked.
+- The base and the pilot use the chat's line (`w3`); the decline runs are
+  qwen3:8b only.
+- The database was built for other runs the same night and reused after
+  the live key checks; the guideline catalogue has no full text, so S3
+  says little here.
+- The copied runs (`2026-10-30-pilot1-v1`, `2026-11-18-qwen3-8b-v1h-cite`)
+  are from other commits, so those two pairs differ in more than sampling.
+
 ## Limits
 
 - The questions were written alongside the cohort they are scored against, and
