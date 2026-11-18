@@ -1437,12 +1437,14 @@
     @apply flex flex-wrap items-center gap-2;
   }
 
+  /* The beats scroll in their own box, so the step bar above stays in view.
+     The line runs down each beat's left edge; the padding keeps the dots unclipped. */
   .twin-beats {
-    @apply border-border ml-1 flex flex-col border-l;
+    @apply flex max-h-[32rem] flex-col overflow-y-auto pl-1.5;
   }
 
   .twin-beat {
-    @apply relative py-0.5 pl-2;
+    @apply border-border relative border-l py-0.5 pl-2;
   }
 
   .twin-beat-button {
@@ -1480,6 +1482,10 @@
 
   .twin-period-lines {
     @apply grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
+  .twin-step {
+    @apply flex flex-wrap items-center gap-2 py-1;
   }
 
   .twin-worth {
