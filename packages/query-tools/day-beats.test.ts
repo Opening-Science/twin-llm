@@ -460,4 +460,25 @@ describe("each measure against its own previous reading (#715)", () => {
       unit: "/min",
     });
   });
+
+  test("a reading holding only another measure does not split a red window", () => {
+    const windows = redWindows(
+      [reading("20:30", 70, 155), reading("20:31", 72, null), reading("20:35", 74, 160)],
+      "without_diabetes",
+    );
+    expect(windows.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["glucose", "20:30", "20:35", 160],
+    ]);
+    const heart = redWindows(
+      [
+        reading("09:00", 110, null),
+        reading("09:02", null, 95),
+        reading("09:05", 115, null),
+      ],
+      "without_diabetes",
+    );
+    expect(heart.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["heart_rate", "09:00", "09:05", 115],
+    ]);
+  });
 });

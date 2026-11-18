@@ -7,8 +7,8 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  * A day of heart rate and glucose turned into beats and red windows. Pure,
  * free of I/O, tested with the illustrative mock day in `fixtures/`.
  *
- * - One measured beat per reading, about the signal that moved most since the
- *   reading before, each change over its own scale: 20 /min of heart rate
+ * - One measured beat per reading, about the signal that moved most since its
+ *   own last reading, each change over its own scale: 20 /min of heart rate
  *   weighs as much as 15 mg/dL of glucose. A tie, or a first reading, goes to
  *   heart rate, then blood glucose. A change under 5 /min or 10 mg/dL is "steady".
  * - Sensor glucose (a continuous monitor) is its own signal: its change is
@@ -18,7 +18,7 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  * - A narrated insulin beat wherever glucose rose 20 mg/dL or more (blood, or
  *   the sensor when the reading has no blood value): insulin is described,
  *   never measured, so it carries no value.
- * - Red windows: consecutive readings past a threshold from
+ * - Red windows: consecutive readings of one measure past a threshold from
  *   `day-thresholds.json` (placeholders for Robin to confirm). Heart rate
  *   counts only while still; a reading with unknown activity is not judged.
  *   Each window opens with a derived beat at its highest value.
@@ -296,9 +296,9 @@ const glucoseRule = (
 };
 
 /**
- * Glucose windows of one specimen. Blood runs over every reading, as before;
- * sensor runs over the readings that carry a sensor value, so a blood or
- * heart-rate reading between two sensor readings does not split a window.
+ * Glucose windows of one specimen, run over the readings that carry that
+ * specimen's value, so a reading holding only another measure does not split
+ * a window.
  */
 const glucoseWindows = (
   sorted: readonly DayReading[],
@@ -308,10 +308,7 @@ const glucoseWindows = (
 ): readonly RedWindow[] => {
   const valueOf = (reading: DayReading): number | null =>
     specimen === "sensor" ? sensorOf(reading) : reading.glucoseMgDl;
-  const readings =
-    specimen === "sensor"
-      ? sorted.filter((reading) => valueOf(reading) !== null)
-      : sorted;
+  const readings = sorted.filter((reading) => valueOf(reading) !== null);
   const low =
     profile === "with_diabetes" ? thresholds.glucoseWithDiabetesRangeMgDl[0] : -Infinity;
   // One pass per side, so a run that jumps from below the range to above it
@@ -349,7 +346,7 @@ export const redWindows = (
 ): readonly RedWindow[] => {
   const sorted = [...readings].sort((a, b) => a.time.localeCompare(b.time));
   const heart = runsOf(
-    sorted,
+    sorted.filter((reading) => reading.heartRatePerMin !== null),
     (reading) => heartBreach(reading, thresholds),
     (reading) => reading.heartRatePerMin ?? 0,
   ).map((run): RedWindow => ({
