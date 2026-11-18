@@ -8,7 +8,10 @@ import { headingSlug } from "../../features/docs/heading-ids";
  * Checks that every relative link in the repository's Markdown pages points
  * at a file that exists and, for a link to a Markdown heading, at a heading
  * that exists. External links (`https:`, `mailto:`) and absolute paths (app
- * routes such as `/lab`) are not checked. Run with `bun run lint:links`.
+ * routes such as `/lab`) are not checked in Markdown. The app's own links to
+ * a docs page (`/docs/runbook#encryption-at-rest` in `app/` and `features/`)
+ * are checked the same way, so renaming a heading cannot strand a link in a
+ * screen. Run with `bun run lint:links`.
  */
 
 export type MarkdownLink = Readonly<{ line: number; target: string }>;
@@ -17,7 +20,7 @@ export type BrokenLink = Readonly<{
   file: string;
   line: number;
   target: string;
-  reason: "missing file" | "missing heading";
+  reason: "missing file" | "missing heading" | "not a docs route";
 }>;
 
 const FENCE = /^\s*(```|~~~)/;
@@ -125,6 +128,57 @@ export const brokenLinks = (
     return [{ file, line, target, reason: "missing heading" }];
   });
 
+/** A link from the app's code to a docs page: `/docs/runbook#encryption-at-rest`. */
+export type AppDocLink = Readonly<{
+  line: number;
+  slug: string;
+  hash: string | undefined;
+}>;
+
+const APP_DOC_LINK = /["'`]\/docs\/([A-Za-z0-9_-][^"'`\s#?$]*)(?:#([^"'`\s]+))?["'`]/g;
+
+/** A slug segment the docs route serves (`docPathForSlug` in `features/docs/docs-pages.ts`). */
+const DOC_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * The `/docs/...` links written out in full in a source file, whatever their
+ * spelling. A link built from a value (`/docs/${page.slug}`) is not written
+ * out and is not checked.
+ */
+export const extractAppDocLinks = (source: string): readonly AppDocLink[] =>
+  source.split("\n").flatMap((text, index) =>
+    [...text.matchAll(APP_DOC_LINK)].map((match) => ({
+      line: index + 1,
+      slug: match[1] ?? "",
+      hash: match[2],
+    })),
+  );
+
+/**
+ * The app's links in the source `file` that reach no docs page, or no heading
+ * on it. The docs route serves `docs/<slug>.md` with the same heading ids as
+ * GitHub, so the same anchors are checked.
+ */
+export const brokenAppDocLinks = (
+  file: string,
+  source: string,
+  files: LinkFiles,
+): readonly BrokenLink[] =>
+  extractAppDocLinks(source).flatMap(({ line, slug, hash }): BrokenLink[] => {
+    const target = `/docs/${slug}${hash === undefined ? "" : `#${hash}`}`;
+    if (slug.startsWith("images/"))
+      return files.exists(`docs/${slug}`)
+        ? []
+        : [{ file, line, target, reason: "missing file" }];
+    if (!slug.split("/").every((segment) => DOC_SEGMENT.test(segment)))
+      return [{ file, line, target, reason: "not a docs route" }];
+    const text = files.readText(`docs/${slug}.md`);
+    if (text === null) return [{ file, line, target, reason: "missing file" }];
+    if (hash === undefined || headingAnchors(text).has(safeDecode(hash).toLowerCase()))
+      return [];
+    return [{ file, line, target, reason: "missing heading" }];
+  });
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const toPosix = (path: string): string => path.split(sep).join("/");
@@ -142,6 +196,21 @@ export const pagesToCheck = (): readonly string[] => [
   ...markdownUnder("docs").sort(),
 ];
 
+const SOURCE = /\.tsx?$/;
+const TEST = /\.test\.tsx?$|\.test-helpers\.ts$/;
+
+/** The app's source files that can link to a docs page: `app/` and `features/`, not tests. */
+export const sourcesToCheck = (): readonly string[] =>
+  ["app", "features"]
+    .flatMap((dir) =>
+      readdirSync(join(ROOT, dir), { recursive: true, withFileTypes: true })
+        .filter(
+          (entry) => entry.isFile() && SOURCE.test(entry.name) && !TEST.test(entry.name),
+        )
+        .map((entry) => toPosix(relative(ROOT, join(entry.parentPath, entry.name)))),
+    )
+    .sort();
+
 const repoFiles: LinkFiles = {
   exists: (path) => existsSync(join(ROOT, path)),
   readText: (path) =>
@@ -150,11 +219,19 @@ const repoFiles: LinkFiles = {
 
 if ((import.meta as { main?: boolean }).main) {
   const pages = pagesToCheck();
-  const broken = pages.flatMap((file) =>
-    brokenLinks(file, readFileSync(join(ROOT, file), "utf8"), repoFiles),
-  );
+  const sources = sourcesToCheck();
+  const broken = [
+    ...pages.flatMap((file) =>
+      brokenLinks(file, readFileSync(join(ROOT, file), "utf8"), repoFiles),
+    ),
+    ...sources.flatMap((file) =>
+      brokenAppDocLinks(file, readFileSync(join(ROOT, file), "utf8"), repoFiles),
+    ),
+  ];
   for (const link of broken)
     console.error(`${link.file}:${link.line}  ${link.target}  (${link.reason})`);
-  console.log(`lint:links: ${pages.length} pages, ${broken.length} broken links`);
+  console.log(
+    `lint:links: ${pages.length} pages, ${sources.length} source files, ${broken.length} broken links`,
+  );
   if (broken.length > 0) process.exit(1);
 }
