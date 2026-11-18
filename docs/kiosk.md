@@ -49,12 +49,13 @@ back to the attract loop.
 
 ## Triggers
 
-A trigger is what presses: a function that calls `onPress` (or `onBack`) and returns a
-function that stops listening (`kiosk-trigger.ts`). The screen itself is one, a press
-anywhere on it. The keyboard is another: Space, Enter and the right or down arrow press,
-the left or up arrow go back, so a desk test or a USB button that sends a key works. The
-light ring on the kiosk's stand will be a third with the same shape, once how it talks to
-the browser is decided.
+A trigger is what presses: a function that sends an input (`press`, `back` or `reset`)
+and returns a function that stops listening (`kiosk-trigger.ts`). The screen itself is
+one, a press anywhere on it. The keyboard is another: Space, Enter and the right or down
+arrow press, the left or up arrow go back, and Escape sends the kiosk straight back to
+the attract loop, so a desk test, a USB button that sends a key, or staff at the screen
+all work. The light ring on the kiosk's stand will be a third with the same shape, once
+how it talks to the browser is decided.
 
 ## Running it on the screen
 
