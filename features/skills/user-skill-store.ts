@@ -75,10 +75,15 @@ const ownSkillsForPalette = async (userId: string): Promise<readonly TurnSkill[]
   }
 };
 
-/** Shipped skills, then the person's own, as the palette and search list them. */
-export const skillsFor = async (userId: string | null): Promise<readonly TurnSkill[]> => [
+/** Shipped skills, then the person's own (marked `own`), as the palette and search list them. */
+export const skillsFor = async (
+  userId: string | null,
+): Promise<readonly (TurnSkill & Readonly<{ own?: true }>)[]> => [
   ...runnableSkills(),
-  ...(userId === null ? [] : await ownSkillsForPalette(userId)),
+  ...(userId === null ? [] : await ownSkillsForPalette(userId)).map((skill) => ({
+    ...skill,
+    own: true as const,
+  })),
 ];
 
 const data = (skill: UserSkillInput) => ({
