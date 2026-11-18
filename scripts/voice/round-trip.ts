@@ -22,10 +22,9 @@ export const pcmSamples = (bytes: Uint8Array): Float32Array | null => {
   const info = wavInfo(bytes);
   if (info === null || info.format !== 1 || info.bitsPerSample !== 16) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const dataStart = bytes.length - info.dataBytes;
   const frames = Math.floor(info.dataBytes / (2 * info.channels));
   return Float32Array.from({ length: frames }, (_, frame) => {
-    const value = view.getInt16(dataStart + frame * 2 * info.channels, true);
+    const value = view.getInt16(info.dataOffset + frame * 2 * info.channels, true);
     return value < 0 ? value / 0x8000 : value / 0x7fff;
   });
 };

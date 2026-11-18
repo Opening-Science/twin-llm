@@ -22,6 +22,24 @@ describe("voice:time helpers", () => {
     );
   });
 
+  test("reads the data chunk where it is, not from the end of the file", () => {
+    const plain = encodeWav(Float32Array.from([0.25, -0.25]));
+    const list = new Uint8Array([
+      ...new TextEncoder().encode("LIST"),
+      4,
+      0,
+      0,
+      0,
+      9,
+      9,
+      9,
+      9,
+    ]);
+    const samples = [...(pcmSamples(new Uint8Array([...plain, ...list])) ?? [])];
+    expect(samples.length).toBe(2);
+    [0.25, -0.25].forEach((value, index) => expect(samples[index]).toBeCloseTo(value, 4));
+  });
+
   test("resamples 22,050 Hz to 16 kHz by length", () => {
     expect(resample(new Float32Array(22_050), 22_050, 16_000).length).toBe(16_000);
     expect([...resample(Float32Array.from([0, 1]), 1, 2)]).toEqual([0, 0.5, 1, 1]);
@@ -35,6 +53,7 @@ describe("voice:time helpers", () => {
       sampleRate: 16_000,
       bitsPerSample: 16,
       dataBytes: 32_000,
+      dataOffset: 44,
       durationMs: 1000,
     });
   });
