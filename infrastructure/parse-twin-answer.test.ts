@@ -256,7 +256,7 @@ describe("qwen3-style goldens", () => {
     expect(parsed.uncertaintyText).toBeNull();
   });
 
-  test("a literature citation under Evidence Used is not a key (#612)", () => {
+  test("a literature citation a search returned under Evidence Used is not a key (#612)", () => {
     const text = [
       "## Evidence Used",
       "- [oura.sleep.score.2026-01-01]",
@@ -268,12 +268,36 @@ describe("qwen3-style goldens", () => {
       "## Answer",
       "Synthetic answer.",
     ].join("\n");
-    const parsed = parseTwinAnswer(text, syntheticOura);
+    const returned = new Set(["ean-als-2024", "pmc1234567", "lit-sleep-pmc1234567.1"]);
+    const parsed = parseTwinAnswer(text, syntheticOura, returned);
     expect(parsed.citedKeys).toEqual([
       "oura.sleep.score.2026-01-01",
       "sleep-2024.made.up",
     ]);
     expect(parsed.hallucinatedKeys).toEqual(["sleep-2024.made.up"]);
+  });
+
+  test("a source id no search returned under Evidence Used is invented (#850)", () => {
+    const text = [
+      "## Evidence Used",
+      "- [hrv-rmssd-2025]",
+      "- [made-up-guideline-2023]",
+      "- [PMC1234567]",
+      "- [unsupported]",
+      "",
+      "## Answer",
+      "Synthetic answer.",
+    ].join("\n");
+    const parsed = parseTwinAnswer(text, syntheticOura, new Set(["pmc1234567"]));
+    expect(parsed.citedKeys).toEqual(["hrv-rmssd-2025", "made-up-guideline-2023"]);
+    expect(parsed.evidenceKeys).toEqual([]);
+    expect(parsed.hallucinatedKeys).toEqual(["hrv-rmssd-2025", "made-up-guideline-2023"]);
+    // With no searches this turn, every source id is invented.
+    expect(parseTwinAnswer(text, syntheticOura).hallucinatedKeys).toEqual([
+      "hrv-rmssd-2025",
+      "made-up-guideline-2023",
+      "PMC1234567",
+    ]);
   });
 });
 

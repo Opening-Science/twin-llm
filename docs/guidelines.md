@@ -201,7 +201,10 @@ Each claim is then:
 | `uncited`     | none of these                                        |
 
 A bracketed token of another shape, such as a wearable key, is left as text.
-Sentences under three words are not claims. Pure: it reads what an answer
+Sentences under three words are not claims. A sentence ends at its stop even
+inside bold, quotes or brackets (`**… therapy.**`), "No." ends one unless a
+number follows, and a line that is no new bullet joins the one before, so a
+wrapped sentence is one claim (#847). Pure: it reads what an answer
 says about its sources, never whether a claim is true.
 
 In a finished answer, each cited id the turn's searches returned is a link to
