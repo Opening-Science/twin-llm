@@ -4,8 +4,10 @@ import {
   defaultVoiceLanguage,
   heardLine,
   pushToTalkLabel,
+  startHold,
   transcribeOutcome,
 } from "./push-to-talk-model";
+import type { Recording } from "@/infrastructure/speech/recorder";
 
 describe("push to talk", () => {
   test("the button says what holding it does, in the picked language", () => {
@@ -58,5 +60,45 @@ describe("push to talk", () => {
         timings: { audioMs: 1, sttMs: 1, totalMs: 1 },
       }).ok,
     ).toBe(false);
+  });
+
+  const fakeRecording = (log: string[]): Recording => ({
+    stop: () => Promise.resolve(null),
+    cancel: () => log.push("cancelled"),
+  });
+
+  test("a hold finishes on its own at the limit", async () => {
+    const log: string[] = [];
+    startHold(
+      () => Promise.resolve(fakeRecording(log)),
+      () => log.push("limit"),
+      10,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(log).toEqual(["limit"]);
+  });
+
+  test("letting go in time stops the limit", async () => {
+    const log: string[] = [];
+    const hold = startHold(
+      () => Promise.resolve(fakeRecording(log)),
+      () => log.push("limit"),
+      10,
+    );
+    hold.clearLimit();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(log).toEqual([]);
+  });
+
+  test("a cancelled hold lets go of the microphone and never fires", async () => {
+    const log: string[] = [];
+    const hold = startHold(
+      () => Promise.resolve(fakeRecording(log)),
+      () => log.push("limit"),
+      10,
+    );
+    hold.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(log).toEqual(["cancelled"]);
   });
 });

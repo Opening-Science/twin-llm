@@ -63,6 +63,34 @@ const UNAUTHORISED = (): Response =>
 
 const NO_STORE = { "cache-control": "no-store" } as const;
 
+/**
+ * The body, or null once it passes `max` bytes. A chunked upload has no
+ * content-length, so the stream itself is counted and dropped at the limit.
+ */
+const readCapped = async (request: Request, max: number): Promise<Uint8Array | null> => {
+  if (request.body === null) return new Uint8Array(0);
+  const reader = request.body.getReader();
+  // Mutable on purpose: the parts and byte count of this one body.
+  const parts: Uint8Array[] = [];
+  const seen = { bytes: 0 };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    seen.bytes += value.byteLength;
+    if (seen.bytes > max) {
+      await reader.cancel();
+      return null;
+    }
+    parts.push(value);
+  }
+  const body = new Uint8Array(seen.bytes);
+  parts.reduce((offset, part) => {
+    body.set(part, offset);
+    return offset + part.byteLength;
+  }, 0);
+  return body;
+};
+
 export const createVoiceHandlers = (deps: VoiceHandlerDeps) => {
   const now = deps.now ?? (() => performance.now());
 
@@ -85,7 +113,8 @@ export const createVoiceHandlers = (deps: VoiceHandlerDeps) => {
     if (!isSpeechLanguage(language)) return voiceFailure("SPEECH_BAD_AUDIO");
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_SPEECH_WAV_BYTES) return voiceFailure("SPEECH_BAD_AUDIO");
-    const wav = new Uint8Array(await request.arrayBuffer());
+    const wav = await readCapped(request, MAX_SPEECH_WAV_BYTES);
+    if (wav === null) return voiceFailure("SPEECH_BAD_AUDIO");
     const result = await transcribeSpeech(deps.config(), wav, language);
     if (!result.ok) return voiceFailure(result.code);
     return Response.json(
