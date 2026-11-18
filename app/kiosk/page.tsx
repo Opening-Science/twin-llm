@@ -1,12 +1,8 @@
-import { type Metadata } from "next";
-
+import { KIOSK_METADATA } from "@/features/digital-twin/kiosk/kiosk-meta";
 import { KioskScreen } from "@/features/digital-twin/kiosk/kiosk-screen";
 import { mockKioskDay } from "@/packages/query-tools/mock-kiosk-day";
 
-export const metadata: Metadata = {
-  title: "Kiosk · TwinLLM",
-  description: "The digital twin of a synthetic person, for a portrait screen.",
-};
+export const metadata = KIOSK_METADATA;
 
 /**
  * The kiosk screen. It reads no person's data, only the synthetic demo body
