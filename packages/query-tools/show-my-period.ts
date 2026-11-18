@@ -12,7 +12,8 @@ import {
 import { isToolRefusal, mixedUnits, type ToolRefusal } from "./refusals";
 import { type showMyPeriodInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
-import { GLUCOSE_LOINCS } from "./show-my-day";
+import { type GlucoseSpecimen } from "./day-beat";
+import { GLUCOSE_LOINCS, SENSOR_GLUCOSE_LOINC, SENSOR_LAG_NOTE } from "./show-my-day";
 import { addDays, utcDay } from "./stats";
 import { audited, distinctUnits, readWindow, subjectInScope } from "./tool-core";
 import { wearableTrend, type WearableTrendResult } from "./wearable-analytics";
@@ -27,8 +28,11 @@ import { comparedRead, spanOf } from "./wearable-tools";
  * `show_my_period`: one synthetic subject's week or month. Glucose as average
  * and time in range (`day-period.ts`, the placeholder thresholds of
  * `show_my_day`), and the resting heart rate and HRV trends with the maths
- * `resting_hr_trend` and `hrv_trend` use (`wearableTrend`). Scope first, one
- * capped read over the period and the 35 days the trends compare, audited.
+ * `resting_hr_trend` and `hrv_trend` use (`wearableTrend`). Sensor glucose
+ * from a continuous monitor gets a summary of its own, never pooled with
+ * blood. Scope first, one capped read over the period and the 35 days the
+ * trends compare, and one capped read of sensor glucose over the period only,
+ * since a monitor writes hundreds of readings a day; audited.
  * Recovery after workouts needs workout times; the warehouse stores minutes
  * per day only, so it is "not recorded".
  */
@@ -47,9 +51,14 @@ export type ShowMyPeriodResult = Readonly<{
   start: string;
   end: string;
   profile: GlucoseProfile;
-  /** Rows read: the period, and the 35 days before its end the trends compare. */
+  /** Rows read: the period, the 35 days before its end the trends compare, and the sensor read. */
   n: number;
+  /** Blood glucose. */
   glucose: GlucosePeriod;
+  /** Sensor glucose; refused on its own when the period holds more than the cap. */
+  sensor_glucose: GlucosePeriod | ToolRefusal;
+  /** `SENSOR_LAG_NOTE` when the period has a sensor reading, else null. */
+  sensor_lag: string | null;
   /** As `resting_hr_trend` and `hrv_trend` return them, refusal included. */
   resting_hr: WearableTrendResult | ToolRefusal;
   hrv: WearableTrendResult | ToolRefusal;
@@ -61,21 +70,37 @@ export type ShowMyPeriodResult = Readonly<{
 const isGlucose = (loinc: string): boolean =>
   (GLUCOSE_LOINCS as readonly string[]).includes(loinc);
 
-/** Glucose rows to days of readings, one reading per row, by UTC day. */
-export const glucoseDays = (rows: readonly ObservationRecord[]): readonly PeriodDay[] => {
+/** Glucose rows of one specimen to days of readings, one reading per row, by UTC day. */
+export const glucoseDays = (
+  rows: readonly ObservationRecord[],
+  specimen: GlucoseSpecimen = "blood",
+): readonly PeriodDay[] => {
   const byDay = rows.reduce<Map<string, DayReading[]>>((acc, row) => {
     const day = utcDay(row.effectiveAt);
     const reading: DayReading = {
       time: row.effectiveAt.toISOString().slice(11, 16),
       event: null,
       heartRatePerMin: null,
-      glucoseMgDl: row.value,
+      glucoseMgDl: specimen === "blood" ? row.value : null,
+      ...(specimen === "sensor" ? { sensorGlucoseMgDl: row.value } : {}),
       moving: null,
     };
     acc.set(day, [...(acc.get(day) ?? []), reading]);
     return acc;
   }, new Map());
   return [...byDay.entries()].map(([day, readings]) => ({ day, readings }));
+};
+
+/** Sensor glucose over the period: refused when its unit is not mg/dL, never converted. */
+const sensorPeriod = (
+  rows: readonly ObservationRecord[],
+  profile: ShowMyPeriodInput["profile"],
+): GlucosePeriod | ToolRefusal => {
+  const units = distinctUnits(rows);
+  if (units.some((unit) => unit !== GLUCOSE_UNIT)) {
+    return mixedUnits(SENSOR_GLUCOSE_LOINC, [...new Set([GLUCOSE_UNIT, ...units])]);
+  }
+  return glucosePeriod(glucoseDays(rows, "sensor"), profile, DAY_THRESHOLDS, "sensor");
 };
 
 const trendOf = (
@@ -118,6 +143,12 @@ export const runShowMyPeriod = (
         comparedRead(window),
       );
       if (isToolRefusal(rows)) return rows;
+      const sensorRows = await readWindow(
+        ports,
+        input.subject_ref,
+        [SENSOR_GLUCOSE_LOINC],
+        window,
+      );
       const span = spanOf(window);
       const glucose = rows.filter(
         (row) =>
@@ -137,8 +168,13 @@ export const runShowMyPeriod = (
         start: window.start,
         end: window.end,
         profile: input.profile,
-        n: rows.length,
+        n: rows.length + (isToolRefusal(sensorRows) ? 0 : sensorRows.length),
         glucose: glucosePeriod(glucoseDays(glucose), input.profile),
+        sensor_glucose: isToolRefusal(sensorRows)
+          ? sensorRows
+          : sensorPeriod(sensorRows, input.profile),
+        sensor_lag:
+          !isToolRefusal(sensorRows) && sensorRows.length > 0 ? SENSOR_LAG_NOTE : null,
         resting_hr: trendOf("resting_hr", rows, window),
         hrv: trendOf("hrv", rows, window),
         recovery: "not recorded",

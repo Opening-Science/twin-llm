@@ -8,7 +8,8 @@ import {
   type SpeechLanguage,
 } from "@/infrastructure/speech/contract";
 import { formatElapsed } from "@/infrastructure/format-measure";
-import type { MicrophoneProblem } from "@/infrastructure/speech/recorder";
+import type { MicrophoneProblem, Recording } from "@/infrastructure/speech/recorder";
+import { MAX_SPEECH_SECONDS } from "@/infrastructure/speech/wav";
 
 /**
  * The words and the one request behind push to talk (`push-to-talk.tsx`),
@@ -52,6 +53,43 @@ export const pushToTalkLabel = (
 /** The hint line after a spoken question: what took how long (#615). */
 export const heardLine = (heard: VoiceHeard): string =>
   `Heard ${formatElapsed(heard.timings.audioMs)} of ${LANGUAGE_WORDS[heard.language]}, written down in ${formatElapsed(heard.timings.sttMs)} (${formatElapsed(heard.timings.totalMs)} in all).`;
+
+/**
+ * The longest hold: a second under the sidecar's limit, so the recording
+ * still fits once the browser's own lag is added.
+ */
+export const MAX_HOLD_MS = (MAX_SPEECH_SECONDS - 1) * 1000;
+
+export type Hold = Readonly<{
+  pending: Promise<Recording | MicrophoneProblem>;
+  /** Let go in time: the limit no longer fires. */
+  clearLimit: () => void;
+  /** Drop the recording and let go of the microphone (the bar went away). */
+  cancel: () => void;
+}>;
+
+/**
+ * One hold of the button: starts recording and finishes it on its own at
+ * `limitMs`, so a long hold is sent rather than refused as unreadable.
+ */
+export const startHold = (
+  start: () => Promise<Recording | MicrophoneProblem>,
+  onLimit: () => void,
+  limitMs: number = MAX_HOLD_MS,
+): Hold => {
+  const timer = setTimeout(onLimit, limitMs);
+  const pending = start();
+  return {
+    pending,
+    clearLimit: () => clearTimeout(timer),
+    cancel: () => {
+      clearTimeout(timer);
+      void pending.then((started) => {
+        if (typeof started !== "string") started.cancel();
+      });
+    },
+  };
+};
 
 const VOICE_LANGUAGE_KEY = "twinllm.voice.language";
 

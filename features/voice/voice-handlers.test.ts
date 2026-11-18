@@ -4,7 +4,7 @@ import {
   type FakeSpeechSidecar,
   startFakeSpeechSidecar,
 } from "@/infrastructure/speech/fake-speech-sidecar";
-import { encodeWav, wavInfo } from "@/infrastructure/speech/wav";
+import { encodeWav, MAX_SPEECH_WAV_BYTES, wavInfo } from "@/infrastructure/speech/wav";
 
 import { createVoiceHandlers } from "./voice-handlers";
 
@@ -103,6 +103,33 @@ describe("voice routes", () => {
       code: "SPEECH_BAD_AUDIO",
       error: "That recording could not be read. Try again.",
     });
+    expect(sidecar.received).toEqual([]);
+  });
+
+  test("a streamed body over the limit is dropped before the sidecar", async () => {
+    const { handlers, sidecar } = await handlersFor();
+    const piece = new Uint8Array(64 * 1024);
+    const pieces = Math.ceil(MAX_SPEECH_WAV_BYTES / piece.length) + 10;
+    const sent = { pieces: 0 };
+    const body = new ReadableStream<Uint8Array>({
+      pull: (controller) => {
+        if (sent.pieces === pieces) {
+          controller.close();
+          return;
+        }
+        sent.pieces += 1;
+        controller.enqueue(piece);
+      },
+    });
+    const response = await handlers.transcribe(
+      new Request("http://localhost/api/voice/transcribe?language=en", {
+        method: "POST",
+        body,
+        duplex: "half",
+      } as RequestInit),
+    );
+    expect(response.status).toBe(400);
+    expect(sent.pieces).toBeLessThan(pieces);
     expect(sidecar.received).toEqual([]);
   });
 

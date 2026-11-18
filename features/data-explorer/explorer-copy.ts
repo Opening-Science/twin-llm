@@ -27,8 +27,8 @@ export const TERMS: readonly (readonly [string, string])[] = [
     "One measurement at one time: a blood pressure, a weight, a lab value. Text answers, such as survey items, are counted apart.",
   ],
   [
-    "LOINC code",
-    "The international code for what was measured, for example 29463-7 for body weight. The chat tools ask for data by these codes.",
+    "Code",
+    "What was measured. Clinical rows use LOINC, the international code, for example 29463-7 for body weight; the chat tools ask for data by these codes. Some synthetic device rows keep the device's own code instead, such as body.height from a scan or af-burden from the wearable simulator, and are labelled Code, not LOINC.",
   ],
   [
     "Unit",

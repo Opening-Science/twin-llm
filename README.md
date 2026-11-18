@@ -68,7 +68,7 @@ Wearable data still starts in each vendor's cloud. What goes where: [`docs/provi
 
 ![TwinLLM data flow: wearable, body-scan, guideline and knowledge, population, synthetic and genome lines run from their sources through sync, storage and tools into an open model, which writes the chat answer and runs the synthetic evaluation.](docs/diagrams/data-flow.svg)
 
-Connectors bring data in as FHIR R4 observations (LOINC codes, UCUM units). A chat turn gives the model a fixed prompt and the query tools; its reply is parsed into a response document with evidence, reasoning, uncertainty and an answer class. More: [models](docs/models.md), [providers](docs/providers.md), [query tools](docs/query-layer.md), [anatomy](docs/anatomy.md), [evaluation](docs/evaluation/harness.md).
+Connectors bring data in as FHIR R4 observations (LOINC codes, UCUM units). A chat turn gives the model a fixed prompt and the query tools; its reply is parsed into a response document with evidence, reasoning, uncertainty and an answer class. More: [models](docs/models.md), [providers](docs/providers.md), [query tools](docs/query-layer.md), [anatomy](docs/anatomy.md), [kiosk](docs/kiosk.md), [evaluation](docs/evaluation/harness.md).
 
 ## Contributing
 
