@@ -2,7 +2,7 @@
 
 import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
-import { type Mesh, type Object3D, Raycaster, Vector2 } from "three";
+import { type Box3, type Mesh, type Object3D, Raycaster, Vector2 } from "three";
 
 import { type AtlasGroup } from "@/packages/anatomy/highlight";
 import { type AtlasLayerId } from "@/packages/anatomy/layers";
@@ -17,6 +17,7 @@ import {
   type PointerSample,
 } from "./pick-part";
 import { WALK_SURFACE_ATTR } from "./walk-controls";
+import { heartWorldBox, isHeartHit } from "../anatomy/heart-geometry";
 
 const isMesh = (object: Object3D): object is Mesh => (object as Mesh).isMesh === true;
 
@@ -52,6 +53,7 @@ export const PickSurface = ({
   layers,
   hiddenSystems,
   onPick,
+  onHeartFocus,
 }: Readonly<{
   enabled: boolean;
   scanRoot: Object3D | null;
@@ -63,6 +65,7 @@ export const PickSurface = ({
   hiddenSystems: readonly OrganSystem[];
   /** null: the tap hit nothing that draws. */
   onPick: (picked: Picked | null) => void;
+  onHeartFocus?: (box: Box3) => void;
 }>) => {
   const gl = useThree((state) => state.gl);
   const camera = useThree((state) => state.camera);
@@ -77,6 +80,7 @@ export const PickSurface = ({
     layers,
     hiddenSystems,
     onPick,
+    onHeartFocus,
   });
   useEffect(() => {
     live.current = {
@@ -88,6 +92,7 @@ export const PickSurface = ({
       layers,
       hiddenSystems,
       onPick,
+      onHeartFocus,
     };
   });
 
@@ -112,17 +117,25 @@ export const PickSurface = ({
       const mapped = hits.map((hit) => ({
         part: now.byMesh.get(hit.object as Mesh) ?? null,
         point: hit.point,
+        face: hit.face,
       }));
       const index = choosePick(mapped, now.getDepth(), now.layers, now.hiddenSystems);
       const chosen = index === null ? null : mapped[index]!;
+      const heart = chosen?.part ? isHeartHit(chosen.part, chosen.face) : false;
+      const target = chosen ? pickTarget(chosen.part, now.groups) : null;
       now.onPick(
-        chosen
+        chosen && target
           ? {
-              target: pickTarget(chosen.part, now.groups),
+              target:
+                heart && target.kind === "part" ? { ...target, label: "Heart" } : target,
               point: [chosen.point.x, chosen.point.y, chosen.point.z],
             }
           : null,
       );
+      if (heart && chosen?.part && now.onHeartFocus) {
+        const box = heartWorldBox(chosen.part.mesh, chosen.part.group === null);
+        if (box) now.onHeartFocus(box);
+      }
     };
 
     const onDown = (event: PointerEvent) => {

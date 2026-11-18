@@ -11,12 +11,8 @@ export const HEART_SCALE = 0.02;
 export const LUNG_SCALE = 0.025;
 /** Emissive added at the peak of a beat: the HRA heart, and the softer BodyParts3D system. */
 export const HEART_GLOW = { hra: 0.5, bodyparts3d: 0.2 } as const;
-/**
- * Emissive at the peak of a ventricular contraction (#53), and half of it at
- * an atrial one: softer than the plain pulse, so the shape change stays
- * readable, and the two phases show as two pulses of light.
- */
-export const CHAMBER_GLOW = 0.15;
+/** Anatomical beat uses motion only; keep its lighting steady. */
+export const CHAMBER_GLOW = 0;
 
 /** The heart's glow while its chambers beat. */
 export const chamberGlow = (atria: number, ventricles: number): number =>

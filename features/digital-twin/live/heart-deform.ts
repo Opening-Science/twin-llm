@@ -23,7 +23,7 @@ export const HEART_AXIS: Vec3 = normalise([0.55, -0.5, 0.65]);
 export const ATRIAL_FADE: readonly [number, number] = [0.3, 0.5];
 
 /** Largest pull of a vertex towards its region's centre (illustrative). */
-export const CONTRACTION = { atria: 0.08, ventricles: 0.1 } as const;
+export const CONTRACTION = { atria: 0.03, ventricles: 0.05 } as const;
 
 function normalise(v: Vec3): Vec3 {
   const length = Math.hypot(v[0], v[1], v[2]);

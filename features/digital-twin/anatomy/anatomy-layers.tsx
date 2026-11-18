@@ -2,7 +2,7 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
+import { Box3, Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
 
 import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
 import { fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
@@ -39,6 +39,7 @@ import {
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
+import { heartWorldBox } from "./heart-geometry";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
@@ -70,6 +71,7 @@ export const AnatomyLayers = ({
   reducedMotion,
   onLoad,
   onPick,
+  onHeartFocus,
   liveVitals,
 }: Readonly<{
   scanRoot: Object3D | null;
@@ -91,6 +93,7 @@ export const AnatomyLayers = ({
   onLoad: (load: AnatomyLoad) => void;
   /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
   onPick?: (picked: Picked | null) => void;
+  onHeartFocus?: (box: Box3) => void;
   /** Live vitals (G4): what drives the heartbeat, breathing and HRV glow. */
   liveVitals?: Readonly<{
     enabled: boolean;
@@ -285,6 +288,28 @@ export const AnatomyLayers = ({
   // Picks the body outline before any atlas is loaded, and atlas parts once one is.
   const readDepth = useCallback(() => depthRef.current, []);
   const ready = prepared !== null && transform !== null;
+  useEffect(() => {
+    if (
+      !ready ||
+      !onHeartFocus ||
+      highlight?.kind !== "groups" ||
+      highlight.ids.length !== 1 ||
+      highlight.ids[0] !== "heart"
+    )
+      return;
+    const box = new Box3();
+    for (const part of prepared.parts) {
+      if (
+        part.group !== "heart" ||
+        !partShown(part, layers, hiddenSystems) ||
+        !layerMix(part.layer, targetDepth).visible
+      )
+        continue;
+      const bounds = heartWorldBox(part.mesh, false);
+      if (bounds) box.union(bounds);
+    }
+    if (!box.isEmpty()) onHeartFocus(box);
+  }, [ready, prepared, highlight, onHeartFocus, layers, hiddenSystems, targetDepth]);
   const pick = (
     <PickSurface
       enabled={onPick !== undefined}
@@ -295,6 +320,7 @@ export const AnatomyLayers = ({
       layers={layers}
       hiddenSystems={hiddenSystems}
       onPick={onPick ?? ignorePick}
+      onHeartFocus={onHeartFocus}
     />
   );
   if (!ready) return pick;

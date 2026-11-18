@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { IDLE_STATUS } from "./live-conditioning";
 import {
+  BODYPARTS3D_BEAT_NOTE,
+  BODYPARTS3D_BEAT_UNAVAILABLE,
   BODYPARTS3D_BREATH_NOTE,
   CHAMBERS_ILLUSTRATIVE,
   CHAMBERS_LINE,
@@ -81,6 +83,33 @@ describe("liveLines", () => {
     ]);
   });
 
+  test("BodyParts3D describes the delayed vessel pulse as illustrative, with an explicit unavailable state", () => {
+    const beating = { ...on(true, false, false), chambers: "sinus" } as const;
+    const lines = liveLines(beating, VITALS, "bodyparts3d", TODAY);
+    expect(lines).toEqual([
+      CHAMBERS_ILLUSTRATIVE,
+      "Pulse at 61 bpm · last reading 14 Mar 2025 (1 year ago) · Synthetic person 1 heart rate",
+      BODYPARTS3D_BEAT_NOTE,
+      "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.",
+    ]);
+    expect(lines[2]).toContain(
+      "vessel surfaces expand together 100 ms after the ventricular pulse",
+    );
+    expect(lines).not.toContain(CHAMBERS_LINE);
+    expect(lines).not.toContain(BODYPARTS3D_HEART_NOTE);
+    const stopped = liveLines(on(true, false, false), VITALS, "bodyparts3d", TODAY);
+    expect(stopped).toContain(BODYPARTS3D_HEART_NOTE);
+    expect(stopped).not.toContain(BODYPARTS3D_BEAT_NOTE);
+    const unavailable = liveLines(
+      { ...beating, vascularUnavailable: true },
+      VITALS,
+      "bodyparts3d",
+      TODAY,
+    );
+    expect(unavailable).toContain(BODYPARTS3D_BEAT_UNAVAILABLE);
+    expect(unavailable).not.toContain(BODYPARTS3D_BEAT_NOTE);
+  });
+
   test("the HRV line names both numbers, the reading's date and age, and the source", () => {
     const lines = liveLines(on(false, false, true), VITALS, "hra", TODAY);
     expect(lines).toEqual([
@@ -100,7 +129,7 @@ describe("liveLines", () => {
     expect(liveLines(beating, VITALS, "hra", TODAY, "sinus")).toEqual([
       "Illustrative simulation, not a physiological model.",
       pulse,
-      "Heart chambers: the region where the atria sit contracts, then the ventricles' region 160 ms later (an illustrative delay). The atlas heart is one mesh, so the regions are approximate.",
+      "Anatomical beat: a subtle atrial contraction, then the ventricles' region 160 ms later, with a quick contraction and slower relaxation. Timing and motion are illustrative; the atlas heart is one mesh, so the regions are approximate.",
       "Beat timing: a simulated sinus rhythm with beat-to-beat variation from the rhythm simulator, paced to the heart rate above.",
     ]);
     expect(liveLines(beating, VITALS, "hra", TODAY, "regular")[3]).toBe(

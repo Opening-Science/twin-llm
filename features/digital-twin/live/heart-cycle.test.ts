@@ -13,6 +13,10 @@ import {
   REGULAR_PATTERN,
   rhythmNow,
   startClock,
+  VENTRICULAR_PEAK,
+  VENTRICULAR_S,
+  VESSEL_DELAY_S,
+  vesselExpansion,
 } from "./heart-cycle";
 
 const at = (elapsed: number, bpm = 60, index = 0, time = elapsed) => ({
@@ -20,6 +24,46 @@ const at = (elapsed: number, bpm = 60, index = 0, time = elapsed) => ({
   elapsed,
   bpm,
   time,
+});
+
+describe("vesselExpansion", () => {
+  test("the vessel pulse follows the ventricular pulse by 100 ms at different rates", () => {
+    expect(VESSEL_DELAY_S).toBe(0.1);
+    for (const bpm of [45, 60, 90, 120, 180]) {
+      const duration = VENTRICULAR_S * Math.min(1.2, Math.max(0.5, Math.sqrt(60 / bpm)));
+      const peak = duration * VENTRICULAR_PEAK;
+      expect(vesselExpansion(at(0, bpm), REGULAR_PATTERN)).toBe(0);
+      expect(vesselExpansion(at(0.099, bpm), REGULAR_PATTERN)).toBe(0);
+      expect(vesselExpansion(at(0.1, bpm), REGULAR_PATTERN)).toBe(0);
+      expect(vesselExpansion(at(peak + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(1, 10);
+      for (const fraction of [0.1, 0.3, 0.6, 0.9]) {
+        const time = duration * fraction;
+        expect(vesselExpansion(at(time + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(
+          chamberContraction(at(time, bpm), REGULAR_PATTERN).ventricles,
+          10,
+        );
+      }
+      expect(vesselExpansion(at(duration + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(
+        0,
+        10,
+      );
+    }
+  });
+
+  test("a delayed pulse finishes smoothly across a short irregular beat boundary", () => {
+    const pattern: BeatPattern = {
+      rr: [0.25, 0.75],
+      labels: ["sinus", "sinus"],
+      start: 0,
+    };
+    const before = vesselExpansion(at(0.249999, 60, 0, 0.249999), pattern);
+    const after = vesselExpansion(at(0.000001, 60, 1, 0.250001), pattern);
+    expect(before).toBeGreaterThan(0);
+    expect(after).toBeCloseTo(before, 4);
+    expect(vesselExpansion(at(0.02, 60, 1, 0.27), pattern)).toBe(0);
+    // Starting on an arbitrary pattern index must not invent a previous pulse.
+    expect(vesselExpansion(at(0, 60, 1, 0), pattern)).toBe(0);
+  });
 });
 
 describe("contractionCurve", () => {
@@ -115,12 +159,12 @@ describe("chamberContraction", () => {
       atria: 1,
       ventricles: 0,
     });
-    // The ventricles start at the beat and peak at 40 % of 0.32 s.
+    // The ventricles start at the beat and peak at 30 % of 0.32 s.
     expect(chamberContraction(at(0), REGULAR_PATTERN)).toEqual({
       atria: 0,
       ventricles: 0,
     });
-    expect(chamberContraction(at(0.128), REGULAR_PATTERN)).toEqual({
+    expect(chamberContraction(at(0.096), REGULAR_PATTERN)).toEqual({
       atria: 0,
       ventricles: 1,
     });
@@ -133,7 +177,7 @@ describe("chamberContraction", () => {
 
   test("at a faster rate the contractions are shorter", () => {
     // 120 bpm: a 0.5 s interval, durations × √0.5.
-    const peak = 0.4 * 0.32 * Math.SQRT1_2;
+    const peak = 0.3 * 0.32 * Math.SQRT1_2;
     expect(chamberContraction(at(peak, 120), REGULAR_PATTERN).ventricles).toBeCloseTo(
       1,
       12,
@@ -158,9 +202,30 @@ describe("chamberContraction", () => {
     expect(Math.max(...peaks)).toBeLessThanOrEqual(AF_QUIVER);
     expect(Math.max(...peaks)).toBeGreaterThan(AF_QUIVER * 0.99);
     expect(
-      chamberContraction(at(0.4 * 0.32 * Math.sqrt(0.8)), pattern).ventricles,
+      chamberContraction(at(0.3 * 0.32 * Math.sqrt(0.8)), pattern).ventricles,
     ).toBeCloseTo(1, 12);
     expect(rhythmNow(at(0), pattern)).toBe("af");
     expect(rhythmNow(at(0), REGULAR_PATTERN)).toBe("sinus");
+  });
+
+  test("a short contraction gives way to a longer, smooth relaxation", () => {
+    expect(VENTRICULAR_PEAK).toBe(0.3);
+    for (const bpm of [45, 60, 90, 120, 180]) {
+      const duration = VENTRICULAR_S * Math.min(1.2, Math.max(0.5, Math.sqrt(60 / bpm)));
+      const peak = duration * VENTRICULAR_PEAK;
+      const relaxation = duration - peak;
+      expect(relaxation).toBeGreaterThan(2 * peak);
+      expect(
+        chamberContraction(at(peak / 2, bpm), REGULAR_PATTERN).ventricles,
+      ).toBeCloseTo(0.5, 10);
+      expect(chamberContraction(at(peak, bpm), REGULAR_PATTERN).ventricles).toBeCloseTo(
+        1,
+        10,
+      );
+      expect(
+        chamberContraction(at(peak + relaxation / 2, bpm), REGULAR_PATTERN).ventricles,
+      ).toBeCloseTo(0.5, 10);
+      expect(chamberContraction(at(duration, bpm), REGULAR_PATTERN).ventricles).toBe(0);
+    }
   });
 });

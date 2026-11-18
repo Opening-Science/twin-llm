@@ -1,7 +1,7 @@
 import { formatDate, formatMeasure, formatNumber } from "@/infrastructure/format-measure";
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
-import { AV_DELAY_S } from "./heart-cycle";
+import { AV_DELAY_S, VESSEL_DELAY_S } from "./heart-cycle";
 import { type HeartRhythm } from "./heart-rhythm";
 import { type HrvBelowUsual, type LiveRate } from "./live-rates";
 
@@ -23,10 +23,10 @@ export const SHOW_ORGANS =
   "Live vitals move the heart and lungs: set Depth to Organs to see them.";
 export const ILLUSTRATIVE = "Illustrative, not a physiological simulation.";
 /** Heart chambers (#53): the toolbar toggle and the lines while they beat. */
-export const CHAMBERS_TOGGLE = "Heart chambers";
+export const CHAMBERS_TOGGLE = "Anatomical beat";
 export const CHAMBERS_ILLUSTRATIVE =
   "Illustrative simulation, not a physiological model.";
-export const CHAMBERS_LINE = `Heart chambers: the region where the atria sit contracts, then the ventricles' region ${Math.round(AV_DELAY_S * 1000)} ms later (an illustrative delay). The atlas heart is one mesh, so the regions are approximate.`;
+export const CHAMBERS_LINE = `Anatomical beat: a subtle atrial contraction, then the ventricles' region ${Math.round(AV_DELAY_S * 1000)} ms later, with a quick contraction and slower relaxation. Timing and motion are illustrative; the atlas heart is one mesh, so the regions are approximate.`;
 
 /** Where the beat times come from, and for AF what the atria are doing now. */
 export const chambersTimingLine = (timing: HeartTiming, now: "sinus" | "af"): string => {
@@ -46,6 +46,9 @@ export const chambersTimingLine = (timing: HeartTiming, now: "sinus" | "af"): st
 
 export const BODYPARTS3D_HEART_NOTE =
   "On this atlas the heart is part of the whole cardiovascular system, so the system glows, more softly.";
+export const BODYPARTS3D_BEAT_NOTE = `Experimental anatomical beat: tagged heart structures contract gently; vessel surfaces expand together ${Math.round(VESSEL_DELAY_S * 1000)} ms after the ventricular pulse, without whole-system scaling. Motion and delay are illustrative, not measured physiology.`;
+export const BODYPARTS3D_BEAT_UNAVAILABLE =
+  "Vessel animation unavailable: this atlas lacks the anatomy IDs or geometry needed to separate heart and vessels. Only the cardiovascular glow is shown.";
 export const BODYPARTS3D_BREATH_NOTE =
   "On this atlas the lungs are part of the whole respiratory system, nose and airways included, so the system glows instead of moving.";
 

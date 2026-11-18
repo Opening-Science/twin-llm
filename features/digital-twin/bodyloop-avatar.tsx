@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ACESFilmicToneMapping, type Group, PerspectiveCamera } from "three";
+import { ACESFilmicToneMapping, Box3, type Group, PerspectiveCamera } from "three";
 import { type OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { VitronicPropertyRow } from "@/features/vitronic/vitronic-status-view";
@@ -102,6 +102,7 @@ import {
 import { mergeScanRows, orderScans, pickDefaultScan } from "./scan-default";
 import { initialAutoRotate } from "./scan-materials";
 import { useTwinPalette } from "./use-twin-palette";
+import { HeartFocus, type CameraFocusRequest } from "./heart-focus";
 import {
   DEFAULT_OVERLAYS,
   OVERLAY_OPTIONS,
@@ -300,6 +301,7 @@ export const BodyLoopAvatar = ({
   const onGlFresh = useCallback(() => setGlLost(false), []);
   const idleRef = useRef<number | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const [heartFocus, setHeartFocus] = useState<CameraFocusRequest | null>(null);
   const camera = useMemo(() => new PerspectiveCamera(40, 1, 0.01, 40), []);
   const anatomy = useAnatomyView(preview === undefined);
   const onControls = useCallback((controls: OrbitControls | null) => {
@@ -400,6 +402,7 @@ export const BodyLoopAvatar = ({
   }, []);
 
   const onUserRotate = useCallback(() => {
+    setHeartFocus(null);
     setAutoRotate(false);
     if (idleRef.current) window.clearTimeout(idleRef.current);
     if (!wantRotate) return;
@@ -407,6 +410,23 @@ export const BodyLoopAvatar = ({
       setAutoRotate(true);
     }, AUTO_ROTATE_IDLE_MS);
   }, [wantRotate]);
+  const onHeartFocus = useCallback((box: Box3) => {
+    if (idleRef.current) window.clearTimeout(idleRef.current);
+    setWantRotate(false);
+    setAutoRotate(false);
+    setHeartFocus({ kind: "heart", box });
+  }, []);
+  const resetView = useCallback(() => {
+    if (idleRef.current) window.clearTimeout(idleRef.current);
+    setWantRotate(false);
+    setAutoRotate(false);
+    if (scanScene) {
+      setHeartFocus({ kind: "body", box: new Box3().setFromObject(scanScene) });
+    } else {
+      setHeartFocus(null);
+      setResetKey((value) => value + 1);
+    }
+  }, [scanScene]);
 
   const selectedSubject = subjects.find((row) => row.id === subjectId);
   const subjectKind: "scanner" | "file" =
@@ -529,6 +549,7 @@ export const BodyLoopAvatar = ({
   const pickLit = anatomy.state.highlightFrom?.id.startsWith(PICK_PREFIX) === true;
   const onPick = useCallback(
     (next: Picked | null) => {
+      setHeartFocus(null);
       setPicked(next);
       onPickPart?.(
         next?.target.kind === "part"
@@ -585,11 +606,12 @@ export const BodyLoopAvatar = ({
     wasActiveRef.current = environment.active;
     setResetKey((value) => value + 1);
   }, [environment.active]);
-  // Closing the card hands focus back to the 3D view, so the keys walk again.
+  // Closing the card restores the full-body view and returns keyboard focus.
   const closeCard = useCallback(() => {
     setPicked(null);
+    resetView();
     viewRef.current?.focus();
-  }, []);
+  }, [resetView]);
   const { live: measuredVitals } = biomarkers;
   // Night playback replaces the newest readings while it is open, inline only.
   const night = useNightPlayback(biomarkerSubject, reducedMotion);
@@ -605,9 +627,9 @@ export const BodyLoopAvatar = ({
     !reducedMotion &&
     (playing || (liveAvailable && (environment.active ? liveInEnvironment : liveInline)));
   // Heart chambers (#53): on by default with live vitals, remembered per viewer.
-  // Only the HRA heart is a mesh of its own; the toggle shows while it can beat.
+  // BodyParts3D uses tagged heart structures and a delayed vessel-surface pulse.
   const [chambersWanted, toggleChambers] = usePanelOpen(PANEL_IDS.heartChambers);
-  const chambersAvailable = liveOn && liveVitals.heart !== null && scheme === "hra";
+  const chambersAvailable = liveOn && liveVitals.heart !== null;
   const heartRhythm = useMemo(
     () => heartRhythmOf(biomarkers.rhythm ?? { kind: "measured" }),
     [biomarkers.rhythm],
@@ -654,6 +676,7 @@ export const BodyLoopAvatar = ({
   const bodyKey = isDemo ? `demo:${demoSex}` : `scan:${shownViatarId}`;
   useEffect(() => {
     setPicked(null);
+    setHeartFocus(null);
   }, [environment.active, anatomy.state.atlasId, bodyKey]);
   // Another subject or scan starts with an empty search; the chosen tab stays.
   useEffect(() => {
@@ -827,6 +850,11 @@ export const BodyLoopAvatar = ({
                 : null
             }
           />
+          <HeartFocus
+            request={heartFocus}
+            getControls={getControls}
+            reducedMotion={reducedMotion}
+          />
           <ProjectAnchor point={picked?.point ?? null} store={anchorStore} />
           <AnatomyLayers
             scanRoot={scanScene}
@@ -843,6 +871,7 @@ export const BodyLoopAvatar = ({
             reducedMotion={reducedMotion}
             onLoad={anatomy.onLoad}
             onPick={onPick}
+            onHeartFocus={onHeartFocus}
             liveVitals={{
               enabled: liveOn,
               vitals: liveVitals,
@@ -928,8 +957,9 @@ export const BodyLoopAvatar = ({
         >
           <ViewToolbar
             autoRotate={autoRotate}
-            onReset={() => setResetKey((value) => value + 1)}
+            onReset={resetView}
             onToggleRotate={() => {
+              setHeartFocus(null);
               const next = !wantRotate;
               setWantRotate(next);
               setAutoRotate(next);
