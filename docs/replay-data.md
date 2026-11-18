@@ -99,10 +99,11 @@ gaps between them (missing, or no readings), so a chart never joins across a gap
 ## The days `show_my_day` already reads
 
 `replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
-adding nothing. A tag the person entered becomes an entered event, and a meal only when
-it plainly names one ("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no
-new logging is needed.
-`moving` does not become an activity, since it does not say walk or run.
+adding nothing. A tag becomes an event, and a meal only when it plainly names one
+("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no new logging is
+needed. The only tags that arrive today are the mock day's story lines (the warehouse
+sets none), so their source reads "Written for the illustrative day's story, not entered
+by anyone". `moving` does not become an activity, since it does not say walk or run.
 
 Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
 synthetic people only, so none of their days is labelled `recorded`; that origin waits
