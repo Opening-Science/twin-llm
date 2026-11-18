@@ -2,6 +2,10 @@
 
 import { cn } from "@/infrastructure/ui";
 
+/** An invisible `::before` past the track, so a finger has at least 24px to hit. */
+export const SWITCH_HIT_AREA =
+  "before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-['']";
+
 /**
  * An on/off switch. `role="switch"` with `aria-checked`, a real button so
  * Space and Enter work, and a label that names what it turns on. The track
@@ -9,9 +13,6 @@ import { cn } from "@/infrastructure/ui";
  * below and 3px at the sides, so a finger has 30 by 42px to hit, past the
  * 24px minimum, and nothing around it moves.
  */
-
-export const SWITCH_HIT_AREA =
-  "before:absolute before:-inset-x-1 before:-inset-y-1.5 before:content-['']";
 export const Switch = ({
   checked,
   onChange,
