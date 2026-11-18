@@ -74,6 +74,7 @@
     "fonts:install": "bun scripts/fonts/install.ts",
     "voice:setup": "bash scripts/voice/setup.sh",
     "voice:serve": "bun scripts/voice/serve.ts",
+    "voice:time": "bun scripts/voice/time.ts",
     "synthea:generate": "bash scripts/synthea/generate-local.sh",
     "synthea:s7": "bun scripts/synthea/s7-cohort.ts",
     "synthea:pin": "bun scripts/synthea/write-pin.ts",

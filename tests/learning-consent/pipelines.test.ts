@@ -189,6 +189,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "downloads and builds the pinned speech engines, model and voices after the person says yes; no data rows",
   "voice:serve":
     "serves speech to text and text to speech on loopback; keeps nothing it hears or says and trains nothing",
+  "voice:time":
+    "times the local speech sidecar on fixed sentences; writes only timings and what was heard of them",
   "synthea:generate": GENERATOR,
   "synthea:s7": GENERATOR,
   "synthea:pin": GENERATOR,
