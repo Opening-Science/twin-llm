@@ -150,7 +150,11 @@ column of sections `--page-section` (2rem) apart. Inside an area that already ha
 gutter, such as the chat's answers and prompt bar, `.page-column` caps the width.
 
 **Accessibility the linter cannot see.** Check contrast, a visible focus ring and full
-keyboard use by eye, in the light and the dark theme.
+keyboard use by eye, in the light and the dark theme. A field that turns its own outline
+off hands the ring to the box around it (the prompt box). Every control is at least 24
+by 24px to tap at 390px, unless it is a link inside a sentence; a small control such as
+`Switch` reaches that with an invisible `::before` rather than a bigger look. Each page
+has one `h1`.
 
 **three.js.** three.js is built around mutating materials, uniforms and shaders. Do
 that in one `Object.assign(...)` call with a comment explaining it, not by assigning to

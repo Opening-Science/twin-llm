@@ -108,15 +108,16 @@ describe("extractAppDocLinks", () => {
   });
 
   test("skips links built from a value and other routes", () => {
-    const source = 'href={`/docs/${page.slug}`} href="/docs" href="/lab/docs/x"';
+    const source =
+      'href={`/docs/${page.slug}`} href="/docs" href="/lab/docs/x" `/docs/...`';
     expect(extractAppDocLinks(source)).toEqual([]);
   });
 });
 
 describe("brokenAppDocLinks", () => {
-  test("accepts a page and a heading on it", () => {
+  test("accepts a page, a heading on it and an image", () => {
     const source =
-      '"/docs/providers" "/docs/providers#what-leaves-the-host" "/docs/providers#notes-1"';
+      '"/docs/providers" "/docs/providers#what-leaves-the-host" "/docs/providers#notes-1" "/docs/images/chat.png"';
     expect(brokenAppDocLinks("features/x.ts", source, files)).toEqual([]);
   });
 
@@ -130,6 +131,20 @@ describe("brokenAppDocLinks", () => {
         target: "/docs/providers#nope",
         reason: "missing heading",
       },
+    ]);
+  });
+
+  test("reports a spelling the docs route refuses, even when the file exists", () => {
+    const source = '"/docs/Providers"\n"/docs/providers.md"\n"/docs/-providers"';
+    expect(
+      brokenAppDocLinks("features/x.ts", source, files).map(({ line, reason }) => ({
+        line,
+        reason,
+      })),
+    ).toEqual([
+      { line: 1, reason: "not a docs route" },
+      { line: 2, reason: "not a docs route" },
+      { line: 3, reason: "not a docs route" },
     ]);
   });
 });

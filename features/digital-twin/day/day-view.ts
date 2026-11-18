@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { type KioskDay, kioskDaySchema } from "@/packages/query-tools/kiosk-day";
 
 /**
@@ -61,3 +63,37 @@ export const pickChoice = (
     listed.find((entry) => entry.day === chosen)?.day ?? listed[0]?.day ?? MOCK_CHOICE
   );
 };
+
+const periodSummarySchema = z
+  .object({
+    period: z.enum(["week", "month"]),
+    start: z.iso.date(),
+    end: z.iso.date(),
+    title: z.string().min(1),
+    lines: z.array(
+      z.object({ label: z.string().min(1), text: z.string().min(1) }).strict(),
+    ),
+    notes: z.array(z.string().min(1)),
+  })
+  .strict();
+
+export type PeriodView = z.infer<typeof periodSummarySchema>;
+
+/** The summary of a `/api/digital-twin/period` body, or null when it does not parse. */
+export const parsePeriod = (body: unknown): PeriodView | null => {
+  const period =
+    body && typeof body === "object" ? (body as { period?: unknown }).period : undefined;
+  const parsed = periodSummarySchema.safeParse(period);
+  return parsed.success ? parsed.data : null;
+};
+
+/** The URL of a person's week or month ending on a day; null for the mock. */
+export const periodUrl = (
+  choice: string,
+  personRef: string,
+  period: "week" | "month",
+  profile: string,
+): string | null =>
+  choice === MOCK_CHOICE
+    ? null
+    : `/api/digital-twin/period/${encodeURIComponent(personRef)}?period=${period}&end=${choice}&profile=${profile}`;

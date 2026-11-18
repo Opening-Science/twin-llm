@@ -21,7 +21,7 @@ export type BrokenLink = Readonly<{
   file: string;
   line: number;
   target: string;
-  reason: "missing file" | "missing heading";
+  reason: "missing file" | "missing heading" | "not a docs route";
 }>;
 
 const FENCE = /^\s*(```|~~~)/;
@@ -136,11 +136,15 @@ export type AppDocLink = Readonly<{
   hash: string | undefined;
 }>;
 
-const APP_DOC_LINK = /["'`]\/docs\/([a-z0-9-]+(?:\/[a-z0-9-]+)*)(?:#([^"'`\s]+))?["'`]/g;
+const APP_DOC_LINK = /["'`]\/docs\/([A-Za-z0-9_-][^"'`\s#?$]*)(?:#([^"'`\s]+))?["'`]/g;
+
+/** A slug segment the docs route serves (`docPathForSlug` in `features/docs/docs-pages.ts`). */
+const DOC_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
- * The `/docs/...` links written out in full in a source file. A link built
- * from a value (`/docs/${page.slug}`) is not written out and is not checked.
+ * The `/docs/...` links written out in full in a source file, whatever their
+ * spelling. A link built from a value (`/docs/${page.slug}`) is not written
+ * out and is not checked.
  */
 export const extractAppDocLinks = (source: string): readonly AppDocLink[] =>
   source.split("\n").flatMap((text, index) =>
@@ -163,6 +167,12 @@ export const brokenAppDocLinks = (
 ): readonly BrokenLink[] =>
   extractAppDocLinks(source).flatMap(({ line, slug, hash }): BrokenLink[] => {
     const target = `/docs/${slug}${hash === undefined ? "" : `#${hash}`}`;
+    if (slug.startsWith("images/"))
+      return files.exists(`docs/${slug}`)
+        ? []
+        : [{ file, line, target, reason: "missing file" }];
+    if (!slug.split("/").every((segment) => DOC_SEGMENT.test(segment)))
+      return [{ file, line, target, reason: "not a docs route" }];
     const text = files.readText(`docs/${slug}.md`);
     if (text === null) return [{ file, line, target, reason: "missing file" }];
     if (hash === undefined || headingAnchors(text).has(safeDecode(hash).toLowerCase()))
