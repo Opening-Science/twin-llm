@@ -434,7 +434,6 @@ const probeItem = (
       key: `${stem}.${askedDay}`,
       label: `${label} (${askedDay})`,
       value,
-      unit: "{score}",
       date: askedDay,
       source,
     };
