@@ -43,6 +43,8 @@ export type FakeSpeechOptions = Readonly<{
   /** Answer every call with this status and an error body instead. */
   status?: number;
   delayMs?: number;
+  /** Answer every call with a 307 to this address instead. */
+  redirectTo?: string;
   /** Replace the fixed sentences, such as "" to test nothing heard. */
   transcripts?: Readonly<Partial<Record<SpeechLanguage, string>>>;
   host?: string;
@@ -90,6 +92,13 @@ export const startFakeSpeechSidecar = async (
   const transcripts = { ...FAKE_TRANSCRIPTS, ...options.transcripts };
   const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    if (options.redirectTo !== undefined) {
+      response.writeHead(307, {
+        location: `${options.redirectTo}${url.pathname}${url.search}`,
+      });
+      response.end();
+      return;
+    }
     if (request.method === "GET" && url.pathname === "/health") {
       sendJson(response, 200, FAKE_SPEECH_HEALTH);
       return;

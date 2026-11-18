@@ -1,5 +1,15 @@
+import { SYSTEMS } from "@open-twin/fhir-core";
+
 const UCUM = "http://unitsofmeasure.org";
 const LOINC = "http://loinc.org";
+
+/** Glucose in blood: the code Google Health sends every glucose reading under. */
+const BLOOD_GLUCOSE_LOINC = "2339-0";
+/** Glucose in interstitial fluid: a continuous glucose monitor's sensor reading. */
+const SENSOR_GLUCOSE_LOINC = "99504-3";
+const SENSOR_GLUCOSE_DISPLAY = "Glucose [Mass/volume] in Interstitial fluid";
+/** Google Health's specimen for a continuous glucose monitor's reading. */
+const INTERSTITIAL_FLUID = "INTERSTITIAL_FLUID";
 
 export const WAREHOUSE_SOURCE = "synthea" as const;
 
@@ -36,6 +46,7 @@ type Quantity = {
 type FhirComponent = {
   readonly code?: { readonly coding?: readonly Coding[] };
   readonly valueQuantity?: Quantity;
+  readonly valueString?: unknown;
 };
 
 type FhirObservation = {
@@ -66,6 +77,29 @@ const codingOf = (coded: {
   return coding.find((item) => item.system === LOINC) ?? coding[0] ?? {};
 };
 
+/** Google Health's `specimen` component, when the reading has one. */
+const specimenOf = (observation: FhirObservation): unknown =>
+  observation.component?.find((component) =>
+    component.code?.coding?.some(
+      (item) => item.system === SYSTEMS.GOOGLE_HEALTH && item.code === "specimen",
+    ),
+  )?.valueString;
+
+/**
+ * The code and display a reading is stored under. Google Health codes every
+ * glucose reading 2339-0 (in blood) and says in a `specimen` component where
+ * it was read. A reading from interstitial fluid is a continuous monitor's,
+ * so it is stored as sensor glucose (99504-3), never as blood glucose.
+ */
+const storedCode = (
+  observation: FhirObservation,
+  loinc: string,
+  display: string,
+): Readonly<{ loinc: string; display: string }> =>
+  loinc === BLOOD_GLUCOSE_LOINC && specimenOf(observation) === INTERSTITIAL_FLUID
+    ? { loinc: SENSOR_GLUCOSE_LOINC, display: SENSOR_GLUCOSE_DISPLAY }
+    : { loinc, display };
+
 export const mapObservation = (resource: unknown): MappedObservation | undefined => {
   if (!isObject(resource) || resource.resourceType !== "Observation") return undefined;
   const observation = resource as FhirObservation;
@@ -73,8 +107,11 @@ export const mapObservation = (resource: unknown): MappedObservation | undefined
   if (!fhirId) return undefined;
 
   const coding = codingOf(observation);
-  const loinc = typeof coding.code === "string" ? coding.code : "";
-  const display = typeof coding.display === "string" ? coding.display : "";
+  const { loinc, display } = storedCode(
+    observation,
+    typeof coding.code === "string" ? coding.code : "",
+    typeof coding.display === "string" ? coding.display : "",
+  );
   const quantity = observation.valueQuantity;
 
   if (quantity && typeof quantity.value === "number") {
