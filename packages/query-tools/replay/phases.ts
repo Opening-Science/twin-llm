@@ -12,7 +12,7 @@ import {
   replayNarrationSchema,
 } from "./items";
 import { localDayBounds, localInstant } from "./local-time";
-import { recoveryAfter } from "./recovery";
+import { type Recovery, recoveryAfter } from "./recovery";
 import { type ReplayDay } from "./replay-day";
 import {
   decide,
@@ -148,6 +148,9 @@ const between =
 
 const overlaps = (event: ReplayEvent, at: number): boolean =>
   ms(event.from) <= at && at < ms(event.to);
+
+const notBackWithinHour = (recovery: Recovery): boolean =>
+  recovery.back_within_min === null || recovery.back_within_min > 60;
 
 const extremeOf = (
   readings: readonly AvailableReading[],
@@ -319,6 +322,27 @@ export const storyPhases = (
 
   // ─── heart rate ───────────────────────────────────────────────────────────
 
+  /**
+   * True when heart rate was read through the hour after `end`: no gap between
+   * readings longer than the time each one stands for, up to the hour's end.
+   */
+  const readThroughHour = (end: number): boolean => {
+    const until = end + 60 * MINUTE;
+    const inHour = heart.filter(
+      (reading) => ms(reading.at) > end && ms(reading.at) <= until,
+    );
+    const last = inHour.at(-1);
+    return (
+      last !== undefined &&
+      until - ms(last.at) <= last.interval_min * MINUTE &&
+      inHour.every((reading, index) => {
+        const previous = inHour[index - 1];
+        const from = previous === undefined ? end : ms(previous.at);
+        return ms(reading.at) - from <= reading.interval_min * MINUTE;
+      })
+    );
+  };
+
   const heartStatus = (
     phase: HeartPhase,
     readings: readonly AvailableReading[],
@@ -365,17 +389,24 @@ export const storyPhases = (
                 evidence: ids,
                 reason: "No heart rate before the run to recover to.",
               }
-            : recovery.back_within_min === null || recovery.back_within_min > 60
+            : notBackWithinHour(recovery) && !readThroughHour(ms(recovery.ended_at))
               ? {
-                  status: "notable",
-                  evidence: recovery.evidence,
-                  reason: "Not back within the recovery band within an hour.",
+                  status: "insufficient_data",
+                  evidence: [...recovery.evidence, ...ids],
+                  reason:
+                    "Heart rate was not read through the hour after the run, so whether it came back cannot be said.",
                 }
-              : {
-                  status: "usual",
-                  evidence: recovery.evidence,
-                  reason: `Back within ${recovery.band_per_min} /min of ${recovery.before_per_min} /min by ${recovery.back_within_min} minutes after the run, read ${recovery.resolution_min} minute(s) apart.`,
-                };
+              : notBackWithinHour(recovery)
+                ? {
+                    status: "notable",
+                    evidence: recovery.evidence,
+                    reason: "Not back within the recovery band within an hour.",
+                  }
+                : {
+                    status: "usual",
+                    evidence: recovery.evidence,
+                    reason: `Back within ${recovery.band_per_min} /min of ${recovery.before_per_min} /min by ${recovery.back_within_min} minutes after the run, read ${recovery.resolution_min} minute(s) apart.`,
+                  };
         return decide(day.origin, HEART_RECOVERY, outcome);
       }
       default:

@@ -202,6 +202,24 @@ describe("statuses", () => {
     expect(recovery.status.reason).toContain("read 1 minute(s) apart");
   });
 
+  test("a run with one reading after it and then two hours of nothing is not enough data", () => {
+    const runEnd = localInstant(DEMO_REFERENCE_DAY, "18:45", DEMO_TIME_ZONE).getTime();
+    const gapped = replayDaySchema.parse({
+      ...REFERENCE,
+      readings: REFERENCE.readings.filter(
+        (one) =>
+          one.stream !== "heart_rate" ||
+          Date.parse(one.at) <= runEnd + 60_000 ||
+          Date.parse(one.at) >= runEnd + 120 * 60_000,
+      ),
+    });
+    const recovery = phasesOf(gapped).find((one) => one.phase === "recovery");
+    expect(recovery?.status.status).toBe("insufficient_data");
+    expect(recovery?.status.reason).toBe(
+      "Heart rate was not read through the hour after the run, so whether it came back cannot be said.",
+    );
+  });
+
   test("without a baseline, sleep and resting are not enough data, never usual", () => {
     const b = phasesOf(day(DEMO_PERSON_B, "2026-10-27"));
     const judged = b.filter((one) => one.phase === "sleep" || one.phase === "resting");

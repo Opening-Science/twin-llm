@@ -107,7 +107,7 @@ export const HEART_NEAR_BASELINE: StatusRule = {
 
 export const HEART_RECOVERY: StatusRule = {
   id: "heart_rate_recovery_within_hour",
-  text: "After a walk or run, heart rate back within the recovery band within an hour is usual; later is notable.",
+  text: "After a walk or run, heart rate back within the recovery band within an hour is usual; later is notable; with heart rate not read through that hour, not enough data.",
   basis: "demo_only",
 };
 

@@ -159,14 +159,14 @@ narrated after a meal; the raised heart rate while still is narrated without a c
 Each phase carries a `status` with its words, its rule (`id`, `text`, `basis`), its
 evidence and a one-sentence reason (`status-rules.ts`).
 
-| Rule                               | Basis                 | Gives                                                                                     |
-| ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
-| `heart_rate_still_above`           | placeholder threshold | Worth a look: above 100 /min while still.                                                 |
-| `heart_rate_activity_not_judged`   | demo only             | Usual: waking, walking, running and winding down are not judged by height.                |
-| `heart_rate_near_resting_baseline` | demo only             | Usual within 10 /min of the resting baseline, else Notable; no baseline, Not enough data. |
-| `heart_rate_recovery_within_hour`  | demo only             | Usual when back within the band within an hour, else Notable.                             |
-| `glucose_past_threshold`           | placeholder threshold | Worth a look past 140 mg/dL (without diabetes) or outside 70–180 (with).                  |
-| `glucose_meal_rise`                | demo only             | Notable for a rise of 30 mg/dL or more after a meal, else Usual.                          |
+| Rule                               | Basis                 | Gives                                                                                                                         |
+| ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `heart_rate_still_above`           | placeholder threshold | Worth a look: above 100 /min while still.                                                                                     |
+| `heart_rate_activity_not_judged`   | demo only             | Usual: waking, walking, running and winding down are not judged by height.                                                    |
+| `heart_rate_near_resting_baseline` | demo only             | Usual within 10 /min of the resting baseline, else Notable; no baseline, Not enough data.                                     |
+| `heart_rate_recovery_within_hour`  | demo only             | Usual when back within the band within an hour, else Notable; Not enough data when heart rate was not read through that hour. |
+| `glucose_past_threshold`           | placeholder threshold | Worth a look past 140 mg/dL (without diabetes) or outside 70–180 (with).                                                      |
+| `glucose_meal_rise`                | demo only             | Notable for a rise of 30 mg/dL or more after a meal, else Usual.                                                              |
 
 No rule is approved for recorded data yet (`APPROVED_FOR_RECORDED` is empty), so on a
 recorded day every status is "Not classified", with that reason. Synthetic
