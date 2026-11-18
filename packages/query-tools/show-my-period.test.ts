@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { AppendInput } from "@/packages/audit/append";
 
 import type { ObservationRecord, QueryToolPorts, SubjectScopeRow } from "./ports";
-import { mixedUnits, ROW_CAP_EXCEEDED } from "./refusals";
+import { isToolRefusal, mixedUnits, ROW_CAP_EXCEEDED } from "./refusals";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import { type ShowMyPeriodResult } from "./show-my-period";
 import { runHrvTrend, runRestingHrTrend, runShowMyPeriod } from "./tools";
@@ -147,13 +147,18 @@ describe("show_my_period over a week", () => {
     expect(result.hrv).toEqual(await runHrvTrend(synthetic, window, ports));
   });
 
-  test("one capped read of five codes over the week and the 35 days before its end, one audit row", async () => {
+  test("one capped read over the week and the 35 days before, one of sensor glucose over the week, one audit row", async () => {
     const { ports, audits, queries } = fakePorts();
     const result = asResult(await runShowMyPeriod(synthetic, WEEK, ports));
-    expect(queries).toHaveLength(1);
+    expect(queries).toHaveLength(2);
     expect(queries[0]).toMatchObject({
       loinc: ["2339-0", "2345-7", "40443-4", "hrv-rmssd"],
       start: new Date("2026-10-13T00:00:00.000Z"),
+      end: new Date("2026-11-16T23:59:59.999Z"),
+    });
+    expect(queries[1]).toMatchObject({
+      loinc: ["99504-3"],
+      start: new Date("2026-11-10T00:00:00.000Z"),
       end: new Date("2026-11-16T23:59:59.999Z"),
     });
     // 35 days of two daily rows, the 16 glucose readings and the one before the week.
@@ -229,5 +234,92 @@ describe("show_my_period refusals", () => {
     expect(await runShowMyPeriod(synthetic, WEEK, fakePorts(many).ports)).toEqual(
       ROW_CAP_EXCEEDED,
     );
+  });
+});
+
+describe("show_my_period with sensor glucose", () => {
+  /** Every 15 minutes for the last two days: 100 mg/dL, and 160 from 20:00 to 21:45. */
+  const SENSOR: readonly FakeRow[] = [dayBefore(1), END].flatMap((day) =>
+    Array.from({ length: 96 }, (_, index) => {
+      const time = `${String(Math.floor(index / 4)).padStart(2, "0")}:${String((index % 4) * 15).padStart(2, "0")}`;
+      return row("99504-3", index >= 80 && index < 88 ? 160 : 100, "mg/dL", day, time);
+    }),
+  );
+
+  test("sensor glucose gets its own summary; blood glucose is unchanged", async () => {
+    // Hand-checked: 192 readings, 16 at 160 and 176 at 100: average 105, 16/192 above.
+    const result = asResult(
+      await runShowMyPeriod(synthetic, WEEK, fakePorts([...FIXTURE, ...SENSOR]).ports),
+    );
+    expect(result.glucose).toMatchObject({
+      specimen: "blood",
+      n: 16,
+      average_mg_dl: 106.3,
+    });
+    expect(result.sensor_glucose).toMatchObject({
+      specimen: "sensor",
+      n: 192,
+      days: 2,
+      average_mg_dl: 105,
+      share_of_readings: { below: null, within: 0.917, above: 0.083 },
+    });
+    expect(result.sensor_lag).toBe(
+      "Sensor glucose is read in the fluid between cells and trails blood glucose by several minutes. It is shown on its own and never compared with blood glucose.",
+    );
+    expect(result.n).toBe(35 * 2 + 16 + 1 + 192);
+  });
+
+  test("a period with no sensor reading has an empty sensor summary and no lag note", async () => {
+    const result = asResult(await runShowMyPeriod(synthetic, WEEK, fakePorts().ports));
+    expect(result.sensor_glucose).toMatchObject({
+      specimen: "sensor",
+      n: 0,
+      average_mg_dl: null,
+      share_of_readings: null,
+    });
+    expect(result.sensor_lag).toBeNull();
+  });
+
+  test("sensor glucose in mmol/L is refused on its own, and blood still answers", async () => {
+    const { ports } = fakePorts([
+      ...FIXTURE,
+      row("99504-3", 5.5, "mmol/L", END, "09:00"),
+    ]);
+    const result = asResult(await runShowMyPeriod(synthetic, WEEK, ports));
+    expect(result.sensor_glucose).toEqual(mixedUnits("99504-3", ["mg/dL", "mmol/L"]));
+    expect(result.glucose.n).toBe(16);
+  });
+
+  test("more sensor readings than the cap refuse the sensor summary, not the period", async () => {
+    const dense = Array.from({ length: 5001 }, (_, index) => ({
+      ...row("99504-3", 100, "mg/dL", END, "00:00"),
+      effectiveAt: new Date(Date.parse(`${END}T00:00:00.000Z`) + index * 10_000),
+    }));
+    const result = asResult(
+      await runShowMyPeriod(synthetic, WEEK, fakePorts([...FIXTURE, ...dense]).ports),
+    );
+    expect(result.sensor_glucose).toEqual(ROW_CAP_EXCEEDED);
+    expect(result.sensor_lag).toBeNull();
+    expect(result.n).toBe(35 * 2 + 16 + 1);
+  });
+
+  test("a month from a five-minute monitor is over the cap: sensor refused, the rest answers", async () => {
+    // 30 days × 288 readings = 8640, past the 5000 cap.
+    const month = Array.from({ length: 30 * 288 }, (_, index) => ({
+      ...row("99504-3", 100, "mg/dL", END, "00:00"),
+      effectiveAt: new Date(Date.parse(`${END}T23:55:00.000Z`) - index * 300_000),
+    }));
+    const result = asResult(
+      await runShowMyPeriod(
+        synthetic,
+        { ...WEEK, period: "month" },
+        fakePorts([...FIXTURE, ...month]).ports,
+      ),
+    );
+    expect(result.sensor_glucose).toEqual(ROW_CAP_EXCEEDED);
+    expect(result.sensor_lag).toBeNull();
+    expect(result.glucose).toMatchObject({ specimen: "blood", n: 17 });
+    expect(isToolRefusal(result.resting_hr)).toBe(false);
+    expect(isToolRefusal(result.hrv)).toBe(false);
   });
 });
