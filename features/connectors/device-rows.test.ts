@@ -79,7 +79,7 @@ describe("deviceRow", () => {
     expect(row.logo?.alt).toBe("Google Health");
   });
 
-  test("Oura has an empty tile and a plain sync line", () => {
+  test("Oura has no logo and a plain sync line", () => {
     const row = deviceRow(input(), NOW);
     expect(row.logo).toBeUndefined();
     expect(detailLine(row)).toBe("Synced 2 hours ago");
