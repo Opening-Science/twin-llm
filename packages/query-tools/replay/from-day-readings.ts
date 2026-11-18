@@ -13,7 +13,8 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  *   the named device; blood and sensor stay two series.
  * - An event tag the person entered becomes an entered event at its time. It
  *   is a meal only when it names one plainly ("Breakfast", "Large dinner"),
- *   never when a meal is only mentioned ("Walk after lunch", "After dinner").
+ *   never when a meal is only mentioned ("Walk after lunch", "After dinner")
+ *   or said not to have happened ("No lunch", "Skipped breakfast").
  * - `moving` is not turned into an activity: it does not say walk or run.
  * - A reading stands for the usual spacing of its series; a lone reading for
  *   an hour.
@@ -29,8 +30,23 @@ export type DayReadingsSource = Readonly<{
   device: string;
 }>;
 
-const MEAL_TAG =
-  /^(?:(?!after |before |post |pre )[a-z]+ )?(breakfast|lunch|snack|dinner)$/i;
+/** A word before a meal that makes the tag about another time, or says the meal did not happen. */
+const NOT_THE_MEAL = [
+  "after",
+  "before",
+  "post",
+  "pre",
+  "no",
+  "skipped",
+  "skip",
+  "missed",
+  "without",
+] as const;
+
+const MEAL_TAG = new RegExp(
+  `^(?:(?!(?:${NOT_THE_MEAL.join("|")}) )[a-z]+ )?(breakfast|lunch|snack|dinner)$`,
+  "i",
+);
 
 /** The meal a tag plainly names, or null. */
 export const mealOfTag = (

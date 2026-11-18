@@ -23,6 +23,14 @@ describe("mealOfTag", () => {
     expect(mealOfTag("After dinner")).toBeNull();
     expect(mealOfTag("Run")).toBeNull();
   });
+
+  test("a tag that says a meal did not happen is not one", () => {
+    expect(mealOfTag("No lunch")).toBeNull();
+    expect(mealOfTag("Skipped breakfast")).toBeNull();
+    expect(mealOfTag("Missed dinner")).toBeNull();
+    expect(mealOfTag("Without snack")).toBeNull();
+    expect(mealOfTag("Late lunch")).toBe("lunch");
+  });
 });
 
 describe("the mock day as a replay day", () => {

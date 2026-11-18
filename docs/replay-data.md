@@ -100,5 +100,6 @@ gaps between them (missing, or no readings), so a chart never joins across a gap
 
 `replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
 adding nothing. A tag the person entered becomes an entered event, and a meal only when
-it plainly names one ("Large dinner", not "Walk after lunch"); no new logging is needed.
+it plainly names one ("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no
+new logging is needed.
 `moving` does not become an activity, since it does not say walk or run.
