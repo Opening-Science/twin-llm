@@ -15,6 +15,7 @@ import {
   WORTH_A_LOOK_NONE,
   WORTH_A_LOOK_NOTE,
   MY_DAY_NOTE,
+  MY_DAY_NOTE_SENSOR,
 } from "./day-copy";
 import { beatFocus } from "./beat-focus";
 import { MOCK_CHOICE } from "./day-view";
@@ -35,6 +36,13 @@ const STATE: MyDayState = {
   onChoice: noop,
   onProfile: noop,
   onBeat: noop,
+  period: {
+    period: "week",
+    available: true,
+    summary: undefined,
+    error: null,
+    onPeriod: noop,
+  },
 };
 
 const html = (state: MyDayState) =>
@@ -97,7 +105,7 @@ describe("MyDayPanel", () => {
 
   test("lists each window with its line, rule and a way to show its beat", () => {
     const out = html(STATE);
-    expect(out).toContain("20:30 · Glucose · furthest 175 mg/dL");
+    expect(out).toContain("20:30 · Blood glucose · furthest 175 mg/dL");
     expect(out).toContain(DAY.worth_a_look[0]!.rule);
     expect(out).toContain(WORTH_A_LOOK_NOTE);
     expect(out).toContain("Show the 20:30 beat");
@@ -108,6 +116,7 @@ describe("MyDayPanel", () => {
     const sensorBeat = {
       ...DAY.beats[blood]!,
       value: 152,
+      specimen: "sensor" as const,
       line: "Sensor glucose up · about 152 mg/dL · derived",
     };
     const beats = [
@@ -117,7 +126,12 @@ describe("MyDayPanel", () => {
     ];
     const windows = [
       ...DAY.worth_a_look,
-      { ...DAY.worth_a_look[0]!, extreme: 152, rule: "Sensor glucose above 140 mg/dL" },
+      {
+        ...DAY.worth_a_look[0]!,
+        specimen: "sensor" as const,
+        extreme: 152,
+        rule: "Sensor glucose above 140 mg/dL",
+      },
     ];
     const out = html({
       ...STATE,
@@ -141,6 +155,43 @@ describe("MyDayPanel", () => {
     expect(out).not.toContain('data-worth="true"');
   });
 
+  test("the step bar says where the step is, and stops at the ends", () => {
+    const count = DAY.beats.length;
+    expect(html(STATE)).toContain(`${count} beats. Next beat starts at the first.`);
+    const first = html({ ...STATE, selected: 0 });
+    expect(first).toContain(`Beat 1 of ${count}, ${DAY.beats[0]!.time}.`);
+    expect(first).toMatch(/disabled=""[^>]*>Previous beat/);
+    const last = html({ ...STATE, selected: count - 1 });
+    expect(last).toMatch(/disabled=""[^>]*>Next beat/);
+  });
+
+  test("folds a run of steady readings and opens it when a step lands inside", () => {
+    const base = DAY.beats.find((beat) => beat.source === "measured")!;
+    const reading = (time: string, value: number) => ({
+      ...base,
+      time,
+      event: "Reading",
+      measure: "heart_rate" as const,
+      direction: "steady" as const,
+      value,
+      unit: "/min" as const,
+      line: `Heart rate steady · about ${value} /min · measured`,
+      worth_a_look: false,
+    });
+    const beats = [reading("06:00", 77), reading("07:00", 74), reading("08:00", 76)];
+    const quiet = { ...STATE, day: { ...DAY, beats, worth_a_look: [] } };
+    const folded = html(quiet);
+    expect(folded).toContain("06:00–08:00 · Heart rate, 74–77 /min");
+    expect(folded).toContain("Show these 3 steady readings");
+    expect(folded).not.toContain("Heart rate steady · about 74 /min");
+    // Stepping to the second beat opens the run, so every beat stays reachable.
+    const open = html({ ...quiet, selected: 1 });
+    expect(open).toContain("Fold these 3 steady readings");
+    expect(open).toContain("Heart rate steady · about 74 /min");
+    expect(open.match(/aria-pressed="true" class="twin-beat-button"/g)).toHaveLength(1);
+    expect(open).toContain("Beat 2 of 3, 07:00.");
+  });
+
   test("shows the route's sentence instead of beats on a refusal", () => {
     const out = html({ ...STATE, day: undefined, error: DAY_REFUSED["no-readings"] });
     expect(out).toContain(DAY_REFUSED["no-readings"]);
@@ -157,6 +208,14 @@ describe("MyDayPanel", () => {
     expect(out).toContain(MY_DAY_DAYS_FAILED);
     expect(out).toContain(MY_DAY_MOCK_OPTION);
     expect(html(STATE)).not.toContain(MY_DAY_DAYS_FAILED);
+  });
+
+  test("names sensor glucose in the intro when the day has it", () => {
+    expect(html(STATE)).toContain(MY_DAY_NOTE);
+    const beats = DAY.beats.map((beat) =>
+      beat.specimen === "blood" ? { ...beat, specimen: "sensor" as const } : beat,
+    );
+    expect(html({ ...STATE, day: { ...DAY, beats } })).toContain(MY_DAY_NOTE_SENSOR);
   });
 
   test("says it is loading before the days are in", () => {

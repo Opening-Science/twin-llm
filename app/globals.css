@@ -513,8 +513,9 @@
   .research-footer-dot {
     @apply hidden min-[100rem]:inline;
   }
+  /* One 24px line, so the only control in the footer is big enough to tap. */
   .research-footer-phone > summary {
-    @apply cursor-pointer list-none;
+    @apply cursor-pointer list-none leading-6;
   }
   .research-footer-phone > summary::-webkit-details-marker {
     display: none;
@@ -753,6 +754,14 @@
       color-mix(in oklab, var(--effort-ultra) 9%, transparent),
       transparent 70%
     );
+  }
+
+  /* The prompt field draws no ring of its own (a ring inside the box would sit
+     on the text), so the box around it carries the focus ring while it has
+     the keyboard. */
+  .surface:has(> textarea:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 
   .effort-ultra-text {
@@ -1101,8 +1110,9 @@
 
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
+  /* The summary and the guide link are 24px high, big enough to tap. */
   .setup-disclosure > summary {
-    @apply text-foreground cursor-pointer text-xs font-medium select-none;
+    @apply text-foreground cursor-pointer py-1 text-xs font-medium select-none;
   }
 
   .setup-code {
@@ -1110,7 +1120,7 @@
   }
 
   .setup-link {
-    @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
+    @apply text-foreground inline-block py-1 text-xs font-medium underline underline-offset-2;
   }
 
   /* Shell lines a person can copy and run, such as a Lab check's command.
@@ -1437,12 +1447,14 @@
     @apply flex flex-wrap items-center gap-2;
   }
 
+  /* The beats scroll in their own box, so the step bar above stays in view.
+     The line runs down each beat's left edge; the padding keeps the dots unclipped. */
   .twin-beats {
-    @apply border-border ml-1 flex flex-col border-l;
+    @apply flex max-h-[32rem] flex-col overflow-y-auto pl-1.5;
   }
 
   .twin-beat {
-    @apply relative py-0.5 pl-2;
+    @apply border-border relative border-l py-0.5 pl-2;
   }
 
   .twin-beat-button {
@@ -1472,6 +1484,18 @@
 
   .twin-beat[data-worth="true"] .twin-beat-button[aria-pressed="true"] {
     @apply border-solid;
+  }
+
+  .twin-period {
+    @apply border-border flex flex-col gap-1.5 rounded-md border p-2.5;
+  }
+
+  .twin-period-lines {
+    @apply grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
+  .twin-step {
+    @apply flex flex-wrap items-center gap-2 py-1;
   }
 
   .twin-worth {
@@ -1832,3 +1856,169 @@
   }
 }
 /* --- Chart kit motion (end) -------------------------------------------------- */
+
+/* --- Kiosk (/kiosk) ----------------------------------------------------------
+   One portrait screen (an 85-inch panel, 1080 × 1920 and up) seen from a few
+   metres away, so type is sized from the screen's height, not the root size.
+   On a landscape screen the same column stands in the centre. */
+.kiosk {
+  display: grid;
+  position: relative;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--primary) 14%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--muted) 80%, var(--background)),
+      var(--background)
+    );
+  color: var(--foreground);
+  user-select: none;
+}
+
+.kiosk-head,
+.kiosk-foot {
+  width: min(100%, calc(100dvh * 0.75));
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+  text-align: center;
+}
+
+.kiosk-head {
+  padding-top: clamp(1rem, 3.5vh, 5rem);
+}
+
+.kiosk-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.4vh, 4.5rem);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.kiosk-subtitle {
+  margin-top: 0.4em;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 2rem);
+}
+
+.kiosk-stage {
+  position: relative;
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: 0;
+  margin-inline: auto;
+}
+
+.kiosk-twin {
+  position: absolute;
+  inset: 0;
+}
+
+/* The kiosk screen owns every press; the 3D view never turns under a finger. */
+.kiosk-twin canvas {
+  pointer-events: none;
+}
+
+.kiosk-twin-note {
+  position: absolute;
+  inset: auto 0 40%;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 2rem);
+  text-align: center;
+}
+
+.kiosk-foot {
+  padding-bottom: clamp(0.75rem, 2.5vh, 3.5rem);
+  color: var(--muted-foreground);
+  font-size: clamp(0.8rem, 1.15vh, 1.5rem);
+  line-height: 1.45;
+}
+
+/* The day's beat, under the twin. */
+.kiosk-panel {
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: clamp(9rem, 22vh, 26rem);
+  padding-bottom: clamp(0.75rem, 2.5vh, 3.5rem);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+
+.kiosk-beat {
+  display: grid;
+  gap: 0.45em;
+  font-size: clamp(0.9rem, 1.45vh, 1.9rem);
+  line-height: 1.4;
+}
+
+.kiosk-beat-count,
+.kiosk-beat-shows,
+.kiosk-day-notes {
+  color: var(--muted-foreground);
+}
+
+.kiosk-beat-count {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.6em;
+  font-family: var(--font-display);
+  font-size: 1.6em;
+  line-height: 1.15;
+}
+
+.kiosk-beat-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-line {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.kiosk-worth {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  width: fit-content;
+  padding: 0.25em 0.75em 0.25em 0.5em;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.kiosk-worth-mark {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+}
+
+.kiosk-day-notes {
+  display: grid;
+  gap: 0.2em;
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+/* The whole screen is the one control. It sits over everything and draws nothing. */
+.kiosk-press {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: transparent;
+  cursor: pointer;
+}
+
+.kiosk-press:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: -6px;
+}
+/* --- Kiosk (end) ------------------------------------------------------------- */

@@ -131,11 +131,80 @@ export const parseReportScores = (markdown: string): readonly ModelScores[] => {
   });
 };
 
+/** One model's row of a report's "Claim sources" table (#612). */
+export type ClaimSources = Readonly<{
+  model: string;
+  /** Answers whose turn returned a guideline passage or an article. */
+  answers: number;
+  claims: number;
+  cited: ScoreCell | null;
+  unsupported: ScoreCell | null;
+  invented: ScoreCell | null;
+  uncited: ScoreCell | null;
+  /** Answers with at least one claim, every one cited or marked unsupported. */
+  covered: ScoreCell | null;
+}>;
+
+const CLAIM_COLUMNS = [
+  "Model",
+  "Answers",
+  "Claims",
+  "Cited",
+  "Marked unsupported",
+  "Invented id",
+  "Uncited",
+  "Answers fully covered",
+] as const;
+
+const wholeNumber = (text: string | undefined): number | null =>
+  text !== undefined && /^\d+$/.test(text) ? Number(text) : null;
+
+/**
+ * The "## Claim sources" table of a report.md. The report writes it only when
+ * some turn returned literature, so a run without it gives none; a table of
+ * another shape gives none rather than a guess.
+ */
+export const parseClaimSources = (markdown: string): readonly ClaimSources[] => {
+  const lines = markdown.split(/\r?\n/);
+  const at = lines.findIndex((line) => line.trim() === "## Claim sources");
+  if (at === -1) return [];
+  const table = tableAfter(lines, at + 1);
+  if (
+    table === null ||
+    table.header.length !== CLAIM_COLUMNS.length ||
+    table.header.some((cell, index) => cell !== CLAIM_COLUMNS[index])
+  ) {
+    return [];
+  }
+  return table.rows.flatMap((row) => {
+    const answers = wholeNumber(row[1]);
+    const claims = wholeNumber(row[2]);
+    if (answers === null || claims === null) return [];
+    const [cited, unsupported, invented, uncited, covered] = row
+      .slice(3, 8)
+      .map((cell) => parseScoreCell(cell ?? ""));
+    return [
+      {
+        model: row[0] ?? "",
+        answers,
+        claims,
+        cited: cited ?? null,
+        unsupported: unsupported ?? null,
+        invented: invented ?? null,
+        uncited: uncited ?? null,
+        covered: covered ?? null,
+      },
+    ];
+  });
+};
+
 export type EvalRun = Readonly<{
   id: string;
   meta: RunMetaSummary | null;
   /** Null when the run has no report.md yet. */
   scores: readonly ModelScores[] | null;
+  /** Empty when the report has no claim-sources table (no turn returned literature). */
+  claims: readonly ClaimSources[];
 }>;
 
 export const summariseRun = (
@@ -146,6 +215,7 @@ export const summariseRun = (
   id,
   meta: metaText === null ? null : parseRunMeta(metaText),
   scores: reportText === null ? null : parseReportScores(reportText),
+  claims: reportText === null ? [] : parseClaimSources(reportText),
 });
 
 /** Newest first by the date in meta.json, then by run id. */
@@ -222,6 +292,79 @@ export const scoreTable = (scores: ModelScores): EvidenceTable => ({
   columns: ["Criterion", ...scores.columns],
   rows: scores.rows.map((row) => [row.criterion, ...row.cells.map(scoreCellText)]),
 });
+
+/** A run's claim sources, one row per model, as the report gives them. */
+export const claimTable = (
+  runId: string,
+  rows: readonly ClaimSources[],
+): EvidenceTable => ({
+  caption: `Claim sources of ${runId}`,
+  // The report's headings, two shortened so the table fits a laptop screen.
+  columns: [
+    "Model",
+    "Answers",
+    "Claims",
+    "Cited",
+    "Unsupported",
+    "Invented id",
+    "Uncited",
+    "Fully covered",
+  ],
+  rows: rows.map((row) => [
+    row.model,
+    formatNumber(row.answers, 0),
+    formatNumber(row.claims, 0),
+    scoreCellText(row.cited),
+    scoreCellText(row.unsupported),
+    scoreCellText(row.invented),
+    scoreCellText(row.uncited),
+    scoreCellText(row.covered),
+  ]),
+});
+
+const CLAIM_SHARES = [
+  ["cited", "cited"],
+  ["marked_unsupported", "unsupported"],
+  ["invented_id", "invented"],
+  ["uncited", "uncited"],
+  ["answers_fully_covered", "covered"],
+] as const;
+
+/** Every claim share of every run, one row each, for a paper's table or figure. */
+export const claimsCsv = (runs: readonly EvalRun[]): string =>
+  toCsv(
+    [
+      "run_id",
+      "model",
+      "answers",
+      "claims",
+      "share",
+      "count",
+      "n",
+      "rate",
+      "wilson95_low_pct",
+      "wilson95_high_pct",
+    ],
+    runs.flatMap((run) =>
+      run.claims.flatMap((row) =>
+        CLAIM_SHARES.map(([name, key]): readonly CsvCell[] => {
+          const cell = row[key];
+          return [
+            run.id,
+            row.model,
+            row.answers,
+            row.claims,
+            name,
+            cell?.passes,
+            cell?.n,
+            cell === null || cell.n === 0 ? null : cell.passes / cell.n,
+            cell?.lowPct,
+            cell?.highPct,
+          ];
+        }),
+      ),
+    ),
+  );
 
 /** Every score cell of every run, one row each, for a paper's table or figure. */
 export const scoresCsv = (runs: readonly EvalRun[]): string =>
