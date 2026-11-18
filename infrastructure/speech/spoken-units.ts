@@ -9,27 +9,74 @@ import type { SpeechLanguage } from "./contract";
  * stay as they are. Pure.
  */
 
-type Unit = Readonly<{ pattern: string; en: string; de: string }>;
+type Words = Readonly<{ en: string; de: string }>;
+
+/** `one` is the singular, for exactly 1, where it differs. */
+type Unit = Readonly<{ pattern: string; many: Words; one?: Words }>;
 
 /** Longest first, so "mmol/L" is matched before "mm" could be. */
 const UNITS: readonly Unit[] = [
-  { pattern: "mmol\\/[lL]", en: "millimoles per litre", de: "Millimol pro Liter" },
+  {
+    pattern: "mmol\\/[lL]",
+    many: { en: "millimoles per litre", de: "Millimol pro Liter" },
+    one: { en: "millimole per litre", de: "Millimol pro Liter" },
+  },
   {
     pattern: "mg\\/d[lL]",
-    en: "milligrams per decilitre",
-    de: "Milligramm pro Deziliter",
+    many: { en: "milligrams per decilitre", de: "Milligramm pro Deziliter" },
+    one: { en: "milligram per decilitre", de: "Milligramm pro Deziliter" },
   },
-  { pattern: "mmHg", en: "millimetres of mercury", de: "Millimeter Quecksilbersäule" },
-  { pattern: "kcal", en: "kilocalories", de: "Kilokalorien" },
-  { pattern: "bpm", en: "beats per minute", de: "Schläge pro Minute" },
-  { pattern: "°C", en: "degrees Celsius", de: "Grad Celsius" },
-  { pattern: "kg", en: "kilograms", de: "Kilogramm" },
-  { pattern: "km", en: "kilometres", de: "Kilometer" },
-  { pattern: "cm", en: "centimetres", de: "Zentimeter" },
-  { pattern: "ms", en: "milliseconds", de: "Millisekunden" },
-  { pattern: "min", en: "minutes", de: "Minuten" },
-  { pattern: "h", en: "hours", de: "Stunden" },
-  { pattern: "%", en: "per cent", de: "Prozent" },
+  {
+    pattern: "mmHg",
+    many: { en: "millimetres of mercury", de: "Millimeter Quecksilbersäule" },
+    one: { en: "millimetre of mercury", de: "Millimeter Quecksilbersäule" },
+  },
+  {
+    pattern: "kcal",
+    many: { en: "kilocalories", de: "Kilokalorien" },
+    one: { en: "kilocalorie", de: "Kilokalorie" },
+  },
+  {
+    pattern: "bpm",
+    many: { en: "beats per minute", de: "Schläge pro Minute" },
+    one: { en: "beat per minute", de: "Schlag pro Minute" },
+  },
+  {
+    pattern: "°C",
+    many: { en: "degrees Celsius", de: "Grad Celsius" },
+    one: { en: "degree Celsius", de: "Grad Celsius" },
+  },
+  {
+    pattern: "kg",
+    many: { en: "kilograms", de: "Kilogramm" },
+    one: { en: "kilogram", de: "Kilogramm" },
+  },
+  {
+    pattern: "km",
+    many: { en: "kilometres", de: "Kilometer" },
+    one: { en: "kilometre", de: "Kilometer" },
+  },
+  {
+    pattern: "cm",
+    many: { en: "centimetres", de: "Zentimeter" },
+    one: { en: "centimetre", de: "Zentimeter" },
+  },
+  {
+    pattern: "ms",
+    many: { en: "milliseconds", de: "Millisekunden" },
+    one: { en: "millisecond", de: "Millisekunde" },
+  },
+  {
+    pattern: "min",
+    many: { en: "minutes", de: "Minuten" },
+    one: { en: "minute", de: "Minute" },
+  },
+  {
+    pattern: "h",
+    many: { en: "hours", de: "Stunden" },
+    one: { en: "hour", de: "Stunde" },
+  },
+  { pattern: "%", many: { en: "per cent", de: "Prozent" } },
 ];
 
 const NUMBER = "\\d+(?:[.,]\\d+)?";
@@ -43,7 +90,8 @@ const withUnits = (text: string, language: SpeechLanguage): string =>
           `(${NUMBER})\\s?${unit.pattern}${/[A-Za-z]$/.test(unit.pattern) ? "(?![A-Za-z])" : ""}`,
           "g",
         ),
-        `$1 ${unit[language]}`,
+        (_match, number: string) =>
+          `${number} ${(number === "1" ? (unit.one ?? unit.many) : unit.many)[language]}`,
       ),
     text,
   );

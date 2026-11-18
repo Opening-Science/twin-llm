@@ -52,4 +52,13 @@ describe("spokenUnits", () => {
       "Von 7.30 bis 8.15 Uhr, ab 22.45 ruhig.",
     );
   });
+
+  test("exactly 1 takes the singular", () => {
+    expect(spokenUnits("1 h, 1 min, 1 kcal, 1 bpm and 1.5 h, 21 h", "en")).toBe(
+      "1 hour, 1 minute, 1 kilocalorie, 1 beat per minute and 1.5 hours, 21 hours",
+    );
+    expect(spokenUnits("1 h und 1 min, 1 kg, 11 h", "de")).toBe(
+      "1 Stunde und 1 Minute, 1 Kilogramm, 11 Stunden",
+    );
+  });
 });
