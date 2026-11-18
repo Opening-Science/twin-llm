@@ -118,3 +118,6 @@ data/motion/
 
 # Synthetic wearable test data (bun run wearables:two-source, #508); rebuilt from a seed, never committed
 /.synthetic-wearables/
+
+# Source-attribution study items and runs (bun run attribution:w1, P6 #508); rebuilt from a seed, never committed
+/.attribution-study/
