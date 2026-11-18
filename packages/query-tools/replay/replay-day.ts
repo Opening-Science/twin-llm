@@ -16,7 +16,8 @@ import { inLocalDay, isCalendarDay, isTimeZone, localDayBounds } from "./local-t
  * outside the local day (a daylight-saving day is 23 or 25 hours long), an
  * event or narration that does not touch the day (one ending at its first
  * midnight does not), two items with one id, and two values of one stream at
- * one instant. A synthetic demonstration always carries its notice.
+ * one instant. A synthetic demonstration carries `DEMO_NOTICE` word for word,
+ * and a recording carries no notice.
  */
 
 /** Shown with every synthetic demonstration day. */
@@ -40,7 +41,7 @@ const dayShape = z
     day: z.string().refine(isCalendarDay, "not a calendar day"),
     time_zone: z.string().refine(isTimeZone, "not a known time zone"),
     origin: z.enum(ORIGINS),
-    /** DEMO_NOTICE on a synthetic day; null on a recording. */
+    /** DEMO_NOTICE on a synthetic day; null on a recording. The parser holds both. */
     notice: z.string().min(1).nullable(),
     readings: z.array(replayReadingSchema),
     events: z.array(replayEventSchema),
@@ -98,9 +99,13 @@ const uniquenessIssues = (day: DayShape): readonly string[] => [
 ];
 
 const noticeIssues = (day: DayShape): readonly string[] =>
-  day.origin === "synthetic_demo" && day.notice === null
-    ? ["a synthetic demonstration day carries its notice"]
-    : [];
+  day.origin === "synthetic_demo"
+    ? day.notice === DEMO_NOTICE
+      ? []
+      : ["a synthetic demonstration day carries its notice"]
+    : day.notice === null
+      ? []
+      : ["a recorded day carries no demonstration notice"];
 
 /** The parser for a replay day. */
 export const replayDaySchema = dayShape.superRefine((day, context) => {
