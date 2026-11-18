@@ -139,6 +139,11 @@ The tool result carries `citations` (source, id, title, address) and a note that
   loopback (`permitVcfVariantsRequest`). Every hosted provider is refused for
   both, the consented Exoscale pilot included, and so is Ollama on another
   machine. See [genome.md](genome.md#imported-vcf).
+- Voice. A spoken question goes from the browser to the app and on to the speech
+  sidecar, which startup keeps on this machine (`VOICE_SIDECAR_URL` on loopback); so does
+  the text of an answer read aloud. Neither the recording nor the audio is stored or
+  logged. The words heard are a prompt like typed ones and follow the rules above. See
+  [voice.md](voice.md).
 
 Chat injects only the summary narrative and `whoop.*` / Oura / Google Health citation keys.
 

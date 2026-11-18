@@ -4,6 +4,7 @@ import {
   countTicks,
   dateAxisTicks,
   extent,
+  fitTimeTicks,
   labelIndexes,
   nearestIndex,
   niceTicks,
@@ -132,6 +133,38 @@ describe("dateAxisTicks", () => {
       "19 Oct",
       "25 Oct",
       "31 Oct",
+    ]);
+  });
+});
+
+describe("fitTimeTicks", () => {
+  const TEN_YEARS = dateAxisTicks(
+    Date.parse("2016-06-01T00:00:00Z"),
+    Date.parse("2026-11-01T00:00:00Z"),
+  );
+  const shown = (plotWidth: number) =>
+    fitTimeTicks(TEN_YEARS, plotWidth).map((tick) => tick.label);
+
+  test("a ten-year axis on a phone keeps every other year and the last (#857)", () => {
+    // A 390 px screen leaves about 300 px of plot: room for six year labels.
+    expect(shown(300)).toEqual(["2017", "2019", "2021", "2023", "2026"]);
+  });
+
+  test("a wide plot keeps every tick", () => {
+    expect(shown(700)).toEqual(TEN_YEARS.map((tick) => tick.label));
+  });
+
+  test("longer labels need more room: quarters on a phone keep fewer", () => {
+    const quarters = dateAxisTicks(
+      Date.parse("2021-01-15T00:00:00Z"),
+      Date.parse("2022-11-14T00:00:00Z"),
+    );
+    expect(quarters).toHaveLength(7);
+    // Room for three "Apr 2021"-wide labels in 300 px, where six years fit.
+    expect(fitTimeTicks(quarters, 300).map((tick) => tick.label)).toEqual([
+      "Apr 2021",
+      "Jan 2022",
+      "Oct 2022",
     ]);
   });
 });
