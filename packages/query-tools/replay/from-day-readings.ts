@@ -1,6 +1,6 @@
 import { type DayReading } from "../day-beats";
 import { median } from "../stats";
-import { type Origin, type ReplayEvent, type ReplayReading } from "./items";
+import { type ReplayEvent, type ReplayReading } from "./items";
 import { localInstant } from "./local-time";
 import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
 
@@ -9,6 +9,9 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  * or the illustrative mock day) as a replay day, so the replay reads the same
  * values the day beats do. Nothing is added: no activity, no meal, no value.
  *
+ * - Every day comes out as a synthetic demonstration with `DEMO_NOTICE`.
+ *   `show_my_day` reads synthetic people only, not recordings of anyone, so
+ *   none is labelled recorded until real recordings come in.
  * - Heart rate, blood glucose and sensor glucose become measured readings of
  *   the named device; blood and sensor stay two series.
  * - An event tag the person entered becomes an entered event at its time. It
@@ -25,7 +28,6 @@ export type DayReadingsSource = Readonly<{
   day: string;
   /** The zone the readings' "HH:MM" times are in: `show_my_day` uses UTC. */
   time_zone: string;
-  origin: Origin;
   /** The device the values came from, as it should be shown. */
   device: string;
 }>;
@@ -78,7 +80,7 @@ export const replayDayFromDayReadings = (
     subject_ref: source.subject_ref,
     day: source.day,
     time_zone: source.time_zone,
-    origin: source.origin,
+    origin: "synthetic_demo",
   } as const;
   const device = { kind: "device", name: source.device } as const;
   const instantOf = (reading: DayReading): string =>
@@ -137,7 +139,7 @@ export const replayDayFromDayReadings = (
   });
   return replayDaySchema.parse({
     ...scope,
-    notice: source.origin === "synthetic_demo" ? DEMO_NOTICE : null,
+    notice: DEMO_NOTICE,
     readings: replayReadings,
     events,
     narrations: [],
