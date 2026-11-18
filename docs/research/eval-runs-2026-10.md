@@ -10,7 +10,8 @@ statement about a real person.
 The run files (`results.jsonl`, `meta.json`, `report.md`, `review.csv`,
 `review-key.json`) and the record cache stay under the gitignored
 `evaluation/runs/` and `evaluation/cache/` of the machine that ran them. This
-page copies only what the reports show.
+page copies only what the reports show. Later sections add reruns into
+November; the newest is "Citation rule on, 18 Nov 2026".
 
 ## Setup
 
@@ -1522,3 +1523,8 @@ catalogue entry gives little to cite.
   replayed over the run files; a call the input schema refused is not in the
   run files, so it counts as no call.
 - Quantisation is as `ollama show` reports it (Q4_K_M for all three).
+- The 18 Nov runs ("Citation rule on") are one sample per line, on a fresh
+  Postgres 18.6 rather than the 16 of October, with the catalogue and no
+  guideline full text. The claim matcher reads only the Answer section, so
+  an id listed under "Evidence Used" counts for nothing there; that choice,
+  not only the models, shapes the claim-source shares.
