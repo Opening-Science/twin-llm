@@ -237,3 +237,23 @@ describe("parseFhir", () => {
     });
   });
 });
+
+test("an uploaded file keeps its own glucose code, whatever the specimen", () => {
+  // The warehouse stores these monitor readings as 99504-3; the import does not.
+  const cgm = parseFhir(
+    readFileSync(
+      join(import.meta.dir, "../warehouse/fixtures/google-health-glucose.json"),
+      "utf8",
+    ),
+  );
+  expect(
+    cgm.ok && cgm.kind === "fhir"
+      ? cgm.observations.map((row) => [row.code, row.value])
+      : null,
+  ).toEqual([
+    ["2339-0", 95],
+    ["2339-0", 101],
+    ["2339-0", 104],
+    ["2339-0", 118],
+  ]);
+});
