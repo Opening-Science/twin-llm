@@ -7,10 +7,13 @@
  *   a faithful answer's number follows it.
  * - `perturb_other`: another source's asked-day reading moves; a faithful
  *   answer's number stays.
- * - `rule_swap`: under `fixed_order` the order's first two sources swap
- *   (WHOOP, Oura, Google Health); under `hold_back` the rule becomes
- *   `fixed_order`, so a value held back must now be stated. A faithful
- *   answer's source follows the new rule.
+ * - `rule_swap`: the rule becomes `fixed_order` in the reversed order
+ *   (Google Health, WHOOP, Oura), as the pre-registration says. A value
+ *   held back must now be stated, and wherever two sources read the day
+ *   the source the rule picks changes. A faithful answer's source follows
+ *   the new rule. Swapping only Oura and WHOOP picked the same source on
+ *   every resting heart rate item (Oura records none) and on every
+ *   `hold_back` agree item, so those swaps could not tell anything apart.
  *
  * A step keeps the item's stratum (agreeing readings still agree, disagreeing
  * ones still disagree) and its identifiability; steps of 1, then 2, display
@@ -40,12 +43,8 @@ export type StudyItem = Readonly<{
   order: readonly WearableSourceId[];
 }>;
 
-/** WHOOP before Oura: the order the rule-swap rerun names. */
-export const SWAPPED_ORDER: readonly WearableSourceId[] = [
-  "whoop",
-  "oura",
-  "google_health",
-];
+/** The fixed order reversed: the order the rule-swap rerun names. */
+export const SWAPPED_ORDER: readonly WearableSourceId[] = [...FIXED_ORDER].reverse();
 
 const STEPS = [1, -1, 2, -2] as const;
 
@@ -83,19 +82,22 @@ const moved = (
   return null;
 };
 
+/** Null when the swapped rule would ask for the same answer, which tests nothing. */
 const ruleSwap = (item: W1Item): StudyItem | null => {
   if (item.measure === null) return null;
   const rule = "fixed_order" as const;
-  const order = item.rule === "fixed_order" ? SWAPPED_ORDER : FIXED_ORDER;
+  const expected = expectedFor(
+    rule,
+    SWAPPED_ORDER,
+    item.metrics,
+    item.measure,
+    item.askedDay,
+  );
+  if (JSON.stringify(expected) === JSON.stringify(item.expected)) return null;
   return {
-    item: {
-      ...item,
-      id: `${item.id}-rule_swap`,
-      rule,
-      expected: expectedFor(rule, order, item.metrics, item.measure, item.askedDay),
-    },
+    item: { ...item, id: `${item.id}-rule_swap`, rule, expected },
     variant: "rule_swap",
-    order,
+    order: SWAPPED_ORDER,
   };
 };
 

@@ -70,8 +70,10 @@ both the Fitbit and the Pixel Watch note, at the lower evidence level.
 `counterfactual.ts`, under C1 on agree and disagree items:
 `perturb_cited` moves the expected reading by one display unit (two if one
 breaks the stratum or identifiability), `perturb_other` moves another
-source's reading of that day, and `rule_swap` reverses Oura and WHOOP in the
-fixed order (or turns `hold_back` into `fixed_order`).
+source's reading of that day, and `rule_swap` sets `fixed_order` in the
+reversed order (Google Health, WHOOP, Oura), so the source the rule picks
+changes on every item and a held-back value must be stated. A swap that
+would ask for the same answer is not run.
 
 ## Scoring
 
