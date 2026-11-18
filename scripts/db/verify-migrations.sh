@@ -63,6 +63,9 @@ fi
 echo "=== pgvector ==="
 bash scripts/db/verify-pgvector.sh
 
+echo "=== chat tables move (triggers, partial indexes, marker) ==="
+bash scripts/db/verify-chat-move.sh
+
 # Prisma 7: `db execute` has no --url; it reads DATABASE_URL from prisma.config.ts.
 echo "=== warehouse source CHECK (observations) ==="
 set +e
@@ -188,4 +191,4 @@ UPDATE "audit_events" SET "row_count" = "row_count" + 1 WHERE "seq" = 1;
 SQL
 bun packages/audit/verify-cli.ts --expect-broken
 
-echo "verify-migrations OK: deploy applied, migrations match schema, pgvector holds, source filter holds, source CHECK holds, audit chain probe holds"
+echo "verify-migrations OK: deploy applied, migrations match schema, pgvector holds, chat move holds, source filter holds, source CHECK holds, audit chain probe holds"
