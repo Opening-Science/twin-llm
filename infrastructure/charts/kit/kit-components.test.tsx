@@ -908,7 +908,7 @@ describe("device list", () => {
       <DeviceList category="vitals" title="Devices" rows={[{ name: "Ring" }]} />,
     );
     expect(out).not.toContain("<img");
-    expect(out).not.toContain("bg-muted size-10");
+    expect(out).not.toContain("h-11");
   });
 
   test("a logo is the vendor's file at 30px, in its own proportions, on a tile", () => {
@@ -924,8 +924,10 @@ describe("device list", () => {
     expect(out).toContain('src="/brand/vendors/example.svg"');
     expect(out).toContain('width="120"');
     expect(out).toContain('height="30"');
-    // Every row leads with a tile, logo or not, so the names line up.
-    expect(out.match(/bg-muted flex h-11/g)).toHaveLength(2);
+    // Only a logo sits on a tile; a row without one keeps a blank slot of
+    // the same width, never an empty grey square, so the names line up.
+    expect(out.match(/bg-muted flex h-11/g)).toHaveLength(1);
+    expect(out).toContain('<span aria-hidden="true" class="size-11 shrink-0"></span>');
   });
 
   test("the vendor's attribution leads the detail line, with its name", () => {
