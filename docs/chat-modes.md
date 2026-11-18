@@ -202,7 +202,7 @@ as `number_review`.
 Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
 
 - **Sources** (the `@` button, or `@` and a word in the text): the sources this person
-  can point a question at here (`prompt-sources.ts`): linked Oura, Whoop and Google
+  can point a question at here (`prompt-menus.ts`): linked Oura, Whoop and Google
   Health; imported data and the genome when their policies allow this server's chat to
   read them; PubMed and Ensembl when the person switched them on (never in local-only
   mode or an incognito chat); and "Import a file", which opens Customize · Data.
@@ -217,7 +217,7 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
   its pick on (`rowSubline`, `autoModelName`). A box that would break the mode's rule is
   disabled and the line under the lists says why. In an incognito chat the models that
   do not run on this machine stay in the lists, greyed out with the reason.
-- **Effort** (`effort-menu.tsx`): a slider over the five steps with what the chosen
+- **Effort** (`effort-picker.tsx`): a slider over the five steps with what the chosen
   step does. At Ultra the step name and the box take a faint tint (`--effort-ultra` in
   `globals.css`, light and dark); nothing moves.
 - **Linked wearables** as before, with their disconnect buttons.
@@ -235,7 +235,9 @@ Under the text box, from left to right (`features/compare/prompt-bar.tsx`):
 `/` still opens the command palette with the skills, and the hint under the bar still
 says when a prompt goes with a skill, that an incognito chat runs on local models only,
 and when a thread's models are no longer offered; otherwise it gives the mode's line or
-what the mode is missing. There is no microphone: TwinLLM has no dictation path.
+what the mode is missing. When the speech sidecar answers, a microphone button beside
+Send takes a spoken question and sends it as typed text would; with the sidecar off
+nothing about voice is drawn ([voice.md](voice.md#push-to-talk)).
 
 An answer says which effort it ran at when that was not Balanced ("Ultra effort:
 thinking on, up to 12 model calls, numbers checked."), and an Ultra answer's step list
