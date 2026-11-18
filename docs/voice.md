@@ -95,9 +95,10 @@ language beside it (EN or DE, remembered in this browser; a German browser start
 Nothing about voice is drawn while it is off.
 
 Hold the button, or hold Space or Enter on it, and speak; let go to send. Pressing it stops
-any answer being read aloud, so the microphone does not record the app's own voice. The browser
-records with its own encoder, then decodes, mixes down to one channel and resamples to
-16 kHz before the upload (`infrastructure/speech/recorder.ts`), and lets go of the
+any answer being read aloud, so the microphone does not record the app's own voice. A hold of
+59 seconds sends itself, so it stays under the sidecar's limit, and leaving the page mid-hold
+lets go of the microphone. The browser records with its own encoder, then decodes, mixes
+down to one channel and resamples to 16 kHz before the upload (`infrastructure/speech/recorder.ts`), and lets go of the
 microphone. The text goes out as a typed prompt would, on the models and mode the bar
 shows; when it cannot (no model, a mode problem, answers still streaming) it waits in the
 box. The hint line then says what took how long, such as "Heard 1.8s of German, written

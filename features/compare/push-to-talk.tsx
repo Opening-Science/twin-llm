@@ -1,22 +1,20 @@
 "use client";
 
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import {
   SPEECH_FAILURE_MESSAGES,
   SPEECH_LANGUAGE_NAMES,
   type SpeechLanguage,
 } from "@/infrastructure/speech/contract";
-import {
-  type MicrophoneProblem,
-  type Recording,
-  startRecording,
-} from "@/infrastructure/speech/recorder";
+import { startRecording } from "@/infrastructure/speech/recorder";
 
 import {
+  type Hold,
   MICROPHONE_LINES,
   pushToTalkLabel,
   type PushToTalkPhase,
+  startHold,
   transcribeRecording,
   type VoiceHeard,
 } from "./push-to-talk-model";
@@ -63,21 +61,31 @@ export const PushToTalk = ({
 }>) => {
   const [phase, setPhase] = useState<PushToTalkPhase>("idle");
   const [problem, setProblem] = useState<string | null>(null);
-  const recording = useRef<Promise<Recording | MicrophoneProblem> | null>(null);
+  const recording = useRef<Hold | null>(null);
+
+  // Leaving mid-hold lets go of the microphone.
+  useEffect(
+    () => () => {
+      recording.current?.cancel();
+      recording.current = null;
+    },
+    [],
+  );
 
   const begin = () => {
     if (disabled || recording.current !== null || phase === "writing") return;
     onListen?.();
     setProblem(null);
     setPhase("listening");
-    recording.current = startRecording();
+    recording.current = startHold(startRecording, () => void finish());
   };
 
   const finish = async () => {
-    const pending = recording.current;
-    if (pending === null) return;
+    const hold = recording.current;
+    if (hold === null) return;
     recording.current = null;
-    const started = await pending;
+    hold.clearLimit();
+    const started = await hold.pending;
     if (typeof started === "string") {
       setPhase("idle");
       setProblem(MICROPHONE_LINES[started]);

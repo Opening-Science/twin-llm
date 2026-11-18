@@ -72,3 +72,11 @@ export const BellOffIcon = (props: IconProps) => (
     <path d="m3.5 3.5 13 13" />
   </Icon>
 );
+
+/** An eye: something to look at. Never the only cue; the words beside it say what. */
+export const EyeIcon = (props: IconProps) => (
+  <Icon {...props}>
+    <path d="M2.5 10s2.8-5 7.5-5 7.5 5 7.5 5-2.8 5-7.5 5-7.5-5-7.5-5Z" />
+    <circle cx="10" cy="10" r="2.2" />
+  </Icon>
+);
