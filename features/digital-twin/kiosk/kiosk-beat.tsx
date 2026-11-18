@@ -8,7 +8,7 @@ import {
   kioskPlaceholder,
   kioskShows,
 } from "./kiosk-copy";
-import { type KioskBeat } from "./kiosk-focus";
+import { type KioskBeat } from "../day/beat-focus";
 
 /** A ring with a dot, beside words: a window's beat never rests on colour. */
 const WorthMark = () => (
