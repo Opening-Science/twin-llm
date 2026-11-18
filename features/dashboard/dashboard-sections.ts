@@ -1,3 +1,5 @@
+import { formatDate } from "@/infrastructure/format-measure";
+
 /**
  * The dashboard's sections, in order, and the words around them. Each
  * section is a first look at one part of the app and links to the page that
@@ -42,3 +44,48 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     linkLabel: "Ask a new question",
   },
 ];
+
+/**
+ * The spot under the twin where "Replay my day" will open once the replay
+ * work lands (#860–#867). Named here so the link has one place to go; until
+ * then it has no link and says so.
+ */
+export const REPLAY_MY_DAY = {
+  id: "replay-my-day",
+  title: "Replay my day",
+  line: "A day played back on the twin. It opens from here once the replay is built.",
+  href: null,
+  status: "Coming",
+} as const;
+
+export const RECENT_CHATS = {
+  shown: 5,
+  label: "Recent conversations",
+  empty: "No conversations yet. Ask a question and it shows here and in the sidebar.",
+} as const;
+
+/** The calendar day of `moment` on the `timeZone` clock, as YYYY-MM-DD. */
+const dayIn = (moment: Date, timeZone: string): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(moment);
+
+/**
+ * "17 Nov 2026 · 1 model": the last activity's day and how many models
+ * answered, when any did. The day is the reader's, in `timeZone`, never the
+ * server's: a chat at 00:30 in Berlin is that day, not the UTC day before.
+ */
+export const recentChatMeta = (
+  updatedAt: string,
+  modelCount: number,
+  timeZone: string,
+): string => {
+  const moment = new Date(updatedAt);
+  const day = formatDate(Number.isNaN(moment.getTime()) ? null : dayIn(moment, timeZone));
+  return modelCount === 0
+    ? day
+    : `${day} · ${modelCount} ${modelCount === 1 ? "model" : "models"}`;
+};
