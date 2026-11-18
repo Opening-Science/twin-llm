@@ -86,7 +86,7 @@ describe("docs/day-thresholds.md", () => {
     expect(DOC).toContain(`| change under ${steady.heart_rate} /min `);
     expect(DOC).toContain(`| change under ${steady.glucose} mg/dL `);
     expect(DOC).toContain(
-      `| glucose rise of ${insulinRise} mg/dL or more since the reading before `,
+      `| glucose rise of ${insulinRise} mg/dL or more since the last glucose reading `,
     );
   });
 

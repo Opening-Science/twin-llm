@@ -680,6 +680,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes digital-twin.day)",
   },
+  "GET /api/digital-twin/period/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.period)",
+  },
   "GET /api/digital-twin/day": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
