@@ -1,14 +1,14 @@
 # open-twin pins
 
 TwinLLM consumes `@open-twin/fhir-core`, `@open-twin/fhir-r4`, `@open-twin/aggregate`,
-`provider-oura`, `provider-google-health`, `provider-whoop`, and the data
+`provider-oura`, `provider-google-health`, `provider-whoop`, `provider-vitronic` (FHIR mapping only), and the data
 of `@open-twin/anchor-layer` from a **gitignored** checkout at a pinned SHA. `@open-twin/interpreter` is not pinned
-(no Anchor mapper yet). `interpretation-contract` and `provider-vitronic` are not synced: nothing in the app imports them.
+(no Anchor mapper yet). `interpretation-contract` is not synced: nothing in the app imports it.
 
 ## Pin
 
 - Repo: https://github.com/Opening-Science/open-twin
-- SHA: `2fd26911c43c3007c8b87a88bf8a3647fa90ded0` (open-twin `main`, 2026-11-16; was `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`). Upstream added a measurement catalogue (`measurements.ts` in fhir-core, fhir-r4, aggregate and each provider) and exports it from the barrels. One change reaches the bundles TwinLLM stores: provider-whoop now gives resting heart rate (recovery) and average heart rate (cycle) a second, WHOOP-local coding (`recovery-resting-heart-rate`, `cycle-average-heart-rate`) after LOINC 8867-4. The warehouse reads the LOINC coding first, so stored rows and what the app shows are unchanged. Upstream's other packages (genomics-vcf, hl7v2, interpretation-contract, interpreter, provider-anchor, provider-open-wearables, provider-vitronic and reader-core) are not synced. The host keeps the resolutions already in `bun.lock`.
+- SHA: `2fd26911c43c3007c8b87a88bf8a3647fa90ded0` (open-twin `main`, 2026-11-16; was `4b42ef944db0b461ca414b8066a5f7aa2594a9ce`). Upstream added a measurement catalogue (`measurements.ts` in fhir-core, fhir-r4, aggregate and each provider) and exports it from the barrels. One change reaches the bundles TwinLLM stores: provider-whoop now gives resting heart rate (recovery) and average heart rate (cycle) a second, WHOOP-local coding (`recovery-resting-heart-rate`, `cycle-average-heart-rate`) after LOINC 8867-4. The warehouse reads the LOINC coding first, so stored rows and what the app shows are unchanged. Upstream's other packages (genomics-vcf, hl7v2, interpretation-contract, interpreter, provider-anchor, provider-open-wearables and reader-core) are not synced. provider-vitronic is synced at the same pin for its mapping. The host keeps the resolutions already in `bun.lock`.
 - Local tree: `.open-twin/` (created by `scripts/sync-open-twin.sh`)
 - App deps: `file:.open-twin/packages/<name>` in `package.json`
 - `anchor-layer`: only `data/anchor-layer.v1.json` is imported (its loader uses `node:fs`); see `docs/biomarkers.md`
@@ -56,7 +56,7 @@ Missing package exports are reached from `infrastructure/open-twin-adapters/` vi
 
 ## Host adapters
 
-TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code outside the folder imports one entry per vendor (`oura.ts`, `whoop.ts`, `google-health.ts`, `aggregate.ts` under `@/infrastructure/open-twin-adapters/`), never a file behind them, so an Oura route does not load Google's auth library; lint (`twin-llm/wearable-entry` and the layer rules) enforces this, so replacing the adapters touches this folder only:
+TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code outside the folder imports one entry per vendor (`oura.ts`, `whoop.ts`, `google-health.ts`, `aggregate.ts`, `vitronic.ts` under `@/infrastructure/open-twin-adapters/`), never a file behind them, so an Oura route does not load Google's auth library; lint (`twin-llm/wearable-entry` and the layer rules) enforces this, so replacing the adapters touches this folder only:
 
 - `oura.ts` / `oura-authorize.ts` — `HostOuraTokenHandler.lastTokens()`; `getAuthorizationUrl` over the public barrel, adding `state`
 - `oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from `.open-twin/packages/provider-oura/src/fhir/bundleBuilder`, so a sync builds the bundle from the data it already fetched instead of calling every endpoint twice
@@ -66,7 +66,7 @@ TwinLLM-only behaviour lives under `infrastructure/open-twin-adapters/`. Code ou
 - `google-health-bundle.ts` — `buildGoogleHealthFhirBundle` over `buildBundleFromResponses` from the public barrel, with the person's shared subject (`person-subject.ts`) and the Patient it points at; the sync fetches with `getDataTypes` and builds from those responses
 - `aggregate.ts` — `aggregateWearableBundles` over `aggregate` from `@open-twin/aggregate`: one subject's Oura, WHOOP and Google Health bundles as one, overlaps reconciled on published evidence. No screen reads the bundle yet. The same file's `judgeByEvidence` reads aggregate's `selectSource` and fhir-core's `reliabilityFor` for the wearable source rules (#464, [wearable-sources.md](wearable-sources.md)), which resolve overlapping summary keys per measure and day; vitals the rules do not compare still take the first source in `VITAL_ANATOMY`. At this pin it also finds no overlap between the three connectors (request 8). Aggregate refuses Observations under more than one subject, so the person's Patient is carried once, with each connector's identifier (`mergePersonPatients`)
 - `person-subject.ts` — one subject per person (#476). Upstream keeps the connector in its patient id (`patientUuid(connector, subjectKey)`), so the host passes the Oura, WHOOP and Google Health builders their `subject` option: `urn:uuid:` UUIDv5 of the host's subject key under the host namespace `uuidv5("twin-llm/person")`, never a connector or vendor id. `withPersonPatient` adds the Patient it points at, with the connector's identifier, and links a Patient the connector built itself (Oura `personal_info`, still under its per-connector id); Observation ids and bundle tags still carry the connector
-- BodyLoop — host Bearer client in `packages/vitronic/`. `provider-vitronic` is not synced; TwinLLM does not persist `fhirBundle` and does not call `createBodyLoopClient` (password grant + `/probands`).
+- `vitronic.ts` — `buildVitronicFhirBundle` over `buildBundleFromVitronicResponse` from the public barrel, from lists the host already fetched. Each list is checked against the provider's own schema (`@open-twin/provider-vitronic/api/schemas/shared`) first; a list that does not match is left out and named in `dropped`. The bundle sits under the person's shared subject (`person-subject.ts`), keyed by the host's subject key, so no proband id reaches it. HTTP stays on the host Bearer client in `packages/vitronic/`: TwinLLM does not call `createBodyLoopClient` (password grant + `/probands`) and still does not persist `fhirBundle` on a snapshot.
 
 ## Upstream issues to file
 

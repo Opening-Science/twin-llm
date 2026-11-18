@@ -100,7 +100,11 @@ from the specialist's row and the model's row, so a pair is offered exactly when
 halves are, and every place that checked an id against the catalog (the turn check,
 `/api/chat`, the incognito route, scheduled tasks, `/compact`) now goes through it. Auto
 cannot be paired, and a specialist on its own preferred model keeps its plain
-`agent:<id>` row.
+`agent:<id>` row. Beside other answers its column still names that model, "General ·
+qwen3:8b" (`turnModelName`, #859), so a Compare column never hides what it ran on. Alone
+it reads "General". In Compare a ticked specialist has its model as a choice too
+(`setCompareModel`), and one ticked there starts on the model Specialists has for it, so
+"General · qwen3:4b" set in Specialists is what Compare runs and names.
 
 ### Why Auto chose
 
