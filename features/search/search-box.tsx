@@ -28,6 +28,7 @@ import {
 } from "@/infrastructure/ui-kit/nav-icons";
 
 import { SearchOpener, useOpenSearch } from "./search-context";
+import { SEARCH_COPY } from "./search-copy";
 import type { StaticSearchItems } from "./search-items";
 import {
   nextTab,
@@ -35,16 +36,12 @@ import {
   type SearchItem,
   type SearchItemKind,
   type SearchTab,
-  TAB_LABELS,
 } from "./search-model";
 import {
-  NOTHING_MATCHES,
   readServerAnswer,
   resultGroups,
-  SEARCH_PRIVACY,
   type ServerAnswer,
   wantsServer,
-  WORDS_ONLY,
 } from "./search-results";
 
 /**
@@ -137,6 +134,7 @@ const SearchDialog = ({
   onClose: () => void;
 }>) => {
   const router = useRouter();
+  const copy = useCopy(SEARCH_COPY);
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const ids = useId();
@@ -271,7 +269,12 @@ const SearchDialog = ({
   );
 
   return (
-    <dialog ref={dialog} aria-label="Search" className="search-dialog" onClose={onClose}>
+    <dialog
+      ref={dialog}
+      aria-label={copy.dialog}
+      className="search-dialog"
+      onClose={onClose}
+    >
       <div className="border-border border-b px-5 pt-4 pb-3">
         <div className="flex items-center gap-3">
           <SearchIcon className="text-muted-foreground" />
@@ -283,8 +286,8 @@ const SearchDialog = ({
             aria-autocomplete="list"
             aria-controls={listId}
             aria-activedescendant={activeIndex < 0 ? undefined : optionId(activeIndex)}
-            aria-label="Search"
-            placeholder="Search threads, pages, docs and commands"
+            aria-label={copy.dialog}
+            placeholder={copy.placeholder}
             className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-[15px] outline-none"
             value={query}
             onChange={(event) => changeQuery(event.target.value)}
@@ -292,7 +295,7 @@ const SearchDialog = ({
           />
           <button
             type="button"
-            aria-label="Close search"
+            aria-label={copy.close}
             className="text-muted-foreground hover:text-foreground rounded-md p-1"
             onClick={close}
           >
@@ -300,7 +303,11 @@ const SearchDialog = ({
           </button>
         </div>
 
-        <div role="tablist" aria-label="Result types" className="mt-3 -ml-1 flex gap-1">
+        <div
+          role="tablist"
+          aria-label={copy.resultTypes}
+          className="mt-3 -ml-1 flex gap-1"
+        >
           {SEARCH_TABS.map((value) => (
             <button
               key={value}
@@ -313,7 +320,7 @@ const SearchDialog = ({
                 input.current?.focus();
               }}
             >
-              {TAB_LABELS[value]}
+              {copy.tabs[value]}
             </button>
           ))}
         </div>
@@ -322,7 +329,7 @@ const SearchDialog = ({
       <div
         id={listId}
         role="listbox"
-        aria-label="Results"
+        aria-label={copy.results}
         aria-busy={loading}
         className="max-h-[min(60vh,28rem)] overflow-y-auto px-2 pt-3 pb-2"
       >
@@ -336,7 +343,7 @@ const SearchDialog = ({
               className="mb-1"
             >
               <div id={titleId} className="text-muted-foreground px-3 pt-2 pb-1 text-xs">
-                {group.title}
+                {copy.groups[group.title]}
               </div>
               {group.items.map((item, itemIndex) => {
                 const index = (startOf[groupIndex] ?? 0) + itemIndex;
@@ -371,7 +378,7 @@ const SearchDialog = ({
                     </span>
                     {item.match === "meaning" && (
                       <span className="text-muted-foreground shrink-0 text-xs">
-                        similar
+                        {copy.similar}
                       </span>
                     )}
                   </div>
@@ -382,7 +389,7 @@ const SearchDialog = ({
         })}
         {!loading && error === null && options.length === 0 && query.trim() !== "" && (
           <p className="text-muted-foreground px-3 py-6 text-center text-sm">
-            {NOTHING_MATCHES}
+            {copy.nothingMatches}
           </p>
         )}
         {error !== null && (
@@ -391,22 +398,22 @@ const SearchDialog = ({
           </p>
         )}
         {server !== null && !server.semantic && (tab === "all" || tab === "threads") && (
-          <p className="text-muted-foreground px-3 py-2 text-xs">{WORDS_ONLY}</p>
+          <p className="text-muted-foreground px-3 py-2 text-xs">{copy.wordsOnly}</p>
         )}
       </div>
 
       <div className="border-border text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-5 py-2.5 text-xs">
         <span>
-          Close <kbd className="search-kbd">Esc</kbd>
+          {copy.hintClose} <kbd className="search-kbd">Esc</kbd>
         </span>
         <span>
-          Change type <kbd className="search-kbd">←</kbd>{" "}
+          {copy.hintChangeType} <kbd className="search-kbd">←</kbd>{" "}
           <kbd className="search-kbd">→</kbd>
         </span>
         <span>
-          Open <kbd className="search-kbd">↵</kbd>
+          {copy.hintOpen} <kbd className="search-kbd">↵</kbd>
         </span>
-        <span className="ml-auto">{SEARCH_PRIVACY}</span>
+        <span className="ml-auto">{copy.privacy}</span>
       </div>
     </dialog>
   );
