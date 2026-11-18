@@ -17,7 +17,12 @@ import { outputEntriesOf, OutputsPanel, useOutputsMode } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
 import { lastTurnEffort, lastTurnModelIds } from "./screen-rules";
 import { TwinCard, type TwinCardFocus } from "./twin-card";
-import { type SpokenAnswer, type SpokenTurn, twinTurnOf } from "./spoken-turn";
+import {
+  closeTwinCard,
+  type SpokenAnswer,
+  type SpokenTurn,
+  twinTurnOf,
+} from "./spoken-turn";
 import { SpokenTurnReader } from "./spoken-turn-reader";
 import { useConversation } from "./use-conversation";
 import { VoiceProvider } from "./voice-context";
@@ -142,7 +147,7 @@ export const CompareScreen = ({
                     dataMode={dataMode}
                     bodyLoopConfigured={bodyLoopConfigured}
                     prompts={turns.map((turn) => turn.prompt)}
-                    onClose={conversation.closeTwin}
+                    onClose={() => closeTwinCard(conversation.closeTwin, setTwinTurn)}
                     onOrganPick={pickOrgan}
                     focus={twinTurn}
                   />
