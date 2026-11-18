@@ -55,6 +55,30 @@ describe("runStudy", () => {
     }
   });
 
+  test("each call carries a seed: the same on a rerun, different between repeats", async () => {
+    const cells = studyCells(studyItems(items.slice(0, 2), false), ["C0", "C1"]);
+    const seeds: number[][] = [[], []];
+    const run = (into: number[]) =>
+      runStudy({
+        cells,
+        models: [
+          {
+            id: "fake:seeds",
+            answer: async (_prompt, seed) => {
+              into.push(seed);
+              return "## Answer\nnone";
+            },
+          },
+        ],
+        repeats: 3,
+      });
+    const records = await run(seeds[0]!);
+    await run(seeds[1]!);
+    expect(seeds[1]).toEqual(seeds[0]!);
+    expect(new Set(seeds[0]).size).toBe(seeds[0]!.length);
+    expect(records.map((record) => record.seed)).toEqual(seeds[0]!);
+  });
+
   test("a failing model is tried three times, then recorded as an error", async () => {
     let calls = 0;
     const failing: AnswerModel = {
@@ -129,12 +153,12 @@ describe("ollamaModel", () => {
       fetch: fake,
     });
     expect(model.id).toBe("ollama:qwen3:4b");
-    expect(await model.answer({ system: "s", user: "u" })).toBe("## Answer\nok");
+    expect(await model.answer({ system: "s", user: "u" }, 7)).toBe("## Answer\nok");
     expect(bodies[0]).toEqual({
       model: "qwen3:4b",
       stream: false,
       think: false,
-      options: { num_ctx: DEFAULT_OLLAMA_NUM_CTX },
+      options: { num_ctx: DEFAULT_OLLAMA_NUM_CTX, seed: 7 },
       messages: [
         { role: "system", content: "s" },
         { role: "user", content: "u" },
@@ -142,11 +166,23 @@ describe("ollamaModel", () => {
     });
   });
 
+  test("refuses to follow a redirect, which could lead off this machine", async () => {
+    const inits: RequestInit[] = [];
+    const fake = ((_url: URL, init?: RequestInit) => {
+      inits.push(init ?? {});
+      return Promise.resolve(
+        new Response(JSON.stringify({ message: { content: "## Answer\nok" } })),
+      );
+    }) as unknown as typeof fetch;
+    await ollamaModel("qwen3:4b", { fetch: fake }).answer({ system: "s", user: "u" }, 1);
+    expect(inits[0]?.redirect).toBe("error");
+  });
+
   test("a set temperature is sent and named in the model id", async () => {
     const { bodies, fake } = recording();
     const model = ollamaModel("qwen3:4b", { fetch: fake, temperature: 0 });
     expect(model.id).toBe("ollama:qwen3:4b@temperature=0");
-    await model.answer({ system: "s", user: "u" });
+    await model.answer({ system: "s", user: "u" }, 7);
     expect(bodies[0]).toMatchObject({
       options: { num_ctx: DEFAULT_OLLAMA_NUM_CTX, temperature: 0 },
     });

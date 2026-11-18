@@ -1,4 +1,5 @@
 import { Card } from "@/infrastructure/ui-kit/card";
+import { NewTabNote } from "@/infrastructure/ui-kit/new-tab-note";
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
 import { type LabCheck, splitCode, STATUS_LABEL, STATUS_TONE } from "./lab-check";
@@ -84,6 +85,7 @@ export const CheckDetail = ({ check }: Readonly<{ check: LabCheck }>) => (
                 : {})}
             >
               {link.label}
+              {link.href.startsWith("http") ? <NewTabNote /> : null}
             </a>
           </li>
         ))}

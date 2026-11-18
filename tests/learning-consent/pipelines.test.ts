@@ -176,6 +176,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "vitronic:connect": LINK,
   "vitronic:mint": LINK,
   "vitronic:cycle": "drives a test scan cycle against the scanner; no learning",
+  "vitronic:reference-list":
+    "writes the reference-scan list (identifiers only) to the ignored vitronic folder; no learning",
   "anatomy:fetch": PUBLIC,
   "anatomy:bake-rigged": "bakes shipped anatomy meshes; no data rows",
   "blender:fit-atlas":
@@ -201,6 +203,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "writes the source-attribution study's synthetic items to files from a seed (P6, #508); no database, no person's rows",
   "attribution:study":
     "runs local models or fakes on the study's synthetic items and writes answers and scores to files (P6, #508); no database, no person's rows",
+  "attribution:stimuli":
+    "writes the user study's synthetic persona, trials and static preview pages to files from a seed (P6, #508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",

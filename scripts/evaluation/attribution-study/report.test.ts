@@ -49,6 +49,16 @@ describe("outcomeShare", () => {
     expect([share.hits, share.n]).toEqual([0, 1]);
   });
 
+  test("an error on an agree item counts as over-hedged, the failing side", () => {
+    const [agree] = of("fake:first_listed", "C1").filter(
+      (record) => record.stratum === "agree",
+    );
+    const failed: StudyRecord = { ...agree!, score: null, error: "down", answer: null };
+    const hedging = OUTCOMES.find((outcome) => outcome.field === "overHedged")!;
+    const share = outcomeShare([failed], hedging);
+    expect([share.hits, share.n]).toEqual([1, 1]);
+  });
+
   test("citing another source's reading scores worse than citing the one stated", () => {
     const right = outcomeShare(of("fake:first_listed", "C1"), attribution).share ?? 0;
     const wrong = outcomeShare(of("fake:cite_other", "C1"), attribution).share ?? 1;
