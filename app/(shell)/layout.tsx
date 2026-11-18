@@ -19,6 +19,7 @@ import { LockButton } from "@/features/vault/lock-button";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { serverEnv } from "@/infrastructure/env";
+import { LanguageSwitch } from "@/infrastructure/locale/language-switch";
 import { isClerkEnabled } from "@/infrastructure/public-env";
 import { ThreadHistoryProvider } from "@/infrastructure/thread-history-store";
 import { Button } from "@/infrastructure/ui-kit/button";
@@ -84,6 +85,7 @@ export default async function ShellLayout({
                   <>
                     {vault.personal && <LockButton unlocked={vault.unlocked} />}
                     {signInConfigured && signedIn && <UserButton />}
+                    <LanguageSwitch />
                     <ThemeToggle />
                   </>
                 ),
