@@ -43,8 +43,13 @@ type Parts = Readonly<{
   second: number;
 }>;
 
-const partsIn = (at: Date, timeZone: string): Parts => {
-  const parts = new Intl.DateTimeFormat("en-GB", {
+/** One formatter per zone: building one is far slower than using it. */
+const FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+
+const formatterFor = (timeZone: string): Intl.DateTimeFormat => {
+  const known = FORMATTERS.get(timeZone);
+  if (known !== undefined) return known;
+  const made = new Intl.DateTimeFormat("en-GB", {
     timeZone,
     hourCycle: "h23",
     year: "numeric",
@@ -53,7 +58,13 @@ const partsIn = (at: Date, timeZone: string): Parts => {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  }).formatToParts(at);
+  });
+  FORMATTERS.set(timeZone, made);
+  return made;
+};
+
+const partsIn = (at: Date, timeZone: string): Parts => {
+  const parts = formatterFor(timeZone).formatToParts(at);
   const get = (type: Intl.DateTimeFormatPartTypes): number =>
     Number(parts.find((part) => part.type === type)?.value ?? "0");
   return {
@@ -141,3 +152,35 @@ export const inLocalDay = (at: Date, bounds: LocalDayBounds): boolean =>
 /** Minutes between two instants. */
 export const minutesBetween = (from: Date, to: Date): number =>
   (to.getTime() - from.getTime()) / MS_PER_MINUTE;
+
+/** The calendar day after `day`. */
+export const dayAfter = (day: string): string => nextDay(day);
+
+/** The calendar day before `day`. */
+export const dayBefore = (day: string): string => {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, (date ?? 1) - 1))
+    .toISOString()
+    .slice(0, 10);
+};
+
+/**
+ * The instant a clock in the zone shows `time` ("HH:MM") on `day`. When the
+ * autumn change makes that time happen twice, the first; when the spring
+ * change skips it, the instant the clock shows an hour later, as it jumps.
+ */
+export const localInstant = (day: string, time: string, timeZone: string): Date => {
+  const [year, month, date] = day.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  const wall = Date.UTC(year ?? 0, (month ?? 1) - 1, date ?? 1, hours ?? 0, minutes ?? 0);
+  const before = offsetMinutes(new Date(wall - 86_400_000), timeZone);
+  const after = offsetMinutes(new Date(wall + 86_400_000), timeZone);
+  const matching = [...new Set([before, after])]
+    .map((offset) => new Date(wall - offset * MS_PER_MINUTE))
+    .filter((at) => {
+      const clock = localClock(at, timeZone);
+      return clock.day === day && clock.time === time;
+    })
+    .sort((a, b) => a.getTime() - b.getTime());
+  return matching[0] ?? new Date(wall - before * MS_PER_MINUTE);
+};
