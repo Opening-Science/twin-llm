@@ -8,6 +8,7 @@ import {
   genomeRunPermit,
   vcfVariantsChatPermit,
 } from "./genome-gate";
+import { importedDataChatPermit } from "./imported-data-gate";
 
 /**
  * The gates read this server's settings on every call. These tests set a
@@ -60,6 +61,20 @@ describe("chatOnLoopback and chatModelIsLocal", () => {
     useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
     expect(chatOnLoopback()).toBe(false);
     expect(chatModelIsLocal()).toBe(false);
+  });
+});
+
+describe("importedDataChatPermit", () => {
+  test("allows personal mode with Ollama on this machine", () => {
+    useEnv({ DATA_MODE: "personal" });
+    expect(importedDataChatPermit()).toEqual({ ok: true });
+  });
+
+  test("refuses synthetic mode, and Ollama on another host", () => {
+    useEnv({ DATA_MODE: "synthetic" });
+    expect(importedDataChatPermit()).toEqual(refusal("data-mode-not-personal"));
+    useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
+    expect(importedDataChatPermit()).toEqual(refusal("chat-model-not-local"));
   });
 });
 
