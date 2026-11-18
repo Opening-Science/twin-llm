@@ -67,6 +67,16 @@ describe("runGenerateScans", () => {
     expect(allowed.code).toBe(0);
   });
 
+  test("refuses a cohort no manifest names unless asked", async () => {
+    const refused = await run(["--in", "/c/fhir"]);
+    expect(refused.code).toBe(1);
+    expect(refused.written.size).toBe(0);
+    expect(refused.err).toContain("no manifest.json next to /c/fhir names the cohort");
+    const allowed = await run(["--in", "/c/fhir", "--allow-eval-cohort"]);
+    expect(allowed.code).toBe(0);
+    expect(allowed.written.get("/c/scans/manifest.json")).not.toHaveProperty("cohortId");
+  });
+
   test("a missing directory or flag is a plain message", async () => {
     expect((await run([])).err).toContain("Usage");
     expect((await run(["--in", "/nope"])).err).toContain("No such directory");
