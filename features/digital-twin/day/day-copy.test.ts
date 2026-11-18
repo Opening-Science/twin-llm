@@ -9,10 +9,11 @@ describe("worthALookLine", () => {
         from: "20:30",
         to: "20:30",
         measure: "glucose",
+        specimen: "blood",
         extreme: 175,
         unit: "mg/dL",
       }),
-    ).toBe("20:30 · Glucose · furthest 175 mg/dL");
+    ).toBe("20:30 · Blood glucose · furthest 175 mg/dL");
   });
 
   test("the value is rounded as the beat lines round it", () => {
@@ -21,10 +22,11 @@ describe("worthALookLine", () => {
         from: "20:30",
         to: "20:30",
         measure: "glucose",
+        specimen: "blood",
         extreme: 155.4,
         unit: "mg/dL",
       }),
-    ).toBe("20:30 · Glucose · furthest 155 mg/dL");
+    ).toBe("20:30 · Blood glucose · furthest 155 mg/dL");
   });
 
   test("a stretch names both ends", () => {
@@ -33,6 +35,7 @@ describe("worthALookLine", () => {
         from: "10:30",
         to: "11:15",
         measure: "heart_rate",
+        specimen: null,
         extreme: 112,
         unit: "/min",
       }),

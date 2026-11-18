@@ -20,6 +20,9 @@ export const DAY_REFUSED = {
 /** The panel under the twin. */
 export const MY_DAY_TITLE = "Show me my day";
 export const MY_DAY_NOTE = "Your day of heart rate and blood sugar, step by step.";
+/** The intro when the day holds a glucose sensor's readings. */
+export const MY_DAY_NOTE_SENSOR =
+  "Your day of heart rate, blood sugar and sensor glucose, step by step.";
 export const MY_DAY_DAYS_FAILED =
   "Could not load this person's days, so only the illustrative day is offered.";
 export const MY_DAY_PICK = "Day";
@@ -58,8 +61,15 @@ export const WORTH_A_LOOK = "Worth a look";
 export const WORTH_A_LOOK_NOTE = "A moment to look at, not a verdict on the person.";
 export const WORTH_A_LOOK_NONE = "Nothing past the thresholds on this day.";
 
-// A glucose window may be blood or sensor; its rule, shown under it, says which.
-const MEASURE_NAME = { heart_rate: "Heart rate", glucose: "Glucose" } as const;
+const windowName = (
+  measure: "heart_rate" | "glucose",
+  specimen: "blood" | "sensor" | null,
+): string =>
+  measure === "heart_rate"
+    ? "Heart rate"
+    : specimen === "sensor"
+      ? "Sensor glucose"
+      : "Blood glucose";
 
 /** One window: when, which signal, and its furthest value past the threshold, rounded as the beat lines are. */
 export const worthALookLine = (
@@ -67,13 +77,15 @@ export const worthALookLine = (
     from: string;
     to: string;
     measure: "heart_rate" | "glucose";
+    specimen: "blood" | "sensor" | null;
     extreme: number;
     unit: string;
   }>,
 ): string =>
-  `${window.from === window.to ? window.from : `${window.from} to ${window.to}`} · ${
-    MEASURE_NAME[window.measure]
-  } · furthest ${formatNumber(window.extreme, 0)} ${window.unit}`;
+  `${window.from === window.to ? window.from : `${window.from} to ${window.to}`} · ${windowName(
+    window.measure,
+    window.specimen,
+  )} · furthest ${formatNumber(window.extreme, 0)} ${window.unit}`;
 
 /** The button that turns the twin to a window's beat. */
 export const worthALookShow = (from: string): string => `Show the ${from} beat`;
@@ -94,3 +106,36 @@ export const PERIOD_OPTIONS = [
 export const PERIOD_MOCK =
   "The illustrative mock is a single day. Pick one of the person's days for a week or month ending on it.";
 export const PERIOD_LOADING = "Loading the period…";
+
+/** Stepping through the day. */
+export const STEP_PREVIOUS = "Previous beat";
+export const STEP_NEXT = "Next beat";
+export const STEP_LABEL = "Step through the day";
+export const STEP_KEYS = "On a beat, the arrow keys step to the next or previous one.";
+
+/** Where the step is: "Beat 3 of 26, 08:15." or the hint before any beat is pressed. */
+export const stepStatus = (
+  selected: number | null,
+  count: number,
+  time: string | null,
+): string =>
+  selected === null || time === null
+    ? `${count} ${count === 1 ? "beat" : "beats"}. Next beat starts at the first.`
+    : `Beat ${selected + 1} of ${count}, ${time}.`;
+
+/** A folded run of steady readings: one line per signal, values as the beat lines round them. */
+export const runLine = (
+  line: Readonly<{
+    name: string;
+    from: string;
+    to: string;
+    low: number;
+    high: number;
+    unit: string;
+  }>,
+): string =>
+  `${line.from === line.to ? line.from : `${line.from}–${line.to}`} · ${line.name}, ${
+    line.low === line.high ? line.low : `${line.low}–${line.high}`
+  } ${line.unit}`;
+export const runOpen = (count: number): string => `Show these ${count} steady readings`;
+export const runFold = (count: number): string => `Fold these ${count} steady readings`;
