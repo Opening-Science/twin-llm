@@ -1207,6 +1207,7 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/(shell)/customize/data/cohort/training/[set]/[number]/page.tsx": {
     open: "synthetic cohort",
   },
+  "app/(shell)/dashboard/page.tsx": "gated",
   "app/(shell)/digital-twin/page.tsx": "gated",
   "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
   "app/(shell)/lab/page.tsx": {
