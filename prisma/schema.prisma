@@ -215,6 +215,126 @@ model ModelResponse {
   @@map("model_responses")
 }
 
+// The three tables that will replace threads, turns and model_responses
+// (.plans/compare-rewrite/DATA-MODEL.md, part B). Expand phase: nothing in
+// the app reads or writes them yet. Each row keeps the id of the old row it
+// copies, and every *_sealed column holds the old column's stored value byte
+// for byte, sealed under the old table and column names. Foreign keys are
+// added when the backfill finishes, so these models declare no relations.
+
+enum ExchangeOrigin {
+  person
+  schedule
+
+  @@map("exchange_origin")
+}
+
+enum AnswerState {
+  streaming
+  complete
+  failed
+  refused
+  stopped
+
+  @@map("answer_state")
+}
+
+/// A conversation belonging to one person. Copies `threads`.
+model Conversation {
+  id             String   @id
+  ownerId        String   @map("owner_id")
+  /// Sealed under the context name `threads.title`.
+  titleSealed    String   @map("title_sealed")
+  startedAt      DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
+  lastActivityAt DateTime @default(now()) @map("last_activity_at") @db.Timestamptz(3)
+
+  @@index([ownerId, lastActivityAt(sort: Desc)])
+  @@map("conversations")
+}
+
+/// One question in a conversation. Copies `turns`.
+model Exchange {
+  id               String         @id
+  conversationId   String         @map("conversation_id")
+  askedAt          DateTime       @default(now()) @map("asked_at") @db.Timestamptz(3)
+  /// Sealed under `turns.prompt`.
+  questionSealed   String         @map("question_sealed")
+  /// Sealed under `turns.label`.
+  bubbleTextSealed String?        @map("bubble_text_sealed")
+  skillName        String?        @map("skill_name")
+  origin           ExchangeOrigin @default(person)
+  /// The scheduled task that asked it; null for a person, or when the task
+  /// that asked an old scheduled turn cannot be told apart.
+  scheduleId       String?        @map("schedule_id")
+
+  @@index([conversationId, askedAt])
+  @@index([scheduleId])
+  @@map("exchanges")
+}
+
+/// The answer one model or agent gave to one exchange. Copies `model_responses`.
+model Answer {
+  id              String      @id
+  exchangeId      String      @map("exchange_id")
+  answererRef     String      @map("answerer_ref")
+  answererLabel   String      @map("answerer_label")
+  columnIndex     Int?        @map("column_index")
+  state           AnswerState @default(streaming)
+  /// Sealed under `model_responses.text`.
+  bodySealed      String      @default("") @map("body_sealed")
+  /// Sealed under `model_responses.reasoningText`.
+  reasoningSealed String?     @map("reasoning_sealed")
+  /// Sealed under `model_responses.attribution`.
+  evidenceSealed  String?     @map("evidence_sealed")
+  /// Sealed under `model_responses.responseDocument`.
+  documentSealed  String?     @map("document_sealed")
+  /// Sealed under `model_responses.toolParts`.
+  toolTraceSealed String?     @map("tool_trace_sealed")
+
+  firstTokenMs    Int?     @map("first_token_ms")
+  tokensPerSecond Decimal? @map("tokens_per_second") @db.Decimal(10, 2)
+  inputTokens     Int?     @map("input_tokens")
+  outputTokens    Int?     @map("output_tokens")
+  totalTokens     Int?     @map("total_tokens")
+  costUsd         Decimal  @default(0) @map("cost_usd") @db.Decimal(10, 6)
+
+  openedAt DateTime  @default(now()) @map("opened_at") @db.Timestamptz(3)
+  closedAt DateTime? @map("closed_at") @db.Timestamptz(3)
+
+  @@unique([exchangeId, answererRef])
+  @@index([state])
+  @@map("answers")
+}
+
+/// A schema move in progress, such as `chat-tables`. Phase is "expanded" or
+/// "backfilled" (CHECK in the migration SQL). The row goes when the move's
+/// contract step drops the old tables.
+model SchemaMove {
+  move      String   @id
+  phase     String
+  startedAt DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  cursors SchemaMoveCursor[]
+
+  @@map("schema_moves")
+}
+
+/// How far a move's backfill got in one table: the last id copied, in
+/// ascending id order, and how many rows it has inserted so far.
+model SchemaMoveCursor {
+  move      String
+  tableName String   @map("table_name")
+  lastId    String?  @map("last_id")
+  copied    Int      @default(0)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  schemaMove SchemaMove @relation(fields: [move], references: [move], onDelete: Cascade)
+
+  @@id([move, tableName])
+  @@map("schema_move_cursors")
+}
+
 // ─── 3. Personal context ────────────────────────────────────────────────────
 
 /// Linked Oura account. Both tokens are encrypted at rest, and sealed
