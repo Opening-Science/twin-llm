@@ -42,3 +42,6 @@ export const KIOSK_UTC = "Times are UTC.";
 /** The thresholds stay placeholders until the reviewer confirms them. */
 export const kioskPlaceholder = (reviewer: string): string =>
   `Thresholds are placeholders until ${reviewer} confirms them.`;
+
+/** Under the day strip: midnight, every six hours, midnight. */
+export const KIOSK_STRIP_HOURS = ["00:00", "06:00", "12:00", "18:00", "24:00"] as const;

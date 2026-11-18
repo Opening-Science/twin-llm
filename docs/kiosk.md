@@ -19,6 +19,12 @@ turns. The twin goes to the beat's layer and lights its organ. A window's beat r
 "Worth a look" with a mark and a note beside it, never a colour alone. The notice, the
 placeholder note and "Times are UTC" stay on screen with every beat.
 
+Above the beat a strip runs from midnight to midnight with a tick per beat time: the
+current one tall and solid, a worth-a-look time as a ring over a hatched band
+(`kiosk-strip.ts`). Shapes, not colours, tell them apart. The strip only places the
+times the day already wrote, and screen readers skip it because the beat says the same
+in words.
+
 A press anywhere on the screen, or Space, Enter or the right arrow, goes on to the next
 beat; the left arrow goes back. The last beat stays.
 

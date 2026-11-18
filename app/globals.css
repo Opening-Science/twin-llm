@@ -1943,4 +1943,68 @@
   outline: 3px solid var(--ring);
   outline-offset: -6px;
 }
+
+/* The day strip: midnight to midnight, a tick per beat time. Shapes carry the
+   meaning (tall solid tick = now, ring over a hatched band = worth a look). */
+.kiosk-strip {
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+.kiosk-strip-track {
+  position: relative;
+  height: 1.6em;
+  border-bottom: 1px solid var(--border);
+}
+
+.kiosk-strip-band {
+  position: absolute;
+  top: 0.15em;
+  bottom: 0;
+  min-width: 4px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--foreground) 35%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+.kiosk-strip-mark {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 0.6em;
+  background: var(--muted-foreground);
+  transform: translateX(-50%);
+}
+
+.kiosk-strip-mark[data-worth] {
+  bottom: 0.7em;
+  width: max(0.7em, 12px);
+  height: max(0.7em, 12px);
+  border: 2px solid var(--foreground);
+  border-radius: 999px;
+  background: transparent;
+}
+
+.kiosk-strip-mark[data-current] {
+  width: 4px;
+  height: 1.5em;
+  background: var(--foreground);
+}
+
+.kiosk-strip-mark[data-current][data-worth] {
+  bottom: 0;
+  width: 0.9em;
+  height: 0.9em;
+  background: var(--foreground);
+}
+
+.kiosk-strip-hours {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.25em;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
 /* --- Kiosk (end) ------------------------------------------------------------- */

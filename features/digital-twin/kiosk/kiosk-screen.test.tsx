@@ -11,6 +11,7 @@ import {
   KIOSK_MOCK_NOTE,
   KIOSK_NEEDS_WEBGL,
   KIOSK_NEXT,
+  KIOSK_STRIP_HOURS,
   KIOSK_SUBTITLE,
   KIOSK_TITLE,
   KIOSK_UTC,
@@ -45,6 +46,7 @@ describe("KioskScreen", () => {
       KIOSK_TITLE,
       KIOSK_SUBTITLE,
       "1 of 18",
+      ...KIOSK_STRIP_HOURS,
       "03:00",
       "Deep sleep",
       "Heart rate steady · about 52 /min · measured",
@@ -88,6 +90,7 @@ describe("KioskBeatCard", () => {
     const index = DAY.beats.findIndex((beat) => beat.worth_a_look);
     expect(card(index)).toEqual([
       `${index + 1} of 18`,
+      ...KIOSK_STRIP_HOURS,
       "20:30",
       "Worth a look",
       KIOSK_WORTH_A_LOOK_NOTE,
@@ -100,7 +103,9 @@ describe("KioskBeatCard", () => {
 
   test("a narrated beat shows no number", () => {
     const index = DAY.beats.findIndex((beat) => beat.source === "narrated");
-    expect(card(index)[3]).toBe("Insulin up · narrated, not measured");
+    expect(card(index)[3 + KIOSK_STRIP_HOURS.length]).toBe(
+      "Insulin up · narrated, not measured",
+    );
   });
 
   test("past the last beat there is nothing to draw", () => {
