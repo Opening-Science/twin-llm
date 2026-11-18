@@ -157,6 +157,8 @@ export const KioskScreen = ({
         className="kiosk-press"
         aria-label={playing ? KIOSK_NEXT : KIOSK_START}
         onClick={press}
+        // A long press on a touch panel opens no menu; the kiosk has nothing to offer there.
+        onContextMenu={(event) => event.preventDefault()}
       />
     </div>
   );

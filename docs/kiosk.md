@@ -63,9 +63,16 @@ The demo body has to be on the machine first (`bun run anatomy:fetch`, see
 ```sh
 bun run build && bun run start
 chromium --kiosk --noerrdialogs --disable-session-crashed-bubble \
-  --incognito http://127.0.0.1:3000/kiosk
+  --incognito --disable-pinch --overscroll-history-navigation=0 \
+  http://127.0.0.1:3000/kiosk
 ```
 
-`--incognito` keeps nothing between browser starts. Without WebGL the page says so
-instead of showing the twin; a lost WebGL context (a driver reset on a screen that runs
-all day) redraws the view.
+`--incognito` keeps nothing between browser starts. `--disable-pinch` and
+`--overscroll-history-navigation=0` stop a visitor zooming the screen or swiping back
+to an empty page; the page itself keeps a tap a press at once, with no long-press menu
+and no grey tap flash. Without WebGL the page says so instead of showing the twin; a
+lost WebGL context (a driver reset on a screen that runs all day) redraws the view.
+
+The page needs no sign-in, so on a hosted deployment anyone with the address can open
+it. It shows only the synthetic body and the mock day, and asks search engines to leave
+it out (`kiosk-meta.ts`).
