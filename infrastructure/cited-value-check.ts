@@ -581,3 +581,26 @@ export const checkCitedValues = (
       : { status: "not_matched", stated: miss.stated.text.trim() };
   });
 };
+
+/**
+ * Whether a number as an answer wrote it (`75 bpm`, `7 h 32 min`, `8,432`),
+ * unit included, states `reading`, by the same rule as `checkCitedValues`.
+ * For the `stated` text a check returned, to ask which other reading it is
+ * (#508). False when `stated` holds no number, or more than one, in the
+ * reading's dimension, or the reading is not a number.
+ */
+export const statedMatchesReading = (
+  stated: string,
+  reading: CheckedReading,
+): boolean => {
+  const value = numericValue(reading.value);
+  if (value === null) return false;
+  const numbers = statedNumbers(valueText(stated), readingUnit(reading.unit), 0);
+  const [only] = numbers;
+  return (
+    numbers.length === 1 &&
+    only !== undefined &&
+    (!only.smallWhole || Math.abs(value) < 11) &&
+    statedMatches(only, reading, value)
+  );
+};

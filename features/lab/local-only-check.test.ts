@@ -47,6 +47,7 @@ describe("configuredEndpoints", () => {
         LOCAL_ONLY: false,
         OLLAMA_BASE_URL: "http://gpu.example.org:11434/v1",
         GENOME_SOURCE: "ark",
+        VOICE_SIDECAR_URL: "http://127.0.0.1:8095",
         GBD_MCP_URL: "https://gbd.example.org/mcp",
         NEXT_PUBLIC_POSTHOG_KEY: "phc_secret",
         CLERK_SECRET_KEY: "sk_secret",
@@ -55,6 +56,7 @@ describe("configuredEndpoints", () => {
     ).toEqual([
       { name: "Chat models: Ollama", local: false },
       { name: "Genome sidecar (Carbon-X)", local: true },
+      { name: "Voice (speech sidecar)", local: true },
       { name: "GBD server", local: false },
       { name: "Analytics (PostHog)", local: false },
       { name: "Sign-in (Clerk)", local: false },

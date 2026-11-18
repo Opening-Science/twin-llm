@@ -54,6 +54,10 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
+import { BEAT_FOCUS_PREFIX, beatFocusMove } from "./day/beat-focus";
+import { DAY_FOCUS_FROM } from "./day/day-copy";
+import { MyDayPanel } from "./day/my-day-panel";
+import { useMyDay } from "./day/use-my-day";
 import { DayMotionBar } from "./motion/day-motion-bar";
 import { useDayMotion } from "./motion/use-day-motion";
 import {
@@ -127,6 +131,8 @@ import {
   SCAN_SET_DEFAULT,
   SCAN_CLEAR_DEFAULT,
   SCAN_DEFAULT_FAILED,
+  SCAN_AUTO_SYNC_STOPPED,
+  scanAutoSyncing,
   BODY_VIEW_LOST,
   BODY_VIEW_RELOAD,
   DEMO_NEEDS_WEBGL,
@@ -151,6 +157,7 @@ import {
 } from "./scan-scene";
 import { scanLabel, isScansPayload, isSnapshotsPayload } from "./body-twin-payloads";
 import { loadSubjects } from "./load-subjects";
+import { autoSyncScans, scansToAutoSync } from "./scan-auto-sync";
 export {
   BODY_TWIN_LOADING,
   BODYLOOP_NO_SCANS,
@@ -162,6 +169,8 @@ export {
   SCAN_CLEAR_DEFAULT,
   SCAN_DEFAULT_TAG,
   SCAN_DEFAULT_FAILED,
+  SCAN_AUTO_SYNC_STOPPED,
+  scanAutoSyncing,
   BODY_VIEW_LOST,
   BODY_VIEW_RELOAD,
   DEMO_NEEDS_WEBGL,
@@ -288,6 +297,9 @@ export const BodyLoopAvatar = ({
   >([]);
   const [savingDefault, setSavingDefault] = useState(false);
   const [defaultError, setDefaultError] = useState(false);
+  // #613: scans the scanner lists that were never stored are fetched on open.
+  const [autoSyncing, setAutoSyncing] = useState(0);
+  const [autoSyncStopped, setAutoSyncStopped] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   // Live vitals: on in the environment, off inline until asked (battery on an
   // 8 GB Air), never with reduced motion.
@@ -361,31 +373,66 @@ export const BodyLoopAvatar = ({
     };
   }, [preview, bodyLoopConfigured]);
 
+  const selectedSubject = subjects.find((row) => row.id === subjectId);
+  const subjectKind: "scanner" | "file" =
+    selectedSubject?.source === VITRONIC_SUBJECT_SOURCE_SCANNER ||
+    selectedSubject?.isSelf === true
+      ? "scanner"
+      : "file";
+
   useEffect(() => {
     if (preview !== undefined || !subjectId || isDemoSubject(subjectId)) return;
     let cancelled = false;
-    void Promise.all([
-      fetch(`/api/vitronic/subjects/${subjectId}/scans`).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-      fetch(`/api/vitronic/subjects/${subjectId}/snapshots`).then((response) =>
-        response.ok ? response.json() : null,
-      ),
-    ])
-      .then(([scansBody, snapshotsBody]: readonly [unknown, unknown]) => {
-        if (cancelled) return;
+    const loadLists = () =>
+      Promise.all([
+        fetch(`/api/vitronic/subjects/${subjectId}/scans`).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+        fetch(`/api/vitronic/subjects/${subjectId}/snapshots`).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+      ]).then(([scansBody, snapshotsBody]: readonly [unknown, unknown]) => {
         const nextScans = isScansPayload(scansBody) ? (scansBody.scans ?? []) : [];
-        const nextSnapshots = isSnapshotsPayload(snapshotsBody)
-          ? (snapshotsBody.snapshots ?? [])
-          : [];
-        setScans(nextScans);
-        setSnapshots(nextSnapshots);
+        if (!cancelled) {
+          setScans(nextScans);
+          setSnapshots(
+            isSnapshotsPayload(snapshotsBody) ? (snapshotsBody.snapshots ?? []) : [],
+          );
+        }
+        return nextScans;
+      });
+    setAutoSyncing(0);
+    setAutoSyncStopped(false);
+    void loadLists()
+      .then(async (listed) => {
+        // Once per open: the lists read after the fetch do not start another round.
+        // Only scanner subjects: a file subject has nothing on the scanner to fetch.
+        const fresh =
+          subjectKind === "scanner" ? scansToAutoSync(listed, Date.now()) : [];
+        if (cancelled || fresh.length === 0) return;
+        setAutoSyncing(fresh.length);
+        const outcome = await autoSyncScans(
+          fresh,
+          (viatarId) =>
+            fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ viatarId }),
+            }).then((response) => response.ok),
+          () => cancelled,
+        );
+        if (cancelled) return;
+        setAutoSyncing(0);
+        setAutoSyncStopped(outcome.stopped);
+        if (outcome.synced.length > 0) await loadLists();
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setAutoSyncing(0);
+      });
     return () => {
       cancelled = true;
     };
-  }, [preview, subjectId]);
+  }, [preview, subjectId, subjectKind]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -427,13 +474,6 @@ export const BodyLoopAvatar = ({
       setResetKey((value) => value + 1);
     }
   }, [scanScene]);
-
-  const selectedSubject = subjects.find((row) => row.id === subjectId);
-  const subjectKind: "scanner" | "file" =
-    selectedSubject?.source === VITRONIC_SUBJECT_SOURCE_SCANNER ||
-    selectedSubject?.isSelf === true
-      ? "scanner"
-      : "file";
 
   const listedScans = useMemo(
     () => orderScans(mergeScanRows(scans, snapshots, subjectKind)),
@@ -524,6 +564,11 @@ export const BodyLoopAvatar = ({
     enabled: preview === undefined,
   });
   const { onFollow: setFollowDay } = dayMotion;
+  // "Show me my day": the Demo person's day as beats, or the illustrative mock day.
+  const myDay = useMyDay({
+    personRef: biomarkers.personRef,
+    enabled: preview === undefined && biomarkerSubject === "demo",
+  });
   const motion = useBodyMotion(scanScene, reducedMotion, isDemo ? "demo" : "scan", {
     plan: dayMotion.plan,
     lines: dayMotion.lines,
@@ -591,6 +636,31 @@ export const BodyLoopAvatar = ({
       },
     });
   }, [initialFocus, scheme, anatomyDispatch]);
+  // A pressed beat turns the twin to its organ at its layer; letting go clears
+  // only a beat's glow, never a pick or a Biomarkers row.
+  const dayFocus = myDay.focus;
+  const dayLit = anatomy.state.highlightFrom?.id.startsWith(BEAT_FOCUS_PREFIX) === true;
+  const dayApplied = useRef<string | null>(null);
+  const { onBeat: letBeatGo } = myDay;
+  useEffect(() => {
+    const move = beatFocusMove(dayFocus?.id ?? null, dayApplied.current, dayLit);
+    if (dayFocus === null) dayApplied.current = null;
+    if (move === "clear") anatomyDispatch({ type: "highlight", highlight: null });
+    // A pick or a Biomarkers row took the twin over: the beat lets go with it.
+    if (move === "let-go") letBeatGo(null);
+    if (move !== "apply" || dayFocus === null) return;
+    dayApplied.current = dayFocus.id;
+    anatomyDispatch({ type: "depth", depth: dayFocus.depth });
+    anatomyDispatch({
+      type: "highlight",
+      highlight: dayFocus.highlights[scheme],
+      from: {
+        id: dayFocus.id,
+        label: `${DAY_FOCUS_FROM}${dayFocus.label}`,
+        highlights: dayFocus.highlights,
+      },
+    });
+  }, [dayFocus, dayLit, scheme, anatomyDispatch, letBeatGo]);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const [viewNode, setViewNode] = useState<HTMLDivElement | null>(null);
   const setView = useCallback((node: HTMLDivElement | null) => {
@@ -1045,6 +1115,9 @@ export const BodyLoopAvatar = ({
         ) : (
           <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
         )}
+        {environment.active || biomarkerSubject !== "demo" ? null : (
+          <MyDayPanel state={myDay} />
+        )}
         {environment.active ? pickCard : null}
       </div>
       {inEnvironment ? (
@@ -1199,6 +1272,7 @@ export const BodyLoopAvatar = ({
             <div className="mt-3 flex flex-wrap gap-2">
               {scannerActions ? (
                 <Button
+                  disabled={autoSyncing > 0}
                   onClick={() => {
                     void fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
                       method: "POST",
@@ -1235,6 +1309,15 @@ export const BodyLoopAvatar = ({
           ) : null}
           {defaultError ? (
             <p className="text-muted-foreground mt-2 text-xs">{SCAN_DEFAULT_FAILED}</p>
+          ) : null}
+          {autoSyncing > 0 ? (
+            <p role="status" className="text-muted-foreground mt-2 text-xs">
+              {scanAutoSyncing(autoSyncing)}
+            </p>
+          ) : autoSyncStopped ? (
+            <p role="status" className="text-muted-foreground mt-2 text-xs">
+              {SCAN_AUTO_SYNC_STOPPED}
+            </p>
           ) : null}
           {listedScans.length === 0 ? (
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">

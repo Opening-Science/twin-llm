@@ -150,7 +150,7 @@ const AllCodes = ({
     <div className="relative mt-3 overflow-x-auto">
       <table className="w-full min-w-xl border-collapse text-sm">
         <caption className="sr-only">
-          Every numeric LOINC code in the cohort with its units and share of subjects
+          Every numeric code in the cohort with its units and share of subjects
         </caption>
         <thead>
           <tr className="border-border border-b">
@@ -225,7 +225,7 @@ export const CohortOverview = ({
           value={formatNumber(perSubject, 0)}
           label="observations per subject, on average"
         />
-        <Tile value={formatNumber(totals.codes, 0)} label="distinct LOINC codes" />
+        <Tile value={formatNumber(totals.codes, 0)} label="distinct codes" />
         <Tile
           value={formatNumber(totals.nonNumeric, 0)}
           label="text observations, not charted"
@@ -240,12 +240,12 @@ export const CohortOverview = ({
 
       <Section
         title="Coverage across subjects"
-        note="Every LOINC code, most widespread first, by the share of subjects with at least one reading. The flat top is the codes nearly everyone has; the tail is the codes few people have, where a tool question mostly returns no rows. Hover the line for a code."
+        note="Every code, most widespread first, by the share of subjects with at least one reading. The flat top is the codes nearly everyone has; the tail is the codes few people have, where a tool question mostly returns no rows. Hover the line for a code."
       >
         <CoverageCurve
           codes={codes}
           subjects={totals.subjects}
-          label={`Share of subjects with each of the ${codes.length} LOINC codes, most widespread first`}
+          label={`Share of subjects with each of the ${codes.length} codes, most widespread first`}
         />
         <p className="text-muted-foreground mt-2 text-xs">
           Share of subjects (y) by code, ranked from most to least widespread (x). Dashed

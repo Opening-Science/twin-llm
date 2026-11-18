@@ -46,6 +46,13 @@ describe("matchItems", () => {
       "Data",
     ]);
   });
+
+  test("hidden keywords find an item like its detail does", () => {
+    const agents: SearchItem = { ...page("Agents"), keywords: "roster, sleep, trainer" };
+    expect(
+      matchItems("trainer", [page("Docs"), agents]).map(({ title }) => title),
+    ).toEqual(["Agents"]);
+  });
 });
 
 describe("tabs", () => {
