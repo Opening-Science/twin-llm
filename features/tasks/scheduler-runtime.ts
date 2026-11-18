@@ -22,7 +22,7 @@ import {
  * The scheduler of this server process (#54): one tick loop started from
  * `instrumentation.ts`, never a second one (`processSingleton`), with no
  * external cron. The turn itself is passed in by the caller, which wires
- * the chat's own pipeline (`features/arena/scheduled-turn-runtime.ts`).
+ * the chat's own pipeline (`features/compare/scheduled-turn-runtime.ts`).
  *
  * At most one run at a time when the chat model runs on this machine, two
  * otherwise. The timer does not keep the process alive.

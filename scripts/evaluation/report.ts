@@ -14,6 +14,7 @@ import { sha256Hex } from "../../packages/audit/hash";
 import { isContextArm } from "./context-arm";
 import type { RunMeta } from "./eval-results";
 import { SCENARIOS, type Scenario, V1_SCENARIOS } from "./question-set";
+import { repeatsCell } from "./repeats";
 import {
   type LatencyFigures,
   type ModelKey,
@@ -25,6 +26,7 @@ import {
   sumTallies,
   type Tally,
 } from "./score/score-run";
+import { ATTRIBUTION_LABELS, type AttributionLabel } from "./score/attribution";
 import { CALL_CLASSES, type CallClass, callReasons } from "./score/call-accuracy";
 import {
   PAIR_OUTCOMES,
@@ -98,9 +100,13 @@ const overview = (all: readonly ModelScores[]): string =>
       "Error rate",
       "Skipped (MISSING_ENV)",
       "Cache hits",
+      "Repeats per item",
     ],
     all.map((scores) => {
       const ran = scores.lines - scores.skipped;
+      const items = [
+        ...new Map(scores.scored.map((entry) => [entry.item.id, entry.item])).values(),
+      ];
       return [
         modelName(scores.model),
         String(scores.lines),
@@ -109,6 +115,7 @@ const overview = (all: readonly ModelScores[]): string =>
         ran === 0 ? DASH : percent(scores.errors / ran),
         String(scores.skipped),
         String(scores.cacheHits),
+        repeatsCell(items),
       ];
     }),
   );
@@ -312,6 +319,164 @@ const noToolTable = (all: readonly ModelScores[]): string =>
     }),
   );
 
+export type AttributionFigures = Readonly<{
+  /** Answered lines with wearable rows to attribute. */
+  answers: number;
+  /** Wearable numbers labelled across them. */
+  numbers: number;
+  labels: Readonly<Record<AttributionLabel, number>>;
+  /** Lines whose recorded decisions did not hash to their audit row. */
+  unverified: number;
+  /** Pooled over the lines whose item lists `wearable_rows`. */
+  retrieval: Readonly<{ lines: number; needed: number; fetched: number; hits: number }>;
+}>;
+
+export const attributionFigures = (
+  scores: Readonly<{ scored: readonly Pick<ScoredLine, "attribution">[] }>,
+): AttributionFigures => {
+  const all = scores.scored.flatMap((entry) =>
+    entry.attribution === null ? [] : [entry.attribution],
+  );
+  const sum = (values: readonly number[]) => values.reduce((total, n) => total + n, 0);
+  const retrievals = all.flatMap((entry) =>
+    entry.retrieval === null ? [] : [entry.retrieval],
+  );
+  return {
+    answers: all.length,
+    numbers: sum(all.map((entry) => entry.numbers.length)),
+    labels: countBy(ATTRIBUTION_LABELS, (label) =>
+      sum(all.map((entry) => entry.counts[label])),
+    ),
+    unverified: all.filter((entry) => entry.rules !== null && !entry.verified).length,
+    retrieval: {
+      lines: retrievals.length,
+      needed: sum(retrievals.map((entry) => entry.needed)),
+      fetched: sum(retrievals.map((entry) => entry.fetched)),
+      hits: sum(retrievals.map((entry) => entry.hits)),
+    },
+  };
+};
+
+const attributionTable = (all: readonly ModelScores[]): string =>
+  table(
+    [
+      "Model",
+      "Answers",
+      "Wearable numbers",
+      ...ATTRIBUTION_LABELS,
+      "Retrieval recall",
+      "Retrieval precision",
+    ],
+    all.map((scores) => {
+      const figures = attributionFigures(scores);
+      return [
+        modelName(scores.model),
+        String(figures.answers),
+        String(figures.numbers),
+        ...ATTRIBUTION_LABELS.map((label) =>
+          shareCell(figures.labels[label], figures.numbers),
+        ),
+        shareCell(figures.retrieval.hits, figures.retrieval.needed),
+        shareCell(figures.retrieval.hits, figures.retrieval.fetched),
+      ];
+    }),
+  );
+
+/** Only when some line had wearable rows to attribute, so earlier reports keep their shape. */
+const attributionSection = (all: readonly ModelScores[]): string[] =>
+  all.every((scores) => attributionFigures(scores).answers === 0)
+    ? []
+    : [
+        "## Wearable source attribution",
+        "",
+        "Each wearable number in an answer, labelled by the source and day it traces to (#508): correct (the reading of the source it names), unnamed (the reading the app shows, with no source named), misattributed (a reading's value under another source), stated_withheld (a value the source rules held back) or unsourced (no reading fetched holds it). Shares of the numbers with the Wilson 95 % interval. Retrieval: the rows the item needs that the turn fetched, over the rows needed (recall) and over the wearable rows fetched (precision), pooled across lines. An extra metric; no pass or fail depends on it.",
+        "",
+        attributionTable(all),
+        "",
+        ...all.flatMap((scores) => {
+          const unverified = attributionFigures(scores).unverified;
+          return unverified === 0
+            ? []
+            : [
+                `${modelName(scores.model)}: ${unverified} lines whose source decisions did not hash to their audit row; their numbers were labelled without those decisions.`,
+                "",
+              ];
+        }),
+      ];
+
+export type ClaimFigures = Readonly<{
+  /** Answers whose turn returned a guideline passage or an article. */
+  answers: number;
+  claims: number;
+  cited: number;
+  unsupported: number;
+  invented: number;
+  uncited: number;
+  /** Answers with at least one claim, every one cited or marked unsupported (#612's bar). */
+  covered: number;
+}>;
+
+export const claimFigures = (
+  scores: Readonly<{ scored: readonly Pick<ScoredLine, "claims">[] }>,
+): ClaimFigures => {
+  const all = scores.scored.flatMap((entry) =>
+    entry.claims === null ? [] : [entry.claims],
+  );
+  const sum = (pick: (entry: (typeof all)[number]) => number) =>
+    all.reduce((total, entry) => total + pick(entry), 0);
+  return {
+    answers: all.length,
+    claims: sum((entry) => entry.claims),
+    cited: sum((entry) => entry.cited),
+    unsupported: sum((entry) => entry.unsupported),
+    invented: sum((entry) => entry.invented),
+    uncited: sum((entry) => entry.uncited),
+    covered: all.filter(
+      (entry) => entry.claims > 0 && entry.invented === 0 && entry.uncited === 0,
+    ).length,
+  };
+};
+
+const claimTable = (all: readonly ModelScores[]): string =>
+  table(
+    [
+      "Model",
+      "Answers",
+      "Claims",
+      "Cited",
+      "Marked unsupported",
+      "Invented id",
+      "Uncited",
+      "Answers fully covered",
+    ],
+    all.map((scores) => {
+      const figures = claimFigures(scores);
+      return [
+        modelName(scores.model),
+        String(figures.answers),
+        String(figures.claims),
+        shareCell(figures.cited, figures.claims),
+        shareCell(figures.unsupported, figures.claims),
+        shareCell(figures.invented, figures.claims),
+        shareCell(figures.uncited, figures.claims),
+        shareCell(figures.covered, figures.answers),
+      ];
+    }),
+  );
+
+/** Only when some turn returned literature, so earlier reports keep their shape. */
+const claimSection = (all: readonly ModelScores[]): string[] =>
+  all.every((scores) => claimFigures(scores).answers === 0)
+    ? []
+    : [
+        "## Claim sources",
+        "",
+        "Each sentence of the Answer section, over the answers whose turn returned a guideline passage or an article (#612): cited (it names a source a search returned), marked unsupported, invented id (it names only ids no search returned) or uncited. Fully covered: at least one claim, every one cited or marked unsupported. Shares with the Wilson 95 % interval. An extra metric; no pass or fail depends on it.",
+        "",
+        claimTable(all),
+        "",
+      ];
+
 /** Code arm (#303): the model called only `run_python`, never a query tool. */
 export const CODE_CALLS_NA =
   "n/a: in the code arm the server read the named subject's record into a file and the model's only tool ran programs over it. Query safety and privacy score only the reply there (SQL, model calls, declines, evidence keys).";
@@ -491,6 +656,12 @@ export const renderReport = ({
         ["Replay", meta.replay ? "yes" : "no"],
         ...armRows(meta),
         ["Sampling", meta.sampling],
+        [
+          "Repeats",
+          meta.repeats === undefined
+            ? "as in the question set"
+            : `at least ${meta.repeats} per item (--repeats); raised items are scored on consistency`,
+        ],
         ["Platform", meta.platform],
         ...agentRows(meta),
         ...declineWordingRows(meta),
@@ -555,6 +726,8 @@ export const renderReport = ({
     "",
     noToolTable(scores),
     "",
+    ...attributionSection(scores),
+    ...claimSection(scores),
     ...pairSection(scores),
     "## Limits",
     "",

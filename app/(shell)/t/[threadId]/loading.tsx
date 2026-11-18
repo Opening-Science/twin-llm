@@ -1,4 +1,4 @@
-import { ThreadSkeleton } from "@/features/arena/compare-skeleton";
+import { ThreadSkeleton } from "@/features/compare/compare-skeleton";
 
 export default function ThreadLoading() {
   return <ThreadSkeleton />;

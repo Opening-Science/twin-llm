@@ -38,7 +38,8 @@ export type ScopeView = Readonly<{
   }>[];
 }>;
 
-const day = (date: Date): string => formatDate(date.toISOString().slice(0, 10));
+/** The viewer's own calendar day for a consent moment, not its UTC day. */
+const day = (date: Date): string => formatDate(date);
 
 const sourceList = (sources: readonly LearningSource[]): string =>
   sources.map((source) => SOURCE_LABELS[source]).join(", ");

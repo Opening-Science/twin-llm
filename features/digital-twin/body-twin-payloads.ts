@@ -1,3 +1,5 @@
+import { formatDate } from "@/infrastructure/format-measure";
+
 import { SCAN_SYNC_AGAIN, SCAN_DEFAULT_TAG } from "./body-twin-copy";
 import {
   type BodyTwinSubject,
@@ -7,7 +9,7 @@ import {
 
 /** Shape checks for the BodyLoop API answers the viewer fetches. */
 export const scanLabel = (scan: BodyTwinScan, pinnedViatarId: number | null): string => {
-  const day = scan.crtime ? scan.crtime.slice(0, 10) : "unknown date";
+  const day = scan.crtime ? formatDate(scan.crtime.slice(0, 10)) : "unknown date";
   const status = scan.incomplete
     ? SCAN_SYNC_AGAIN
     : scan.synced === true

@@ -12,7 +12,7 @@ export type LiveDbTest = { readonly file: string; readonly tests: number };
 
 export const LIVE_DB_TESTS: readonly LiveDbTest[] = [
   { file: "features/data-explorer/cohort-queries.live.test.ts", tests: 7 },
-  { file: "packages/gbd-local/store.live.test.ts", tests: 6 },
+  { file: "packages/gbd-local/store.live.test.ts", tests: 7 },
   { file: "features/gbd/gbd-import-routes.live.test.ts", tests: 2 },
   { file: "scripts/gbd/import.live.test.ts", tests: 2 },
 ];

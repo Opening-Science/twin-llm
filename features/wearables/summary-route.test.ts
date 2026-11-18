@@ -38,6 +38,10 @@ const okDeps = {
     appended.push(input);
     return undefined;
   }),
+  appendAudit: async (input: AppendInput) => {
+    appended.push(input);
+    return undefined;
+  },
 };
 
 describe("GET /api/wearables/summary", () => {
@@ -86,9 +90,9 @@ describe("GET /api/wearables/summary", () => {
       getLatestWhoopSummary: async () => null,
     });
     expect((await GET()).status).toBe(200);
-    expect(appended).toEqual([
+    expect(appended[0]).toEqual(
       personalReadEvent({ actor: "local", purpose: "wearables-summary", rowCount: 2 }),
-    ]);
+    );
     expect(JSON.stringify(appended)).not.toContain(WHOOP_NARRATIVE);
   });
 
@@ -117,5 +121,48 @@ describe("GET /api/wearables/summary", () => {
     const res = await GET();
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Could not load wearable summaries." });
+  });
+
+  test("overlapping readings go out resolved, with a sources row (#464)", async () => {
+    appended.length = 0;
+    const day = "2026-01-02";
+    const reading = (key: string, value: number) => ({
+      key,
+      label: "HRV",
+      value,
+      unit: "ms",
+      date: day,
+    });
+    const GET = createWearablesSummaryHandler({
+      ...okDeps,
+      getLatestOuraSummary: async () => ({
+        ...dummySummary,
+        metrics: [reading(`sleep.hrv.long_sleep.${day}`, 52)],
+      }),
+      getLatestWhoopSummary: async () => ({
+        ...dummySummary,
+        metrics: [reading(`whoop.recovery.hrv.${day}`, 54)],
+      }),
+      getLatestGoogleHealthSummary: async () => null,
+      getLatestVitronicSummary: async () => null,
+    });
+    const body = (await (await GET()).json()) as {
+      oura: { metrics: readonly unknown[] };
+      whoop: { metrics: readonly unknown[] };
+    };
+    expect(body.oura.metrics).toEqual([
+      {
+        ...reading(`sleep.hrv.long_sleep.${day}`, 52),
+        sourceRule: {
+          kind: "agree",
+          line: "WHOOP agrees (WHOOP 54 ms): within 5.4 ms, the larger of 5 ms and 10% of the highest reading. Oura's reading is shown.",
+        },
+      },
+    ]);
+    expect(body.whoop.metrics).toEqual([]);
+    expect(appended.map((row) => [row.tool, row.rowCount])).toEqual([
+      ["personal.read.wearables-summary", 2],
+      ["wearable.sources.oura+whoop", 1],
+    ]);
   });
 });

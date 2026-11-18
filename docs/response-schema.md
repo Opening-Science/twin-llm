@@ -69,6 +69,9 @@ v1 without a version bump, with parse defaults `[]` and `true`.
 together with the uncertainty reason `knowledge_only`.
 `sources.literature` (#236) was added the same way, with default `[]`,
 together with the reason `literature_only`.
+The reason `literature_not_found` (#612) was added the same way. An unknown
+reason drops a document, so a build from before it would drop a newer
+document that carries it.
 `skill` (#42) names the skill a turn ran under, such as `sleep`. It is set by
 the host from the request, never from model text, and is absent on ordinary
 turns and on older documents. The skill-run audit row (`skill.<name>`) stays on
@@ -118,6 +121,12 @@ A match is exact, case-insensitive exact, or a dotted prefix on whole segments
 exactly one segment apart (`a.b` ↔ `a.b.c`, a dropped date; the shorter side
 at least two segments). A cited key is a `[bracketed]` token, or a bullet
 whose first word is dotted and key-like; other bullet words are prose. A
+bracketed literature citation (a PMC id, an article's document id, a
+guideline id ending in its year such as `[ean-als-2024]`, or `[unsupported]`;
+`infrastructure/source-ids.ts`) is not a key (#612): the
+search tools ask for these, and the 2 November General agent run listed
+`[ean-ms-palliative-2020]` under Evidence Used, where it counted as a
+hallucinated key. A
 label-only match gives an attribution chip but never counts toward
 `sufficient_data`. Offered keys go to
 `evidence_keys`; the rest go to `hallucinated_keys`. Attribution
@@ -204,6 +213,7 @@ collectors and `DATA_MODE`. Nothing is read from the model's prose.
 | `population_only`       | not sufficient and `gbd_rows` is non-empty           |
 | `knowledge_only`        | not sufficient and `sources.knowledge` is non-empty  |
 | `literature_only`       | not sufficient and `sources.literature` is non-empty |
+| `literature_not_found`  | guideline search returned `[]`, no article either    |
 | `hallucinated_keys`     | `hallucinated_keys` is non-empty                     |
 | `tool_returned_no_rows` | any `tool_calls` row has `row_count` 0               |
 | `no_model_statement`    | the Uncertainty section is missing or blank          |
@@ -260,7 +270,7 @@ themselves are stored next to it in `model_responses."toolParts"`
 (`docs/storage.md`, "Tool parts of an answer").
 
 The schema, copy and parser live in `infrastructure/response-document/` so
-the arena feature can import them. `features/chat/response/{document-v1,copy}.ts`
+the chat view can import them. `features/chat/response/{document-v1,copy}.ts`
 re-export them.
 
 ## UI copy
@@ -292,6 +302,7 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   - `population_only`: `Only population figures support this answer.`
   - `knowledge_only`: `Only OpenTwin notes about TwinLLM itself support this answer.`
   - `literature_only`: `Only published articles support this answer.`
+  - `literature_not_found`: `The guideline library had no passage on this question, so the literature here does not cover it.`
   - `hallucinated_keys`: `Some cited keys were not in the model's context.`
   - `tool_returned_no_rows`: `A data lookup returned no rows.`
   - `no_model_statement`: `The model wrote no uncertainty statement.`
@@ -314,6 +325,11 @@ never repeated. Codes (`answer_class`, reasons, `next_step`) are never shown.
   `evidence_keys`: the chips name each value, and the thread export lists every chip
   with its source, day and key under "Evidence:" (keys alone when an answer has no
   chips). With keys but no chips the panel says only how many values were cited.
+- Source rule (#464): a cited value that was used over another source's reading for the
+  same measure and day carries the rule as `sourceRule` (`{ kind: "agree" | "evidence",
+line }`) on the stored attribution, and the chip and the export print the line after
+  the source. A held-back measure is never offered, so it is never cited. Rules:
+  [wearable-sources.md](wearable-sources.md).
 - Cited value check (#545): the number the reply states for each cited value is checked
   against the stored reading behind its key (`infrastructure/cited-value-check.ts`, rules
   in its header: units and their spellings, durations such as `7 h 32 min` or `7:32`,

@@ -15,6 +15,17 @@ The typefaces Selecta (Maxitype) and ABC Diatype Semi Mono (Dinamo Typefaces) ar
 
 The files in `public/brand/vendors/` are the WHOOP and Google Health logos, copied unchanged from each company's brand assets. They are their owners' trademarks, **not** covered by the Apache License (`LICENSES/LicenseRef-Vendor-Trademarks.txt`), and are shown only to identify a service a user has connected. Source and hashes: `PROVENANCE.md`.
 
+## Upstream shell (LLM Arena)
+
+The multi-model chat shell (side-by-side answers, `features/arena/`) began from:
+
+- Project: LLM Arena
+- URL: https://github.com/adrianhajdin/llm-arena
+- Upstream package version observed at derivation: 0.1.0
+- Upstream license identifier: NOASSERTION (no LICENSE file published in that repository at the time of review)
+
+The leaderboard, benchmarks page and turn/vote data model derived from it were removed in October 2026; the shell that remains has been extended since. This NOTICE retains attribution. It does **not** claim that the Arena upstream granted MIT or Apache-2.0 terms. Do not describe the whole tree as "all Apache-2.0".
+
 ## open-twin connectors
 
 Packages synced at a pinned SHA into the gitignored `.open-twin/` are from [Opening-Science/open-twin](https://github.com/Opening-Science/open-twin) (MIT). See `PROVENANCE.md` for the exact SHA and TwinLLM-only host patches.

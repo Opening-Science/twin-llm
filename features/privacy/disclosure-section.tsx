@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
@@ -10,14 +11,24 @@ import type { LedgerView } from "./disclosure-view";
  * unlock like the rest of the page. Server-rendered.
  */
 
+/**
+ * A recipient name that may break after a dot or a slash, so a host name
+ * (`api.ouraring.com`) wraps between its parts, never inside one.
+ */
+const breakable = (name: string): ReactNode[] =>
+  name
+    .split(/(?<=[./])(?=.)/)
+    .flatMap((part, index) => (index === 0 ? [part] : [<wbr key={index} />, part]));
+
 const RECIPIENT_COLUMNS = [
   "Recipient",
   "Direction",
   "Events",
   "Values",
   "Size",
-  "First",
-  "Last",
+  "Stored values in text",
+  "First (UTC)",
+  "Last (UTC)",
 ] as const;
 
 export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
@@ -34,17 +45,12 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       metric and its day.
     </p>
     <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-      Before a request to a model goes out, its text (your own words, answers and tool
-      results) is checked for values stored here: rsIDs and genome sites of your imported
-      files, their file names, body scan labels and your account id; lab values with their
-      unit, measure codes next to your own value, clinical record codes and long names,
-      and lines of your twin notes. A value you typed yourself is not counted. Each entry
-      says what kinds were found and how many, never the values. The check is approximate:
-      a value written another way is missed, and wearable numbers are not checked. A
-      request that holds rsIDs or genome sites from your imported files is not sent, and
-      its entry says Blocked. So is one with rsID- or site-shaped text when the check
-      itself fails. Other matches are recorded and the request still goes. Entries from
-      before the check say not checked. A model on this machine is not a recipient.
+      Before a request to a model goes out, its text is checked for values stored here:
+      genome identifiers, file and body scan names, lab values, codes, clinical records,
+      twin note lines and readings next to their date. Each entry records the kinds found
+      and how many, never the values. A match does not stop the request, except your own
+      rsIDs or genome sites: then nothing is sent and the entry says Blocked. The check is
+      approximate and can miss a value written another way.
     </p>
     {view.recipients.length === 0 ? (
       <p className="mt-4 text-sm">
@@ -52,7 +58,7 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
       </p>
     ) : (
       <>
-        <div className="lab-table-wrap mt-4">
+        <div className="lab-table-wrap lab-table-fit mt-4">
           <table className="lab-table">
             <caption className="sr-only">Running totals per recipient</caption>
             <thead>
@@ -67,13 +73,20 @@ export const DisclosureSection = ({ view }: Readonly<{ view: LedgerView }>) => (
             <tbody>
               {view.recipients.map((row) => (
                 <tr key={row.key}>
-                  <th scope="row">{row.recipient}</th>
+                  <th scope="row">{breakable(row.recipient)}</th>
                   <td>{row.direction}</td>
                   <td>{row.events}</td>
                   <td>{row.values}</td>
                   <td>{row.size}</td>
-                  <td>{row.since}</td>
-                  <td>{row.last}</td>
+                  <td>
+                    {row.freeTextFound ? (
+                      <StatusBadge tone="warn">{row.freeText}</StatusBadge>
+                    ) : (
+                      row.freeText
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap">{row.since}</td>
+                  <td className="whitespace-nowrap">{row.last}</td>
                 </tr>
               ))}
             </tbody>

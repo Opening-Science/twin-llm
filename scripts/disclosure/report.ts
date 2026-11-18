@@ -2,6 +2,7 @@
  * Joins scored conversations and probe answers into results, and renders the
  * tables of the write-up (#301). Pure.
  */
+import { formatNumber } from "@/infrastructure/format-measure";
 import { mulberry32 } from "@/infrastructure/seeded-random";
 import {
   ATTACKS,
@@ -117,10 +118,15 @@ export const pearson = (a: readonly number[], b: readonly number[]): number | nu
   return saa === 0 || sbb === 0 ? null : sab / Math.sqrt(saa * sbb);
 };
 
-const f3 = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "n/a" : value.toFixed(3);
+/**
+ * Three places, through the app's formatter, so the write-up and the Lab
+ * screen round alike: halves away from zero. A 40 by 40 AUROC is a count
+ * over 1,600 pairs and can sit exactly on a half (0.7825 is 0.783).
+ */
+export const f3 = (value: number | null | undefined): string =>
+  value === null || value === undefined ? "n/a" : formatNumber(value, 3);
 const pct = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "n/a" : `${(100 * value).toFixed(1)}%`;
+  value === null || value === undefined ? "n/a" : `${formatNumber(100 * value, 1)}%`;
 
 export const ATTACK_LABELS: Readonly<Record<Attack, string>> = {
   loss: "Loss",
@@ -158,7 +164,7 @@ export const probeTable = (
       : "n/a";
   const body = rows.map(
     ([name, r]) =>
-      `| ${name} | ${rate(r.member)} | ${rate(r.nonMember)} | ${r.difference === null ? "n/a" : `${(100 * r.difference).toFixed(1)} points`} | ${r.permutationP === null ? "n/a" : r.permutationP.toFixed(3)} |`,
+      `| ${name} | ${rate(r.member)} | ${rate(r.nonMember)} | ${r.difference === null ? "n/a" : `${formatNumber(100 * r.difference, 1)} points`} | ${r.permutationP === null ? "n/a" : f3(r.permutationP)} |`,
   );
   return [header, ...body].join("\n");
 };

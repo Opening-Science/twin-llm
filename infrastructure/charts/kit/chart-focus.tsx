@@ -190,6 +190,34 @@ export const ChartFocusFrame = ({
 );
 
 /**
+ * The named group around a chart that is a picture: no tab stop, but a
+ * screen reader still hears what the chart is. An interactive chart is
+ * named by its `ChartFocusFrame` instead, so every chart has exactly one
+ * named group: without a label this is a plain box, for the root of a
+ * chart whose focus frame inside carries the name.
+ */
+export const ChartGroup = ({
+  label,
+  className,
+  children,
+  ...rest
+}: Readonly<{
+  label: string | undefined;
+  className?: string;
+  children: ReactNode;
+  "data-state"?: string;
+}>) => (
+  <div
+    role={label === undefined ? undefined : "group"}
+    aria-label={label}
+    className={className}
+    {...rest}
+  >
+    {children}
+  </div>
+);
+
+/**
  * A dimmed mark: the focused one stays full, the rest step back. Marks
  * only: text never fades, since 40% would fall below AA. Text steps back
  * to the muted colour instead (`mutedUnlessFocused`).

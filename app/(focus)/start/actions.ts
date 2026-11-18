@@ -1,6 +1,6 @@
 "use server";
 
-import { startTurn } from "@/features/arena/start-turn";
+import { startTurn } from "@/features/compare/start-turn";
 import type { StartThreadResult } from "@/features/onboarding/onboarding-flow";
 import { completeOnboarding } from "@/features/onboarding/onboarding-store";
 import { starterModels } from "@/features/onboarding/starter-models";
@@ -13,7 +13,7 @@ const MAX_STARTER_PROMPT = 2000;
 
 /**
  * Opens a new thread with the starter question the person picked, on the
- * default models, through the arena's own `startTurn`. The thread page then
+ * default models, through the chat's own `startTurn`. The thread page then
  * streams the answers as for any new turn. Onboarding counts as done once the
  * thread exists.
  */

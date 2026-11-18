@@ -144,6 +144,35 @@ describe("stored values in a hosted chat request (#346)", () => {
     }
   });
 
+  test("a reading next to its own day is a dated value: recorded, still sent, no day or number stored", async () => {
+    const net = network();
+    const ledger = book();
+    const dated: StoredValues = {
+      ...STORED,
+      readings: [{ code: null, value: "6.1", unit: "mmol/L", date: "2026-03-14" }],
+    };
+    const typed = ["What did my glucose do in March?"];
+    await generateText({
+      model: hostedModel(net, ledger.record, async (text) =>
+        freeTextCheckOf(storedValueMatches(text, dated, typed.join("\n"))),
+      ),
+      messages: [
+        { role: "user", content: typed[0] ?? "" },
+        { role: "assistant", content: "On 14 March 2026 your glucose was 6,1." },
+        { role: "user", content: "Thanks." },
+      ],
+      maxRetries: 0,
+    });
+    expect(net.requests.length).toBe(1);
+    expect(ledger.rows.map((row) => [row.direction, row.freeText])).toEqual([
+      [undefined, { matches: [{ kind: "dated value", count: 1 }] }],
+    ]);
+    const rows = JSON.stringify(ledger.rows);
+    for (const value of ["6.1", "6,1", "2026-03-14", "March"]) {
+      expect(rows).not.toContain(value);
+    }
+  });
+
   test("a value the person typed is not counted, even when the answer repeats it", async () => {
     const net = network();
     const ledger = book();

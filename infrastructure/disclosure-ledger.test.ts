@@ -568,8 +568,20 @@ const row = (overrides: Partial<LedgerEntry>): LedgerEntry => ({
 describe("ledgerTotals", () => {
   test("adds up each recipient over time, newest recipient first", () => {
     const totals = ledgerTotals([
-      row({ ts: at(5), refCount: 3, categories: ["question text", "wearable summary"] }),
-      row({ ts: at(1), payloadBytes: null, synthetic: true }),
+      row({
+        ts: at(5),
+        refCount: 3,
+        categories: ["question text", "wearable summary"],
+        freeTextChecked: true,
+        freeTextMatches: [{ kind: "lab value", count: 1 }],
+      }),
+      row({
+        ts: at(1),
+        payloadBytes: null,
+        synthetic: true,
+        freeTextChecked: true,
+        freeTextMatches: [],
+      }),
       row({
         ts: at(3),
         kind: "vendor-sync",
@@ -599,6 +611,8 @@ describe("ledgerTotals", () => {
         first: at(9),
         last: at(9),
         categories: [{ category: "genome report", events: 1 }],
+        freeTextChecked: 0,
+        freeTextFound: 0,
       },
       {
         recipient: "exoscale",
@@ -614,6 +628,8 @@ describe("ledgerTotals", () => {
           { category: "question text", events: 2 },
           { category: "wearable summary", events: 1 },
         ],
+        freeTextChecked: 2,
+        freeTextFound: 1,
       },
       {
         recipient: "Oura",
@@ -629,6 +645,8 @@ describe("ledgerTotals", () => {
           { category: "access token", events: 1 },
           { category: "date window", events: 1 },
         ],
+        freeTextChecked: 0,
+        freeTextFound: 0,
       },
     ]);
   });

@@ -1,9 +1,16 @@
 "use client";
 
+import { formatMeasureNumber, formatNumber } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 
 import { categoryTextClass } from "../category-token";
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { ringPartAt, scoreRing } from "./kit-geometry";
 import type { ScoreRingProps } from "./types";
 
@@ -75,7 +82,7 @@ export const ScoreRing = ({
           dominantBaseline="central"
           className="fill-foreground font-mono text-3xl font-bold tabular-nums"
         >
-          {ring.score}
+          {formatMeasureNumber("percent", ring.score)}
         </text>
       ) : null}
     </svg>
@@ -96,7 +103,7 @@ export const ScoreRing = ({
                   // The focused part reads in foreground; the list is muted already.
                   className={focused === parts.indexOf(p) ? "text-foreground" : undefined}
                 >
-                  {p.label}: {Math.round(p.value)}/{Math.round(p.max)}
+                  {p.label}: {formatNumber(p.value, 0)}/{formatNumber(p.max, 0)}
                 </li>
               ))}
             </ul>
@@ -114,7 +121,7 @@ export const ScoreRing = ({
       )}
     </div>
   );
-  if (!live) return body;
+  if (!live) return <ChartGroup label={label ?? title}>{body}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout

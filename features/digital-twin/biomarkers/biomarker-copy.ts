@@ -11,6 +11,12 @@ export const BIOMARKERS_TAB = "Biomarkers";
 export const VITALS_GROUP = "Vitals";
 export const NO_VALUE_SECTION = "Other Anchor biomarkers (no value)";
 
+/** How wearable sources that overlapped on a day were resolved (#464, docs/wearable-sources.md). */
+export const SOURCES_AGREE = "Sources agree";
+export const SOURCE_ON_EVIDENCE = "Source chosen on published evidence";
+export const VALUE_HELD_BACK = "Held back";
+export const NO_SOURCE_CHOSEN = "No source chosen";
+
 /** Wearable vitals are not Anchor markers, so they get their own part, and only when there are any. */
 export const valueCount = (
   withValues: number,

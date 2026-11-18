@@ -2,6 +2,7 @@ import "server-only";
 
 import { join } from "node:path";
 
+import { isProductionRuntime } from "@/infrastructure/env";
 import type { TurnSkill } from "@/infrastructure/skill-gate";
 
 import { checkSkills, readSyntheticSubjects } from "./read-skills";
@@ -36,15 +37,28 @@ const appRoot = (): SkillsRoot => ({
   questionsPath: join(process.cwd(), "evaluation", "questions.v1.json"),
 });
 
-const cache: { skills: readonly Skill[] | null } = { skills: null };
+/**
+ * `load` once and kept while `readOnce()` holds (production); called again on
+ * every read otherwise (development).
+ */
+export const skillsReader = (
+  load: () => readonly Skill[],
+  readOnce: () => boolean,
+): (() => readonly Skill[]) => {
+  // A one-slot cache filled on first read; nothing else writes it.
+  const cache: { skills: readonly Skill[] | null } = { skills: null };
+  return () => {
+    if (!readOnce()) return load();
+    Object.assign(cache, { skills: cache.skills ?? load() });
+    return cache.skills ?? [];
+  };
+};
 
 /** Every runnable skill, as the chat runs it. */
-export const runnableSkills = (): readonly TurnSkill[] => {
-  if (process.env.NODE_ENV !== "production") return runnableSkillsIn(appRoot());
-  // A one-slot cache filled on first read; nothing else writes it.
-  Object.assign(cache, { skills: cache.skills ?? runnableSkillsIn(appRoot()) });
-  return cache.skills ?? [];
-};
+export const runnableSkills: () => readonly TurnSkill[] = skillsReader(
+  () => runnableSkillsIn(appRoot()),
+  isProductionRuntime,
+);
 
 /** The runnable skill with this name, or null. */
 export const findRunnableSkill = (name: string): TurnSkill | null =>

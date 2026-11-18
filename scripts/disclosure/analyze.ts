@@ -17,6 +17,7 @@ import {
   analyseModel,
   analyseProbes,
   attackTable,
+  f3,
   pearson,
   probeTable,
   tokenScores,
@@ -211,7 +212,7 @@ const report = [
   ...sections,
   "## Checkpoint against served weights (Pearson r of per-conversation scores)",
   Object.entries(agreement)
-    .map(([k, v]) => `- ${k}: ${v === null ? "n/a" : v.toFixed(3)}`)
+    .map(([k, v]) => `- ${k}: ${f3(v)}`)
     .join("\n") || "- not scored",
   "## Exact-value extraction probe",
   probeTable(Object.entries(probes)),

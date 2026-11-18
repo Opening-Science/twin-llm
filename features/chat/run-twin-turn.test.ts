@@ -445,4 +445,32 @@ describe("runTwinTurn at an effort (#366)", () => {
     });
     expect(document.data_basis.tool_calls).toEqual([]);
   });
+
+  test("the wearable sources row (#464) records the turn and is not a data lookup", async () => {
+    const model = new MockLanguageModelV4({ doStream: async () => streamOf(text("Hi")) });
+    const lookup = {
+      seq: 2,
+      tool: "wearable_coverage",
+      args_sha256: "c".repeat(64),
+      result_sha256: "d".repeat(64),
+      row_count: 3,
+      ts: "2026-10-31T10:00:01.000Z",
+    };
+    const { finish } = await run(
+      model,
+      applyEffort("balanced", { ollama: false, canThink: false }),
+      [
+        {
+          seq: 1,
+          tool: "wearable.sources.oura+whoop",
+          args_sha256: "a".repeat(64),
+          result_sha256: "b".repeat(64),
+          row_count: 2,
+          ts: "2026-10-31T10:00:00.000Z",
+        },
+        lookup,
+      ],
+    );
+    expect((await finish.buildDocument()).data_basis.tool_calls).toEqual([lookup]);
+  });
 });

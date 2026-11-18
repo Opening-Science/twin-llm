@@ -1,7 +1,7 @@
 "use client";
 
 import { nearestIndex } from "../chart-geometry";
-import { ChartFocusFrame, ChartReadout, useChartFocus } from "./chart-focus";
+import { ChartFocusFrame, ChartGroup, ChartReadout, useChartFocus } from "./chart-focus";
 import { dayAxis } from "./format";
 import {
   cumulativeDay,
@@ -46,6 +46,7 @@ export const CumulativeDay = ({
     defaultFocus,
   });
   const focused = live ? focus.index : null;
+  const name = label ?? "Today against a usual day";
   const chart = (
     <ChartSvg height={HEIGHT}>
       {(width) => {
@@ -169,14 +170,14 @@ export const CumulativeDay = ({
       }}
     </ChartSvg>
   );
-  if (!live) return chart;
+  if (!live) return <ChartGroup label={name}>{chart}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout
         id={focus.readoutId}
         text={focused === null ? null : samples[focused]?.readout}
       />
-      <ChartFocusFrame focus={focus} label={label ?? "Today against a usual day"}>
+      <ChartFocusFrame focus={focus} label={name}>
         {chart}
       </ChartFocusFrame>
     </div>

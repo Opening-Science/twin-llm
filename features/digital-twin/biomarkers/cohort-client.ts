@@ -1,4 +1,8 @@
 import { type FormattableMetric } from "@/infrastructure/format-measure";
+import {
+  type HeldBackNote,
+  parseHeldBackNotes,
+} from "@/infrastructure/wearable-source-rules";
 
 import { type LabValue } from "./biomarker-rows";
 import { type CohortPerson, type CohortRhythm } from "./cohort-handler";
@@ -77,14 +81,43 @@ export const loadCohortValues = (
     })
     .catch(() => null);
 
-/** Oura, Whoop and Google Health metrics (BodyLoop has no vitals); none on failure. */
+const VITAL_SOURCES = ["oura", "whoop", "googleHealth"] as const;
+
+/**
+ * The wearable vitals as the server resolved them (#464): where sources
+ * overlapped on a day, only the reading used is left, with its rule, and the
+ * measures held back come as notes, once each.
+ */
+export type VitalSnapshot = Readonly<{
+  metrics: readonly FormattableMetric[];
+  heldBack: readonly HeldBackNote[];
+}>;
+
+export const NO_VITALS: VitalSnapshot = { metrics: [], heldBack: [] };
+
+const heldBackOf = (body: unknown): readonly HeldBackNote[] => {
+  const notes = new Map<string, HeldBackNote>();
+  for (const source of VITAL_SOURCES) {
+    for (const note of parseHeldBackNotes(field(field(body, source), "heldBack"))) {
+      notes.set(`${note.measure}|${note.day ?? ""}`, note);
+    }
+  }
+  return [...notes.values()];
+};
+
+/** Oura, Whoop and Google Health (BodyLoop has no vitals); none on failure. */
+export const loadVitalSnapshot = (fetcher: Fetcher = fetch): Promise<VitalSnapshot> =>
+  getJson(fetcher, "/api/wearables/summary")
+    .then((body) => ({
+      metrics: VITAL_SOURCES.flatMap(
+        (source) => listOrNull<FormattableMetric>(field(body, source), "metrics") ?? [],
+      ),
+      heldBack: heldBackOf(body),
+    }))
+    .catch(() => NO_VITALS);
+
+/** The metrics alone, for readers that draw series (motion). */
 export const loadVitalMetrics = (
   fetcher: Fetcher = fetch,
 ): Promise<readonly FormattableMetric[]> =>
-  getJson(fetcher, "/api/wearables/summary")
-    .then((body) =>
-      ["oura", "whoop", "googleHealth"].flatMap(
-        (source) => listOrNull<FormattableMetric>(field(body, source), "metrics") ?? [],
-      ),
-    )
-    .catch(() => []);
+  loadVitalSnapshot(fetcher).then((snapshot) => snapshot.metrics);

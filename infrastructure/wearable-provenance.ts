@@ -5,12 +5,12 @@
  * vitals share it on server and client. It names a source by its product
  * name only: never a stored key, a vendor id or a subject id.
  *
- * Nothing here combines sources. Every value the app shows today was recorded
- * by one source; the open-twin aggregate (`open-twin-adapters/aggregate.ts`)
- * is not read on screen yet.
+ * Nothing here combines sources. Where sources overlap on a measure and day,
+ * `wearable-source-rules.ts` decides which reading is used, or holds it back;
+ * every value shown was still recorded by one source.
  */
 import { VALUE_CHECK_STATUSES, type ValueCheckStatus } from "./cited-value-check";
-import { formatDate } from "./format-measure";
+import { formatDate, formatMetricValue } from "./format-measure";
 
 export const WEARABLE_SOURCE_IDS = [
   "oura",
@@ -61,6 +61,36 @@ export type WearableProvenance = Readonly<{
 
 const storedDay = (day: unknown): string | null =>
   typeof day === "string" && ISO_DAY.test(day) ? day : null;
+
+const LABEL_DAY = /\s*\((\d{4}-\d{2}-\d{2})\)\s*$/;
+
+/**
+ * A cited value as people read it: "Steps, 11 Nov 2026" and "8,120", not the
+ * stored "Steps (2026-11-11)" and 8120. The day is the attribution's own, else
+ * the one the stored label ends with; the value goes through the same
+ * formatter as the Digital Twin's.
+ */
+export const citedValueText = (
+  attribution: Readonly<{
+    metricKey: string;
+    label: string;
+    value: string | number;
+    unit?: string;
+    day?: unknown;
+  }>,
+): Readonly<{ heading: string; value: string }> => {
+  const day =
+    storedDay(attribution.day) ?? LABEL_DAY.exec(attribution.label)?.[1] ?? null;
+  const label = attribution.label.replace(LABEL_DAY, "");
+  return {
+    heading: day === null ? label : `${label}, ${formatDate(day)}`,
+    value: formatMetricValue({
+      key: attribution.metricKey,
+      value: attribution.value,
+      ...(attribution.unit === undefined ? {} : { unit: attribution.unit }),
+    }),
+  };
+};
 
 /** "From Oura, 15 Oct 2026"; "From Oura" when the day is not known. */
 export const provenanceLine = ({ source, day }: WearableProvenance): string => {

@@ -1,0 +1,162 @@
+import "server-only";
+
+import type { z } from "zod";
+
+import { type DayBeat } from "./day-beat";
+import {
+  DAY_THRESHOLDS,
+  type DayReading,
+  dayBeats,
+  type GlucoseProfile,
+  type RedWindow,
+  redWindows,
+} from "./day-beats";
+import {
+  defaultQueryToolPorts,
+  type ObservationRecord,
+  type QueryToolPorts,
+} from "./ports";
+import { isToolRefusal, mixedUnits, type ToolRefusal } from "./refusals";
+import { type showMyDayInput } from "./schemas";
+import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
+import { audited, distinctUnits, readWindow, subjectInScope } from "./tool-core";
+
+/**
+ * `show_my_day`: one synthetic person's day of heart rate and glucose as
+ * beats and red windows (`day-beats.ts`). Scope first, one capped read of
+ * four codes over the UTC day, audited. Sensor glucose from a continuous
+ * monitor is read as its own measure, labelled sensor, never mixed with
+ * blood glucose. The warehouse stores no events and
+ * no activity, so each beat's event is "Reading" and the still-heart-rate
+ * rule is not applied to a warehouse day.
+ */
+
+export const HEART_RATE_LOINC = "8867-4";
+/** Glucose in blood, and in serum or plasma. */
+export const GLUCOSE_LOINCS = ["2339-0", "2345-7"] as const;
+/** Glucose in interstitial fluid: a continuous glucose monitor's sensor reading. */
+export const SENSOR_GLUCOSE_LOINC = "99504-3";
+/** Said with every day that has a sensor reading. */
+export const SENSOR_LAG_NOTE =
+  "Sensor glucose is read in the fluid between cells and trails blood glucose by several minutes. It is shown on its own and never compared with blood glucose.";
+const UNITS = { heart: "/min", glucose: "mg/dL" } as const;
+
+type ShowMyDayInput = z.infer<typeof showMyDayInput>;
+
+export type ShowMyDayResult = Readonly<{
+  subject_ref: string;
+  day: string;
+  profile: GlucoseProfile;
+  /** Rows read. */
+  n: number;
+  /** `SENSOR_LAG_NOTE` when the day has a sensor glucose reading, else null. */
+  sensor_lag: string | null;
+  beats: readonly DayBeat[];
+  red_windows: readonly RedWindow[];
+  /** The thresholds behind the red windows, and who still has to confirm them. */
+  thresholds: Readonly<{ status: "placeholder"; reviewer: string }>;
+  activity: "not recorded";
+  /** Beat and red-window times are UTC wall-clock times. */
+  timezone: "UTC";
+}>;
+
+const isGlucose = (loinc: string): boolean =>
+  (GLUCOSE_LOINCS as readonly string[]).includes(loinc);
+
+/**
+ * Rows to readings, one per UTC minute, heart rate, blood glucose and sensor
+ * glucose side by side.
+ * Rows come sorted by time, so when a measure has several rows in one minute
+ * the last one is kept.
+ */
+export const readingsFromRows = (
+  rows: readonly ObservationRecord[],
+): readonly DayReading[] => {
+  const byMinute = rows.reduce<Map<string, DayReading>>((acc, row) => {
+    const time = row.effectiveAt.toISOString().slice(11, 16);
+    const current: DayReading = acc.get(time) ?? {
+      time,
+      event: null,
+      heartRatePerMin: null,
+      glucoseMgDl: null,
+      moving: null,
+    };
+    acc.set(
+      time,
+      row.loinc === SENSOR_GLUCOSE_LOINC
+        ? { ...current, sensorGlucoseMgDl: row.value }
+        : isGlucose(row.loinc)
+          ? { ...current, glucoseMgDl: row.value }
+          : { ...current, heartRatePerMin: row.value },
+    );
+    return acc;
+  }, new Map());
+  return [...byMinute.values()].sort((a, b) => a.time.localeCompare(b.time));
+};
+
+/** Heart rate in /min and both glucoses in mg/dL only; anything else is refused, never converted. */
+const unitRefusal = (rows: readonly ObservationRecord[]): ToolRefusal | null => {
+  const heart = distinctUnits(rows.filter((row) => row.loinc === HEART_RATE_LOINC));
+  if (heart.some((unit) => unit !== UNITS.heart)) {
+    return mixedUnits(HEART_RATE_LOINC, [...new Set([UNITS.heart, ...heart])]);
+  }
+  const glucose = rows.filter((row) => isGlucose(row.loinc));
+  const glucoseUnits = distinctUnits(glucose);
+  if (glucoseUnits.some((unit) => unit !== UNITS.glucose)) {
+    return mixedUnits(glucose[0]?.loinc ?? GLUCOSE_LOINCS[0], [
+      ...new Set([UNITS.glucose, ...glucoseUnits]),
+    ]);
+  }
+  const sensorUnits = distinctUnits(
+    rows.filter((row) => row.loinc === SENSOR_GLUCOSE_LOINC),
+  );
+  if (sensorUnits.some((unit) => unit !== UNITS.glucose)) {
+    return mixedUnits(SENSOR_GLUCOSE_LOINC, [
+      ...new Set([UNITS.glucose, ...sensorUnits]),
+    ]);
+  }
+  return null;
+};
+
+export const runShowMyDay = (
+  scope: SessionScope,
+  input: ShowMyDayInput,
+  ports: QueryToolPorts = defaultQueryToolPorts(),
+): Promise<ShowMyDayResult | ToolRefusal> =>
+  audited<ShowMyDayResult | ToolRefusal>(
+    scope,
+    "show_my_day",
+    input,
+    input.subject_ref,
+    async () => {
+      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+        return SUBJECT_SCOPE_VIOLATION;
+      }
+      const rows = await readWindow(
+        ports,
+        input.subject_ref,
+        [HEART_RATE_LOINC, ...GLUCOSE_LOINCS, SENSOR_GLUCOSE_LOINC],
+        { start: input.day, end: input.day },
+      );
+      if (isToolRefusal(rows)) return rows;
+      const refusal = unitRefusal(rows);
+      if (refusal) return refusal;
+      const readings = readingsFromRows(rows);
+      return {
+        subject_ref: input.subject_ref,
+        day: input.day,
+        profile: input.profile,
+        n: rows.length,
+        sensor_lag: rows.some((row) => row.loinc === SENSOR_GLUCOSE_LOINC)
+          ? SENSOR_LAG_NOTE
+          : null,
+        beats: dayBeats(readings, input.profile),
+        red_windows: redWindows(readings, input.profile),
+        thresholds: { status: DAY_THRESHOLDS.status, reviewer: DAY_THRESHOLDS.reviewer },
+        activity: "not recorded",
+        timezone: "UTC",
+      };
+    },
+    (result) => ("n" in result ? result.n : 0),
+    ports,
+  );

@@ -1,4 +1,5 @@
 import { type Estimate } from "@/infrastructure/charts/kit/kit-geometry";
+import { formatNumber } from "@/infrastructure/format-measure";
 
 import { type ScoreCell } from "./eval-runs";
 import { type Arm, type NoiseRow, type RuleChange, type ValueCi } from "./research-read";
@@ -28,8 +29,6 @@ export const STUDY_STATUS: Readonly<Record<Study, readonly string[]>> = {
   "heart-brain": ["Pre-registration pending"],
   disclosure: ["One pilot, one seed"],
 };
-
-const fixed = (value: number, decimals: number): string => value.toFixed(decimals);
 
 const ofAnswers = (cell: ScoreCell): string =>
   `${cell.passes} of ${cell.n} (${Math.round((cell.passes / cell.n) * 100)}\u00a0%)`;
@@ -78,15 +77,15 @@ const arrhythmiaFound = (
   const beats = resolution?.byFeature.get("beat.flag_share");
   const night = resolution?.byFeature.get("day.hrv_rmssd");
   return [
-    `On two open ECG databases the research flag found AF windows with sensitivity ${fixed(clean.afdb.sensitivity.value, 3)} and ${fixed(clean.ltafdb.sensitivity.value, 3)}, at specificity ${fixed(clean.afdb.specificity.value, 3)} and ${fixed(clean.ltafdb.specificity.value, 3)}.`,
+    `On two open ECG databases the research flag found AF windows with sensitivity ${formatNumber(clean.afdb.sensitivity.value, 3)} and ${formatNumber(clean.ltafdb.sensitivity.value, 3)}, at specificity ${formatNumber(clean.afdb.specificity.value, 3)} and ${formatNumber(clean.ltafdb.specificity.value, 3)}.`,
     ...(light
       ? [
-          `Light simulated beat-detection noise took specificity to ${fixed(light.afdb.specificity.value, 3)} and ${fixed(light.ltafdb.specificity.value, 3)}.`,
+          `Light simulated beat-detection noise took specificity to ${formatNumber(light.afdb.specificity.value, 3)} and ${formatNumber(light.ltafdb.specificity.value, 3)}.`,
         ]
       : []),
     ...(beats && night
       ? [
-          `On simulated days, beat windows separated AF days with AUROC ${fixed(beats.value, 3)} and night heart rate variability with ${fixed(night.value, 3)}.`,
+          `On simulated days, beat windows separated AF days with AUROC ${formatNumber(beats.value, 3)} and night heart rate variability with ${formatNumber(night.value, 3)}.`,
         ]
       : []),
   ].join(" ");
@@ -99,10 +98,10 @@ const heartBrainFound = (
   const after = within?.windows.find((w) => w.window === "after")?.ratio;
   if (!after) return null;
   return [
-    `In synthetic people the stroke rate after AF onset was ${fixed(after.ratio, 2)} times the rate before it (95 % interval ${fixed(after.low, 2)}–${fixed(after.high, 2)}).`,
+    `In synthetic people the stroke rate after AF onset was ${formatNumber(after.ratio, 2)} times the rate before it (95 % interval ${formatNumber(after.low, 2)}–${formatNumber(after.high, 2)}).`,
     ...(rule
       ? [
-          `Doubling the AF part of the generator's stroke rule moved the estimate from ${fixed(rule.base.ratio, 2)} to ${fixed(rule.doubled.ratio, 2)}, where the rules imply ${fixed(rule.base.expected, 2)} and ${fixed(rule.doubled.expected, 2)}.`,
+          `Doubling the AF part of the generator's stroke rule moved the estimate from ${formatNumber(rule.base.ratio, 2)} to ${formatNumber(rule.doubled.ratio, 2)}, where the rules imply ${formatNumber(rule.base.expected, 2)} and ${formatNumber(rule.doubled.expected, 2)}.`,
         ]
       : []),
   ].join(" ");
@@ -112,7 +111,7 @@ const disclosureFound = (attacks: SummaryInput["attacks"]): string | null => {
   if (!attacks) return null;
   const pilot = [...attacks.pilot, ...attacks.served];
   const range = (rows: readonly Estimate[]) =>
-    `${fixed(Math.min(...rows.map((r) => r.estimate)), 3)} to ${fixed(Math.max(...rows.map((r) => r.estimate)), 3)}`;
+    `${formatNumber(Math.min(...rows.map((r) => r.estimate)), 3)} to ${formatNumber(Math.max(...rows.map((r) => r.estimate)), 3)}`;
   const allSpanChance = pilot.every(
     (r) => r.low != null && r.high != null && r.low <= 0.5 && r.high >= 0.5,
   );

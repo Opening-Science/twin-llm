@@ -83,6 +83,9 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "infrastructure/open-twin-adapters/whoop-workout.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/google-health.ts": { ledger: VENDOR_SYNC },
   "infrastructure/open-twin-adapters/oura-bundle.ts": { exempt: TYPES_ONLY },
+  "infrastructure/open-twin-adapters/oura-authorize.ts": {
+    exempt: "builds the Oura authorize URL the browser is sent to; it sends nothing",
+  },
   "infrastructure/open-twin-adapters/google-health-bundle.ts": {
     exempt:
       "maps responses the sync already fetched into a FHIR bundle; it sends nothing",
@@ -144,7 +147,7 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "features/chat/generation-analytics.ts": { exempt: TYPES_ONLY },
   "features/analytics/analytics-privacy.ts": { exempt: BROWSER_POSTHOG },
   "features/analytics/posthog-provider.tsx": { exempt: BROWSER_POSTHOG },
-  "features/shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
+  "features/app-shell/thread-bar.tsx": { exempt: BROWSER_POSTHOG },
   "infrastructure/arcjet.ts": { exempt: ARCJET },
   "infrastructure/protection-verdict.ts": { exempt: ARCJET },
   "features/chat/chat-protection.ts": { exempt: ARCJET },
@@ -154,14 +157,17 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   "app/layout.tsx": { exempt: CLERK },
   "app/(shell)/layout.tsx": { exempt: CLERK },
   "features/auth/app-auth.tsx": { exempt: CLERK },
-  "features/shell/nav-panel.tsx": { exempt: CLERK },
-  "features/arena/prompt-bar.tsx": { exempt: `${SAME_ORIGIN}; ${CLERK}` },
+  "features/compare/prompt-bar.tsx": { exempt: `${SAME_ORIGIN}; ${CLERK}` },
 
   // On this machine or the local network.
   "packages/carbon-x/client.ts": {
     exempt: "the DNA model sidecar, refused unless its address is loopback",
   },
   "packages/carbon-x/fake-carbon-x.ts": { exempt: "a test double on loopback" },
+  "infrastructure/speech/sidecar-client.ts": {
+    exempt: "the speech sidecar, refused unless its address is loopback",
+  },
+  "infrastructure/speech/fake-speech-sidecar.ts": { exempt: "a test double on loopback" },
   "packages/vitronic/base-url.ts": {
     exempt:
       "the BodyLoop scanner on the local network: the request carries the pairing token and ids, the scan comes in. Not in the design's table (privacy-design 2.5)",
@@ -178,9 +184,9 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
   },
 
   // The browser calling this app.
-  "features/arena/suggestion-chips.tsx": { exempt: SAME_ORIGIN },
   "features/connectors/use-connector-status.ts": { exempt: SAME_ORIGIN },
-  "features/shell/export-notice-dialog.tsx": { exempt: SAME_ORIGIN },
+  "features/digital-twin/day/use-my-day.ts": { exempt: SAME_ORIGIN },
+  "features/app-shell/export-notice.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/dataset-list.tsx": { exempt: SAME_ORIGIN },
   "features/personal-data/import-panel.tsx": { exempt: SAME_ORIGIN },
   "features/synthea/synthea-generator.tsx": { exempt: SAME_ORIGIN },

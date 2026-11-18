@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
+import type { HeldBackNote } from "@/infrastructure/wearable-source-rules";
+
 import { COHORT_FAILED, DEMO_LABS_NOTE, NO_COHORT, SELF_NO_LABS } from "./biomarker-copy";
 import {
   loadCohortPeople,
   loadCohortValues,
   loadVitalMetrics,
+  loadVitalSnapshot,
   rhythmOf,
   type Fetcher,
 } from "./cohort-client";
@@ -110,6 +113,32 @@ describe("loadVitalMetrics", () => {
     expect(await loadVitalMetrics(answer(200, body))).toEqual([metric]);
     expect(await loadVitalMetrics(answer(502, {}))).toEqual([]);
     expect(await loadVitalMetrics(offline)).toEqual([]);
+  });
+});
+
+describe("loadVitalSnapshot (#464)", () => {
+  test("held-back notes once each across sources; a malformed one is dropped", async () => {
+    const note: HeldBackNote = {
+      measure: "resting-heart-rate",
+      day: "2026-10-15",
+      keys: [
+        "whoop.recovery.rhr.2026-10-15",
+        "google.daily-resting-heart-rate.2026-10-15",
+      ],
+      sources: ["whoop", "google_health"],
+      reason: "no_evidence",
+      line: "Held back: WHOOP and Google Health disagree on resting heart rate.",
+    };
+    const body = {
+      oura: { metrics: [] },
+      whoop: { metrics: [], heldBack: [note, { ...note, reason: "guess" }] },
+      googleHealth: { metrics: [], heldBack: [note] },
+    };
+    expect(await loadVitalSnapshot(answer(200, body))).toEqual({
+      metrics: [],
+      heldBack: [note],
+    });
+    expect(await loadVitalSnapshot(offline)).toEqual({ metrics: [], heldBack: [] });
   });
 });
 

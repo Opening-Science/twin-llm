@@ -4,6 +4,7 @@ import {
   blocksSend,
   BLOCKING_KINDS,
   describeFreeTextCheck,
+  foldedName,
   FREE_TEXT_KIND,
   freeTextCheckOf,
   hasGenomeShapedText,
@@ -13,6 +14,8 @@ import {
   lookupMatches,
   MAX_LOOKUPS,
   canonicalNumber,
+  datesIn,
+  daysAround,
   NO_STORED_VALUES,
   parseFreeTextMatches,
   type StoredValues,
@@ -136,6 +139,7 @@ describe("knownValueMatches", () => {
       { kind: "coded value", count: 0 },
       { kind: "clinical record", count: 0 },
       { kind: "twin note line", count: 0 },
+      { kind: "dated value", count: 0 },
     ]);
   });
 
@@ -152,6 +156,7 @@ describe("knownValueMatches", () => {
       { kind: "coded value", count: 0 },
       { kind: "clinical record", count: 0 },
       { kind: "twin note line", count: 0 },
+      { kind: "dated value", count: 0 },
     ]);
   });
 
@@ -161,6 +166,39 @@ describe("knownValueMatches", () => {
         (match) => match.kind === "account id",
       ),
     ).toEqual({ kind: "account id", count: 1 });
+  });
+});
+
+describe("names: case and diacritics folded", () => {
+  /** Synthetic labels and file names with accents, as an operator might type them. */
+  const known: readonly KnownValue[] = [
+    { kind: FREE_TEXT_KIND.label, value: "Zoë Demo" },
+    { kind: FREE_TEXT_KIND.label, value: "Straße Probe" },
+    { kind: FREE_TEXT_KIND.file, value: "befund-müller-synthetic.csv" },
+  ];
+
+  const found = (text: string) =>
+    knownValueMatches(text, known)
+      .filter((match) => match.count > 0)
+      .map((match) => [match.kind, match.count]);
+
+  test("one spelling per name", () => {
+    expect(foldedName("  ZOË   Demo ")).toBe("zoe demo");
+    expect(foldedName("Zoe\u0308")).toBe("zoe");
+    expect(foldedName("STRASSE")).toBe(foldedName("Straße"));
+    expect(foldedName("Ｍüller")).toBe("muller");
+  });
+
+  test("agreement: the same name with or without accents, in any case", () => {
+    expect(found("Compare zoe demo with ZOË DEMO")).toEqual([["body scan label", 1]]);
+    expect(found("strasse probe and BEFUND-MULLER-SYNTHETIC.CSV")).toEqual([
+      ["file name", 1],
+      ["body scan label", 1],
+    ]);
+  });
+
+  test("near miss: a name inside a longer word, or one letter off, is not found", () => {
+    expect(found("zoe demos, zoey demo, strassen probe")).toEqual([]);
   });
 });
 
@@ -306,6 +344,7 @@ describe("storedValueMatches", () => {
       "coded value": 0,
       "clinical record": 0,
       "twin note line": 0,
+      "dated value": 0,
     });
     // A stored value they did not type still counts.
     expect(counts(`${text} Glucose 5.4 mmol/L.`, typed)["lab value"]).toBe(1);
@@ -393,6 +432,116 @@ describe("storedValueMatches: locale and unit spellings", () => {
 
   test("a value the person typed in one spelling is theirs in another spelling too", () => {
     expect(labs("Your glucose of 5.4 mmol/L is noted.", "Glukose 5,4 mmol/l?")).toBe(0);
+  });
+});
+
+describe("datesIn", () => {
+  const days = (text: string) => datesIn(text).map((date) => date.day);
+
+  test("ISO and en-GB spellings of one day", () => {
+    expect(
+      days(
+        "2026-03-14, 2026-03-14T08:00, 14/03/2026, 14.3.2026, 14-03-2026, 14 March 2026, 14th Mar. 2026",
+      ),
+    ).toEqual(Array.from({ length: 7 }, () => "2026-03-14"));
+    expect(days("3 Sept 2026 and 1st june 2025")).toEqual(["2026-09-03", "2025-06-01"]);
+  });
+
+  test("no day: month first, two-digit years, impossible days, mixed marks", () => {
+    expect(days("03/14/2026, 14/03/26, 31/02/2026, 2026-13-01, 14/03.2026")).toEqual([]);
+    expect(days("version 1.2.2026x, 12026-03-14, 14 Marchx 2026")).toEqual([]);
+  });
+});
+
+describe("storedValueMatches: dated values", () => {
+  /** A synthetic person: a dated reading, an undated one, a dated record. */
+  const stored: StoredValues = {
+    ...NO_STORED_VALUES,
+    readings: [
+      { code: null, value: "5.4", unit: "mmol/L", date: "2026-03-14" },
+      { code: null, value: "72", unit: "/min", date: null },
+    ],
+    records: [{ code: "195967001", display: "Asthma", date: "2019-06-01" }],
+  };
+
+  const dated = (text: string, typed = "") =>
+    storedValueMatches(text, stored, typed).find(
+      (match) => match.kind === FREE_TEXT_KIND.dated,
+    )?.count;
+
+  test("agreement: a stored number or record next to its own day, in any spelling", () => {
+    expect(dated("On 14/03/2026 my glucose was 5.4.")).toBe(1);
+    expect(dated("glucose 5,4 (2026-03-14)")).toBe(1);
+    expect(dated("Asthma since 1 June 2019")).toBe(1);
+    expect(dated("diagnosed 01.06.2019: code 195967001")).toBe(1);
+    expect(dated("14 Mar 2026: 5.4; asthma, 2019-06-01")).toBe(2);
+  });
+
+  test("near miss: the right value next to another day, or the right day without it", () => {
+    expect(dated("On 15/03/2026 my glucose was 5.4.")).toBe(0);
+    expect(dated("On 14/03/2026 my glucose was 5.5.")).toBe(0);
+    expect(dated("Asthma since 2 June 2019")).toBe(0);
+    expect(dated("Plans for 1 June 2019")).toBe(0);
+  });
+
+  test("false-positive guards", () => {
+    // A day's own digits are not the reading's number.
+    expect(dated("2026-03-14 and 14/03/2026")).toBe(0);
+    // A month-first day is not read.
+    expect(dated("03/14/2026: 5.4")).toBe(0);
+    // A row without a day never counts as dated.
+    expect(dated("14/03/2026 heart rate 72")).toBe(0);
+    // Too far apart.
+    expect(dated(`14/03/2026 ${"x".repeat(100)} 5.4`)).toBe(0);
+  });
+
+  test("an instant reading: its UTC day or the day either side, no further", () => {
+    const night: StoredValues = {
+      ...NO_STORED_VALUES,
+      readings: [
+        // 2026-03-13T23:30Z, 00:30 on 14 March in Zurich.
+        { code: null, value: "48", unit: "ms", date: "2026-03-13", instant: true },
+        // 2026-03-12T12:00Z: two days before 14 March anywhere.
+        { code: null, value: "61", unit: "ms", date: "2026-03-12", instant: true },
+      ],
+    };
+    const count = (text: string) =>
+      storedValueMatches(text, night).find((match) => match.kind === FREE_TEXT_KIND.dated)
+        ?.count;
+    expect(count("On 14 March 2026 my overnight HRV was 48.")).toBe(1);
+    expect(count("On 14 March 2026 my overnight HRV was 61.")).toBe(0);
+    // A day alone, or the day's own digits, still never count.
+    expect(count("14 March 2026, 13/03/2026")).toBe(0);
+    expect(daysAround("2026-03-01", true)).toEqual([
+      "2026-02-28",
+      "2026-03-01",
+      "2026-03-02",
+    ]);
+    expect(daysAround("2026-03-01", false)).toEqual(["2026-03-01"]);
+  });
+
+  test("a whole-day reading is not shifted", () => {
+    const day: StoredValues = {
+      ...NO_STORED_VALUES,
+      readings: [{ code: null, value: "48", unit: "ms", date: "2026-03-13" }],
+    };
+    expect(
+      storedValueMatches("On 14 March 2026 it was 48.", day).find(
+        (match) => match.kind === FREE_TEXT_KIND.dated,
+      )?.count,
+    ).toBe(0);
+  });
+
+  test("a dated value the person typed is theirs", () => {
+    expect(dated("Noted: 5.4 on 2026-03-14.", "My glucose was 5,4 on 14/03/2026")).toBe(
+      0,
+    );
+  });
+
+  test("dated values never block", () => {
+    expect(
+      blocksSend(freeTextCheckOf(storedValueMatches("14/03/2026 5.4", stored))),
+    ).toBe(false);
   });
 });
 

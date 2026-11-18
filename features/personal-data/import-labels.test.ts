@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  codesFoundLabel,
   byteSizeLabel,
   countLabel,
   datasetContentsLabel,
@@ -63,5 +64,15 @@ describe("datasetContentsLabel", () => {
         lastAt: "2024-02",
       }),
     ).toBe("9 rows · Feb 2024");
+  });
+});
+
+describe("codesFoundLabel", () => {
+  test("a cut list says how much it shows, grouped en-GB", () => {
+    expect(codesFoundLabel(50, 1_234)).toBe("Codes found (first 50 of 1,234)");
+  });
+
+  test("a whole list has no count", () => {
+    expect(codesFoundLabel(12, 12)).toBe("Codes found");
   });
 });

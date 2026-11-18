@@ -67,6 +67,8 @@ import {
   valuesAroundEventInput,
   rhythmIrregularityInput,
   cohortEventRatesInput,
+  showMyDayInput,
+  showMyPeriodInput,
 } from "./schemas";
 import type { SessionScope } from "./scope";
 import {
@@ -92,6 +94,8 @@ import {
   runValuesAroundEvent,
   runRhythmIrregularity,
   runCohortEventRates,
+  runShowMyDay,
+  runShowMyPeriod,
 } from "./tools";
 
 /**
@@ -261,6 +265,10 @@ export const queryToolRunners = (
   ),
   genome_variants: bind(genomeVariantsInput, (input) =>
     runGenomeVariants(mcpGenomeVariantsDeps(scope, ports), input),
+  ),
+  show_my_day: bind(showMyDayInput, (input) => runShowMyDay(scope, input, ports)),
+  show_my_period: bind(showMyPeriodInput, (input) =>
+    runShowMyPeriod(scope, input, ports),
   ),
 });
 

@@ -2,6 +2,7 @@ import { cn } from "@/infrastructure/ui";
 
 import { categoryTextClass } from "../category-token";
 import { HEADING } from "./heading";
+import { NoValue } from "./no-value";
 import type { LabResultCardProps } from "./types";
 
 /** Status colours follow the word; the word is what carries the outcome. */
@@ -27,6 +28,7 @@ export const LabResultCard = ({
   const Heading = HEADING[headingLevel];
   return (
     <article
+      aria-label={title}
       className="surface rounded-card flex flex-col gap-3 p-5"
       aria-busy={state === "loading" ? true : undefined}
       data-state={state}
@@ -64,7 +66,7 @@ export const LabResultCard = ({
           <div key={row.label} className="contents">
             <dt className="text-muted-foreground">{row.label}</dt>
             <dd className="text-foreground text-right font-mono tabular-nums">
-              {state === "default" ? row.value : "–"}
+              {state === "default" ? row.value : <NoValue state={state} />}
             </dd>
           </div>
         ))}

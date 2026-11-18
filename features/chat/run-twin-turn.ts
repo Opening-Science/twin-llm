@@ -17,6 +17,7 @@ import {
 import { CHAT_STOP_AUDIT_TOOL } from "@/infrastructure/chat-stop";
 import { skillOfAuditTool, type TurnSkill } from "@/infrastructure/skill-gate";
 import { UI_CONTEXT_AUDIT_TOOL, type UiContext } from "@/infrastructure/ui-context";
+import { WEARABLE_SOURCES_TOOL_PREFIX } from "@/infrastructure/wearable-source-audit";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
 import { drainGbdTurn } from "@/packages/gbd-mcp/collector";
@@ -211,14 +212,15 @@ export const runTwinTurn = (
   const documentOf =
     (parsed: ParsedTwinAnswer, toolResults: readonly TwinTurnToolResult[]) =>
     async () => {
-      // The skill-run, UI context, effort and stop rows record the turn; they
-      // read nothing, so they are not tool calls.
+      // The skill-run, UI context, effort, stop and wearable sources (#464)
+      // rows record the turn; they read nothing, so they are not tool calls.
       const toolCalls = (await deps.loadAudit(turnId)).filter(
         (row) =>
           skillOfAuditTool(row.tool) === null &&
           row.tool !== UI_CONTEXT_AUDIT_TOOL &&
           row.tool !== EFFORT_AUDIT_TOOL &&
-          row.tool !== CHAT_STOP_AUDIT_TOOL,
+          row.tool !== CHAT_STOP_AUDIT_TOOL &&
+          !row.tool.startsWith(WEARABLE_SOURCES_TOOL_PREFIX),
       );
       const gbd = drainGbdTurn(turnId);
       const guidelines = drainGuidelineTurn(turnId);

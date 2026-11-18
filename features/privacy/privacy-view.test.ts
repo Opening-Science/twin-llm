@@ -83,6 +83,25 @@ describe("privacyView", () => {
       ],
     });
   });
+
+  test("consent days are the local calendar day either side of midnight", () => {
+    // Local clock times, so each is that day wherever the test runs; the
+    // zone-shifted cases (UTC a day behind or ahead) are in format-measure.test.ts.
+    const [training] = privacyView(
+      [
+        entry({ grantedAt: new Date(2026, 9, 30, 0, 15) }),
+        entry({
+          id: "c-0",
+          grantedAt: new Date(2026, 9, 29, 23, 30),
+          withdrawnAt: new Date(2026, 9, 30, 0, 5),
+        }),
+      ],
+      AT,
+    );
+    expect(training?.active?.since).toBe("30 Oct 2026");
+    expect(training?.past[0]?.granted).toBe("29 Oct 2026");
+    expect(training?.past[0]?.withdrawn).toBe("30 Oct 2026");
+  });
 });
 
 describe("chosenSources", () => {

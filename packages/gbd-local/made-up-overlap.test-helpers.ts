@@ -22,6 +22,12 @@ const GERMANY_2023 = row(`81,"Germany"`, 2023, "3.5");
 export const OVERLAP_FILE_A = [MADE_UP_HEADER, SWISS_2021, SHARED, ""].join("\n");
 /** Switzerland 2023 (also in A) and Germany 2023. */
 export const OVERLAP_FILE_B = [MADE_UP_HEADER, SHARED, GERMANY_2023, ""].join("\n");
+/** Switzerland 2015 only: the year of the eval's S4 probe (#273). */
+export const PROBE_YEAR_FILE = [
+  MADE_UP_HEADER,
+  row(`94,"Switzerland"`, 2015, "4.5"),
+  "",
+].join("\n");
 
 export const runLive = Reflect.get(process.env, "RUN_LIVE") === "1";
 

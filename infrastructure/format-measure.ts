@@ -170,7 +170,8 @@ export const isoLocalDate = (date: Date = new Date()): string =>
  * read from ICU, so a locale change updates both. bun on macOS uses the
  * system ICU and bun on Linux its own, and CLDR 48 renamed September from
  * `Sept` to `Sep`, so the same code printed two spellings. A fixed table
- * keeps every build byte for byte the same.
+ * keeps every build byte for byte the same. Every month is three letters,
+ * `Sep` included, as the chart axes and the docs write it.
  */
 const EN_GB_MONTHS = [
   "Jan",
@@ -181,7 +182,7 @@ const EN_GB_MONTHS = [
   "Jun",
   "Jul",
   "Aug",
-  "Sept",
+  "Sep",
   "Oct",
   "Nov",
   "Dec",
@@ -196,12 +197,20 @@ const dayLabel = (day: number, month: number, year?: number): string =>
 /**
  * A calendar day as `16 Oct 2026` (or `16 Oct`). Takes YYYY-MM-DD, which is
  * how every metric date is stored, and reads it as that day in UTC so the
- * label never shifts with the viewer's time zone.
+ * label never shifts with the viewer's time zone. A `Date` is a moment, so
+ * it shows the viewer's own calendar day (`isoLocalDate`): a consent given
+ * at 00:30 local time is that day, not the UTC day before.
  */
 export const formatDate = (
-  isoDay: string | null | undefined,
+  day: string | Date | null | undefined,
   style: "long" | "short" = "long",
 ): string => {
+  if (day instanceof Date) {
+    return Number.isNaN(day.getTime())
+      ? EMPTY_VALUE
+      : formatDate(isoLocalDate(day), style);
+  }
+  const isoDay = day;
   if (!isoDay || !ISO_DATE_ONLY.test(isoDay)) return EMPTY_VALUE;
   const [y, m, d] = isoDay.split("-").map(Number);
   const date = new Date(Date.UTC(y!, m! - 1, d!));
@@ -210,18 +219,37 @@ export const formatDate = (
   return style === "long" ? dayLabel(d!, m!, y!) : dayLabel(d!, m!);
 };
 
+/** A moment's UTC day and clock, or null when it is missing or invalid. */
+const utcParts = (
+  moment: Date | null | undefined,
+): Readonly<{ day: string; clock: string }> | null =>
+  !moment || Number.isNaN(moment.getTime())
+    ? null
+    : {
+        day: dayLabel(
+          moment.getUTCDate(),
+          moment.getUTCMonth() + 1,
+          moment.getUTCFullYear(),
+        ),
+        clock: `${pad2(moment.getUTCHours())}:${pad2(moment.getUTCMinutes())}`,
+      };
+
 /**
  * A moment as `16 Oct 2026, 09:12 UTC`, for event logs such as the
  * disclosure ledger. UTC, so a row reads the same for every viewer.
  */
 export const formatTimestamp = (moment: Date | null | undefined): string => {
-  if (!moment || Number.isNaN(moment.getTime())) return EMPTY_VALUE;
-  const day = dayLabel(
-    moment.getUTCDate(),
-    moment.getUTCMonth() + 1,
-    moment.getUTCFullYear(),
-  );
-  return `${day}, ${pad2(moment.getUTCHours())}:${pad2(moment.getUTCMinutes())} UTC`;
+  const parts = utcParts(moment);
+  return parts === null ? EMPTY_VALUE : `${parts.day}, ${parts.clock} UTC`;
+};
+
+/**
+ * The same UTC moment as `16 Oct 2026 09:12`, without the zone: for a table
+ * column whose heading names the zone ("First (UTC)"), so the cell stays short.
+ */
+export const formatUtcCell = (moment: Date | null | undefined): string => {
+  const parts = utcParts(moment);
+  return parts === null ? EMPTY_VALUE : `${parts.day} ${parts.clock}`;
 };
 
 const zonedFormats = new Map<string, Intl.DateTimeFormat>();
@@ -527,6 +555,25 @@ const UNIT_TEXT: Readonly<Record<string, string>> = {
 export const formatUnit = (unit: string): string =>
   UNIT_TEXT[unit] ?? normaliseUnit(unit);
 
+/** UCUM annotations such as `{score}` or `{beats}`: a note for machines, not a unit. */
+const UCUM_ANNOTATION = /\{[^}]*\}/g;
+
+/** Heart rate and pulse are counted in beats, so their `/min` reads `bpm`. */
+const BEATS_LABEL = /\b(heart rate|pulse)\b/i;
+
+/**
+ * A UCUM unit code as a reader reads it, for records that carry raw codes
+ * (Synthea, FHIR): annotations go (`{score}` → no unit, `{beats}/min` →
+ * `/min`), and `/min` reads `per min`, or `bpm` (the `heartRate` unit) when
+ * the label names a heart rate. Anything else is shown as `formatUnit` does.
+ */
+export const formatUcumUnit = (unit: string, label = ""): string => {
+  const bare = unit.replace(UCUM_ANNOTATION, "").trim();
+  if (bare === "/min")
+    return BEATS_LABEL.test(label) ? MEASURES.heartRate.unit : "per min";
+  return formatUnit(bare);
+};
+
 /** A formatted number and its stored unit: `%` and `°` attach, others take a space. */
 export const withUnit = (number: string, unit: string): string => {
   const shown = formatUnit(unit);
@@ -534,9 +581,29 @@ export const withUnit = (number: string, unit: string): string => {
   return shown === "%" || shown === "°" ? `${number}${shown}` : `${number} ${shown}`;
 };
 
+/**
+ * Other names a source stores for a kind's unit. Google Health readings keep
+ * open-twin's UCUM display name: a resting heart rate in `per minute` reads
+ * `bpm`. Only for a kind the key already pins, so a breathing rate in
+ * `per minute` never becomes `bpm`.
+ */
+const KIND_UNIT_SPELLINGS: Readonly<Partial<Record<MeasureKind, ReadonlySet<string>>>> = {
+  heartRate: new Set([
+    "/min",
+    "per minute",
+    "beats per minute",
+    "beats/min",
+    "{beats}/min",
+  ]),
+  hrv: new Set(["millisecond", "milliseconds"]),
+};
+
 /** The key's kind applies only when the stored unit is empty or is that kind's unit. */
 const unitMatches = (kind: MeasureKind, unit: string): boolean =>
-  unit === "" || normaliseUnit(unit) === MEASURES[kind].unit;
+  unit === "" ||
+  normaliseUnit(unit) === MEASURES[kind].unit ||
+  (KIND_UNIT_SPELLINGS[kind]?.has(unit.trim().toLowerCase().replace(/\s+/g, " ")) ??
+    false);
 
 export type FormattableMetric = Readonly<{
   key: string;

@@ -11,14 +11,15 @@
 | Replay            | yes                                               |
 | Arm               | tools: the chat route's tools                     |
 | Sampling          | none set                                          |
+| Repeats           | as in the question set                            |
 | Platform          | darwin-arm64                                      |
 | Cohort codes      | not loaded: invented code is the check digit only |
 
 ## Overview
 
-| Model           | Lines | Answered | Errors | Error rate | Skipped (MISSING_ENV) | Cache hits |
-| --------------- | ----- | -------- | ------ | ---------- | --------------------- | ---------- |
-| ollama:qwen3:4b | 4     | 3        | 1      | 25 %       | 0                     | 0          |
+| Model           | Lines | Answered | Errors | Error rate | Skipped (MISSING_ENV) | Cache hits | Repeats per item |
+| --------------- | ----- | -------- | ------ | ---------- | --------------------- | ---------- | ---------------- |
+| ollama:qwen3:4b | 4     | 3        | 1      | 25 %       | 0                     | 0          | 1–2              |
 
 Error rate is errors over the lines that ran; skipped lines are left out. An error is never a pass.
 

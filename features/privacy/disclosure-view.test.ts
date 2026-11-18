@@ -56,22 +56,26 @@ describe("ledgerView (#140)", () => {
           recipient: "exoscale",
           direction: "Sent",
           events: "1",
-          since: "31 Oct 2026, 14:00 UTC",
-          last: "31 Oct 2026, 14:00 UTC",
+          since: "31 Oct 2026 14:00",
+          last: "31 Oct 2026 14:00",
           values: "1",
           size: "4.2 kB",
           categories: "question text (1), wearable summary (1)",
+          freeText: "1 of 1 checked",
+          freeTextFound: true,
         },
         {
           key: "sent|Oura",
           recipient: "Oura",
           direction: "Sent",
           events: "1, 1 synthetic",
-          since: "31 Oct 2026, 09:00 UTC",
-          last: "31 Oct 2026, 09:00 UTC",
+          since: "31 Oct 2026 09:00",
+          last: "31 Oct 2026 09:00",
           values: "0",
           size: "not measured",
           categories: "access token (1), date window (1)",
+          freeText: "not checked",
+          freeTextFound: false,
         },
       ],
       entries: [
@@ -108,6 +112,22 @@ describe("ledgerView (#140)", () => {
       ],
       shownOf: null,
     });
+  });
+
+  test("a recipient's total counts the checked events that held stored values (#346)", () => {
+    const clean: LedgerEntry = { ...MODEL, seq: 3, freeTextMatches: [] };
+    const dated: LedgerEntry = {
+      ...MODEL,
+      seq: 4,
+      freeTextMatches: [{ kind: "dated value", count: 2 }],
+    };
+    const unread: LedgerEntry = { ...MODEL, seq: 5, freeTextMatches: "not a list" };
+    const total = (rows: readonly LedgerEntry[]) =>
+      ledgerView(rows, []).recipients.map((row) => [row.freeText, row.freeTextFound]);
+    expect(total([MODEL, clean, dated])).toEqual([["2 of 3 checked", true]]);
+    expect(total([clean])).toEqual([["none of 1 checked", false]]);
+    // A stored result that does not read back is checked, not found.
+    expect(total([unread])).toEqual([["none of 1 checked", false]]);
   });
 
   test("says when only the latest events are listed", () => {

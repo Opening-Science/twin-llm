@@ -22,7 +22,13 @@ import {
   type BiomarkerRow,
   type LabValue,
 } from "./biomarker-rows";
-import { loadCohortPeople, loadCohortValues, loadVitalMetrics } from "./cohort-client";
+import {
+  loadCohortPeople,
+  loadCohortValues,
+  loadVitalSnapshot,
+  NO_VITALS,
+  type VitalSnapshot,
+} from "./cohort-client";
 import { type CohortPerson } from "./cohort-handler";
 import { rowHighlight, rowNotes } from "./row-highlight";
 import {
@@ -142,10 +148,9 @@ export const useBiomarkerTab = ({
     vitals: [],
     rhythm: null,
   });
-  const [metricsRead, setMetrics] = useState<readonly FormattableMetric[] | undefined>(
-    undefined,
-  );
-  const metrics = useMemo(() => metricsRead ?? [], [metricsRead]);
+  const [metricsRead, setMetrics] = useState<VitalSnapshot | undefined>(undefined);
+  const snapshot = metricsRead ?? NO_VITALS;
+  const metrics: readonly FormattableMetric[] = snapshot.metrics;
   const personRef = chosenRef ?? people?.[0]?.ref ?? "";
 
   useEffect(() => {
@@ -180,8 +185,8 @@ export const useBiomarkerTab = ({
   useEffect(() => {
     if (!enabled || subject !== "self") return;
     let cancelled = false;
-    void loadVitalMetrics().then((list) => {
-      if (!cancelled) setMetrics(list);
+    void loadVitalSnapshot().then((read) => {
+      if (!cancelled) setMetrics(read);
     });
     return () => {
       cancelled = true;
@@ -192,9 +197,12 @@ export const useBiomarkerTab = ({
   const current = subject === "demo" && labs.ref === personRef ? labs : null;
   const values = current?.values ?? null;
   const failed = people === null || (current !== null && current.values === null);
-  const vitals = subject === "self" ? metrics : null;
+  const vitals = subject === "self" ? snapshot : null;
   const rows = useMemo(
-    () => [...markerRows(values), ...vitalRows(latestVitals(vitals ?? []))],
+    () => [
+      ...markerRows(values),
+      ...vitalRows(latestVitals(vitals?.metrics ?? [], vitals?.heldBack ?? [])),
+    ],
     [values, vitals],
   );
   const organs = useMemo(() => organStatus(values ?? []), [values]);

@@ -7,14 +7,18 @@
  * the tool results (synthetic data; they stay in these gitignored files and
  * never reach report.md or review.csv), and timings.
  *
- * v2 (C3b) added `tool_results` and `audit[].subject_ref`. A v1 run is
+ * v2 (C3b) added `tool_results` and `audit[].subject_ref`; #508 added the
+ * optional `audit[].source_decisions`, so v2 lines before it still parse. A v1 run is
  * upgraded by replaying it (`bun run eval -- … --replay`), which calls no model.
  * `error` is a fixed marker, never provider text, which can echo prompts or
  * row values. Pure module, no I/O.
  */
 import { z } from "zod";
 
+import { sha256Hex, toCanonicalJson } from "../../packages/audit/hash";
 import { responseDocumentV1Schema } from "../../infrastructure/response-document/document-v1";
+import { WEARABLE_SOURCE_IDS } from "../../infrastructure/wearable-provenance";
+import { SOURCE_MEASURES } from "../../infrastructure/wearable-source-rules";
 
 import { CODE_RUN_ERRORS } from "./code-sandbox";
 import { RECORDED_ARMS } from "./context-arm";
@@ -91,6 +95,55 @@ export type ResultError = (typeof RESULT_ERRORS)[number];
 /** An item that needs env this run lacks (S4 needs the GBD server): skipped, never scored. */
 export const MISSING_ENV = "MISSING_ENV";
 
+/**
+ * One decision of a `wearable.sources.*` audit row, as `auditedDecision` writes
+ * it, with the day it was made for. The audit row leaves the day out (#143);
+ * the results line, which already holds the tool results, keeps it so a
+ * decision is found by its measure and day, never by its position.
+ */
+export const auditedDecisionSchema = z
+  .object({
+    measure: z.enum(SOURCE_MEASURES),
+    day: z.iso.date().nullable(),
+    outcome: z.enum(["only_source", "agree", "evidence", "held_back"]),
+    used: z.enum(WEARABLE_SOURCE_IDS).nullable(),
+    others: z.array(z.enum(WEARABLE_SOURCE_IDS)),
+    reason: z.string().nullable(),
+  })
+  .strict();
+
+export const sourceDecisionsSchema = z
+  .object({
+    /** `wearable-source-rules/1`. */
+    rules: z.string(),
+    decisions: z.array(auditedDecisionSchema),
+  })
+  .strict();
+
+export type SourceDecisions = z.infer<typeof sourceDecisionsSchema>;
+
+/**
+ * The args the audit row hashed: the rule set's version and the decisions
+ * without their days, in the order the line keeps them.
+ */
+export const auditedSourceArgs = (
+  recorded: SourceDecisions,
+): Readonly<{ rules: string; decisions: readonly object[] }> => ({
+  rules: recorded.rules,
+  decisions: recorded.decisions.map(({ day: _day, ...decision }) => decision),
+});
+
+/**
+ * The decisions a line keeps for its `wearable.sources.*` row, or null when
+ * they do not hash to the row's `args_sha256`: then the line's decisions are
+ * not the ones the audit chain recorded, and nothing is scored from them.
+ */
+export const verifiedSourceDecisions = (row: AuditLine): SourceDecisions | null =>
+  row.source_decisions !== undefined &&
+  sha256Hex(toCanonicalJson(auditedSourceArgs(row.source_decisions))) === row.args_sha256
+    ? row.source_decisions
+    : null;
+
 export const auditLineSchema = z
   .object({
     tool: z.string(),
@@ -100,6 +153,15 @@ export const auditLineSchema = z
     refusal: z.string().nullable(),
     /** The subject the call asked for, from its input; null for cohort and reference tools. */
     subject_ref: z.string().nullable(),
+    /**
+     * On a `wearable.sources.*` row (#464) only: the rule set's version and its
+     * decisions as the row's args record them (`wearableSourcesEvent`: per
+     * measure the outcome, the source used and the others), each with its
+     * day. Without the days they must hash to `args_sha256`
+     * (`verifiedSourceDecisions`). The attribution score (#508) reads them.
+     * Absent on every other row and on runs before #508.
+     */
+    source_decisions: sourceDecisionsSchema.optional(),
   })
   .strict();
 
@@ -329,6 +391,11 @@ export const metaSchema = z
     /** `process.platform-process.arch`; never the machine's hostname. */
     platform: z.string(),
     timeout_ms: z.number().int().positive(),
+    /**
+     * Set when `--repeats` (#304) raised every item to at least this many
+     * repeats; such items are scored on consistency too. Absent: the set's own.
+     */
+    repeats: z.number().int().min(2).max(10).optional(),
     /**
      * Set when `--decline-wording` replaced the chat route's decline line
      * (#274): the wording's id and the sha256 of its text. Absent: the product's.

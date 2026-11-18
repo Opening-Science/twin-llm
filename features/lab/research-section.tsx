@@ -8,6 +8,7 @@ import {
   type ResearchFigureData,
   type ResearchRead,
   type ResearchStudy,
+  sourceLine,
   STUDY_ORDER,
   STUDY_TITLE,
 } from "./research-results";
@@ -176,8 +177,7 @@ const FigureCard = ({ card }: Readonly<{ card: ResearchCard }>) => {
           </details>
         )}
         <p className="text-muted-foreground font-mono text-xs break-all tabular-nums">
-          {card.source}
-          {card.runDate === null ? null : <> · run {card.runDate}</>}
+          {sourceLine(card)}
         </p>
       </div>
     </InsightCard>

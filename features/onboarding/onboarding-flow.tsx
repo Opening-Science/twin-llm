@@ -40,7 +40,7 @@ import { fallbackStarters, type StarterResult } from "./starter-questions";
  * sending this person here.
  *
  * Opening the thread is the route's to wire (`onStartThread`): it needs the
- * arena's turn creation, which this feature may not import.
+ * chat's turn creation, which this feature may not import.
  */
 
 export type StartThreadResult =

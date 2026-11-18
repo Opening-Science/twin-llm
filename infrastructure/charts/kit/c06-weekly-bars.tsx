@@ -2,7 +2,13 @@
 
 import { cn } from "@/infrastructure/ui";
 
-import { ChartFocusFrame, ChartReadout, dimmed, useChartFocus } from "./chart-focus";
+import {
+  ChartFocusFrame,
+  ChartGroup,
+  ChartReadout,
+  dimmed,
+  useChartFocus,
+} from "./chart-focus";
 import { barsWithLine, slotIndex, weekdayLetters } from "./kit-geometry";
 import {
   AXIS_TEXT,
@@ -111,13 +117,20 @@ export const WeeklyBars = ({
       }}
     </ChartSvg>
   );
+  const name = label ?? caption;
   return (
-    <div className="flex flex-col gap-3" data-state={state}>
+    // A picture is named here; an interactive chart by its focus frame.
+    <ChartGroup
+      label={live ? undefined : name}
+      className="flex flex-col gap-3"
+      data-state={state}
+    >
       {state === "loading" ? (
         <HeroSkeleton />
       ) : (
         <Hero
-          hero={{ label: caption, value: state === "empty" ? "–" : hero, unit }}
+          hero={{ label: caption, value: hero, unit }}
+          missing={state === "empty"}
           category={category}
           dot={false}
         />
@@ -128,13 +141,13 @@ export const WeeklyBars = ({
             id={focus.readoutId}
             text={focused === null ? null : readouts?.[focused]}
           />
-          <ChartFocusFrame focus={focus} label={label ?? caption}>
+          <ChartFocusFrame focus={focus} label={name}>
             {chart}
           </ChartFocusFrame>
         </>
       ) : (
         chart
       )}
-    </div>
+    </ChartGroup>
   );
 };

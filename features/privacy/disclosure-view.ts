@@ -13,6 +13,7 @@ import {
   formatBytes,
   formatNumber,
   formatTimestamp,
+  formatUtcCell,
 } from "@/infrastructure/format-measure";
 
 /**
@@ -27,11 +28,17 @@ export type RecipientView = Readonly<{
   recipient: string;
   direction: "Sent" | "Received" | "Blocked";
   events: string;
+  /** UTC, without the zone: the column heading names it ("First (UTC)"). */
   since: string;
+  /** UTC, without the zone, like `since`. */
   last: string;
   values: string;
   size: string;
   categories: string;
+  /** How many checked events held stored values in their free text (#346). */
+  freeText: string;
+  /** True when any did. */
+  freeTextFound: boolean;
 }>;
 
 export type EntryView = Readonly<{
@@ -83,6 +90,15 @@ const SOURCE_LABELS: Readonly<Record<ValueRef["source"], string>> = {
 const sizeOf = (bytes: number | null): string =>
   bytes === null ? "not measured" : formatBytes(bytes);
 
+/** "2 of 9 checked", "none of 9 checked", or "not checked" when no event was. */
+const freeTextTotal = (total: RecipientTotal): string => {
+  if (total.freeTextChecked === 0) return "not checked";
+  const checked = formatNumber(total.freeTextChecked, 0);
+  return total.freeTextFound === 0
+    ? `none of ${checked} checked`
+    : `${formatNumber(total.freeTextFound, 0)} of ${checked} checked`;
+};
+
 const recipientView = (total: RecipientTotal): RecipientView => ({
   key: `${total.direction}|${total.recipient}`,
   recipient: total.recipient,
@@ -91,8 +107,8 @@ const recipientView = (total: RecipientTotal): RecipientView => ({
     total.syntheticEvents === 0
       ? formatNumber(total.events, 0)
       : `${formatNumber(total.events, 0)}, ${formatNumber(total.syntheticEvents, 0)} synthetic`,
-  since: formatTimestamp(total.first),
-  last: formatTimestamp(total.last),
+  since: formatUtcCell(total.first),
+  last: formatUtcCell(total.last),
   values: formatNumber(total.refs, 0),
   size:
     total.unmeasured === total.events
@@ -103,6 +119,8 @@ const recipientView = (total: RecipientTotal): RecipientView => ({
   categories: total.categories
     .map((item) => `${item.category} (${formatNumber(item.events, 0)})`)
     .join(", "),
+  freeText: freeTextTotal(total),
+  freeTextFound: total.freeTextFound > 0,
 });
 
 /** "Model request: chat answer"; the purpose alone when it repeats the kind. */

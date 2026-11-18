@@ -10,6 +10,7 @@ import type {
 } from "@/infrastructure/charts/kit";
 import { formatDuration } from "@/infrastructure/charts/kit/format";
 import {
+  EMPTY_VALUE,
   formatClock,
   formatDate,
   formatMeasure,
@@ -938,8 +939,8 @@ const bedtimeCard = (nights: WearableDetail["nights"] | "loading"): KitCard | nu
     values: [],
     readouts: [],
     target: null,
-    reference: { label: "Usual (7 nights)", value: "–" },
-    last: { label: "Last night", value: "–" },
+    reference: { label: "Usual (7 nights)", value: EMPTY_VALUE },
+    last: { label: "Last night", value: EMPTY_VALUE },
     axis: ["", ""],
   } as const;
   if (nights === "loading") return { ...base, ...loading("consistency"), ...shape };
@@ -976,11 +977,11 @@ const bedtimeCard = (nights: WearableDetail["nights"] | "loading"): KitCard | nu
     target: usual,
     reference: {
       label: "Usual (7 nights)",
-      value: usual === null ? "–" : nightClock(usual),
+      value: usual === null ? EMPTY_VALUE : nightClock(usual),
     },
     last: {
       label: "Last night",
-      value: latest.bedtime === null ? "–" : nightClock(latest.bedtime),
+      value: latest.bedtime === null ? EMPTY_VALUE : nightClock(latest.bedtime),
     },
     axis: [
       formatDate(addDays(list[0]!.day, -1), "short"),
@@ -1110,6 +1111,6 @@ const emptySection = (id: KitSection["id"], sentence: string): KitCard => ({
   category: "vitals",
   sentence,
   state: "empty",
-  current: { month: "This month", value: null, display: "–" },
-  previous: { month: "Last month", value: null, display: "–" },
+  current: { month: "This month", value: null, display: EMPTY_VALUE },
+  previous: { month: "Last month", value: null, display: EMPTY_VALUE },
 });

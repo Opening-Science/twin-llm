@@ -53,6 +53,7 @@ describe("loadWearableContext", () => {
       whoopSummary: whoop,
       googleHealthSummary: null,
       vitronicSummary: null,
+      sourceDecisions: [],
     });
     expect(calls).toEqual([
       "oura:user-1",

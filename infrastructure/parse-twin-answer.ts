@@ -10,6 +10,7 @@ import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-typ
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
 import { metricDay } from "@/infrastructure/wearable-provenance";
+import { isCitationToken } from "@/infrastructure/source-ids";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -181,7 +182,10 @@ const parseCitedKeys = (evidenceSection: string | null): string[] => {
     if (!trimmed || trimmed.startsWith("#")) continue;
 
     for (const match of trimmed.matchAll(/\[([a-z0-9_.-]+)\]/gi)) {
-      push(match[1]);
+      // A literature citation is not a key (#612): the search tools ask for
+      // these, and a model that also lists them under Evidence Used has not
+      // invented a key.
+      if (!isCitationToken(match[1] ?? "")) push(match[1]);
     }
 
     if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
@@ -231,6 +235,9 @@ export const resolveAttribution = (
       unit: metric.unit,
       ...(metric.source ? { source: metric.source } : {}),
       ...(metric.source && day ? { day } : {}),
+      ...("sourceRule" in metric && metric.sourceRule !== undefined
+        ? { sourceRule: metric.sourceRule }
+        : {}),
     });
   };
 

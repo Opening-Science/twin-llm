@@ -37,11 +37,17 @@ Biomarkers). The Demo body shows Anatomy and this tab, since it has no scan.
   from the range's says so instead of a position.
 - **Where values come from:** the Demo borrows a synthetic cohort person's labs
   (below), Synthetic person 1 by default. Self has no lab source yet, so it lists
-  the catalogue and adds Vitals from its own wearable summaries: per vital, the
-  first source in the vitals table that has data, newest day. Each vital names
-  where it comes from ("From Oura, 15 Oct 2026") and, when a later source also
-  has a reading, says so and gives the rule ("WHOOP also records this; Oura
-  comes first in a fixed order, so its reading is shown.", #464). Other BodyLoop
+  the catalogue and adds Vitals from its own wearable summaries. Each vital names
+  where it comes from ("From Oura, 15 Oct 2026", #464). For HRV, resting heart
+  rate, blood oxygen and steps the sources are compared under the wearable
+  source rules ([wearable-sources.md](wearable-sources.md)): the row shows the
+  newest reading the rules kept with its rule and a status ("Sources agree",
+  "Source chosen on published evidence"), or "Held back" ("No source chosen")
+  with the reason when the newest day's readings disagree and nothing decides.
+  The other vitals show
+  the first source in the vitals table that has data, newest day, and name a
+  later source with a related measure ("WHOOP also records this; Oura comes
+  first in a fixed order, so its reading is shown."). Other BodyLoop
   subjects list the catalogue only. The panel shows for every subject, scans or
   not, since the catalogue always has rows.
 - **A failed read says so:** when the cohort list or a person's values cannot be
@@ -261,6 +267,33 @@ Decisions and open points:
   (`sleep_recovery → nervous`).
 - **Stress:** no wearable here reports it, so there is no row.
 - **Composite scores** (readiness, recovery, activity) get no system.
+
+### Male and female twin targets (`twin-targets.ts`, `atlas-groups.ts`)
+
+open-twin stops at the nine body systems (D14); the mesh to light belongs here, with
+the atlases. `twinTargetRows()` is the marker list with a `target3d` column per donor:
+one row per Anchor marker keyed by its LOINC code, then one per open-twin measurement
+key that feeds a vital (`MEASUREMENT_VITALS`, checked against open-twin's catalogue at
+the current pin).
+
+- A target is a list of HRA group keys, exactly as the atlas's
+  `anatomical_structure_of` writes them: `#VHMHeart` on the male atlas,
+  `#VHFHeartV1.1` on the female. Node names are not used, because a loader rewrites
+  them.
+- The organ groups are the ones the Biomarkers tab already lights (the region table
+  and the vitals table above). `target3d()` keeps the keys of one donor's atlas that
+  match them, the same match the twin makes.
+- Empty where that atlas has no mesh, never a neighbour: the male atlas has no
+  testis, sternum or manubrium, the female none for the prostate, and neither has the
+  glands. D12 markers, steps and strain are empty on both.
+- `atlas-groups.ts` pins the keys of `hra-m.ao.glb` (50) and `hra.ao.glb` (61). A test
+  reads the installed atlases, when present, and fails when they differ.
+
+26 of the 67 markers have a target on at least one donor.
+
+Open point: the `brain` group on both atlases is the optic chiasm only; the whole
+brain is the separate `allenbrain` group. HRV and sleep therefore point at the optic
+chiasm, as the twin lights them today.
 
 ## open-twin decisions this follows
 

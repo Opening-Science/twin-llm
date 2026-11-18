@@ -21,7 +21,7 @@ import {
  * The check of outgoing free text against one person's database (#346).
  * rsIDs and sites are looked up through the keyed hashes of their imported
  * VCFs (no variant is opened); file names, body scan labels, imported
- * readings (code, number, unit), clinical records (code, name) and twin
+ * readings (code, number, unit, day), clinical records (code, name, day) and twin
  * notes are opened once per checker, that is once per model call. None of
  * these stores keeps a keyed hash of a value, so they cannot be looked up
  * sealed. Rejects while the vault is locked, which the ledger records as not
@@ -44,16 +44,29 @@ const openOrNull = (
 ): string | null =>
   stored === null ? null : cipher.openText(table, column, rowId, stored);
 
+/** Readings whose file gave a whole day; a year or a month alone is not a day. */
+const DAY_PRECISIONS: ReadonlySet<string> = new Set(["day", "instant"]);
+
+/** The UTC day of a stored time, as the matcher reads days (`2026-03-14`). */
+const dayOf = (at: Date): string => at.toISOString().slice(0, 10);
+
 const storedValuesOf = async (actor: string, userId: string): Promise<StoredValues> => {
   const cipher = cipherForActor(actor);
   const [readings, records, notes] = await Promise.all([
     database().personalObservation.findMany({
       where: { userId },
-      select: { id: true, code: true, value: true, unit: true },
+      select: {
+        id: true,
+        code: true,
+        value: true,
+        unit: true,
+        effectiveAt: true,
+        effectivePrecision: true,
+      },
     }),
     database().personalClinicalRecord.findMany({
       where: { userId },
-      select: { id: true, code: true, display: true },
+      select: { id: true, code: true, display: true, startAt: true },
     }),
     database().twinNote.findMany({
       where: { userId },
@@ -71,10 +84,13 @@ const storedValuesOf = async (actor: string, userId: string): Promise<StoredValu
       code: openOrNull(cipher, OBSERVATIONS, "code", row.id, row.code),
       value: cipher.openText(OBSERVATIONS, "value", row.id, row.value),
       unit: cipher.openText(OBSERVATIONS, "unit", row.id, row.unit),
+      date: DAY_PRECISIONS.has(row.effectivePrecision) ? dayOf(row.effectiveAt) : null,
+      instant: row.effectivePrecision === "instant",
     })),
     records: records.map((row) => ({
       code: openOrNull(cipher, CLINICAL, "code", row.id, row.code),
       display: cipher.openText(CLINICAL, "display", row.id, row.display),
+      date: row.startAt === null ? null : dayOf(row.startAt),
     })),
     noteLines: notes.flatMap((row) => [
       cipher.openText(NOTES, "title", row.id, row.title),

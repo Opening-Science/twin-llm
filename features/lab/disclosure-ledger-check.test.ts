@@ -24,6 +24,8 @@ const TOTAL: RecipientTotal = {
   first: new Date(Date.UTC(2026, 9, 30, 8, 0)),
   last: new Date(Date.UTC(2026, 9, 31, 14, 5)),
   categories: [{ category: "question text", events: 3 }],
+  freeTextChecked: 3,
+  freeTextFound: 0,
 };
 
 const ARK: RecipientTotal = {

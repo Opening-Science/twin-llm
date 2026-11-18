@@ -251,6 +251,10 @@ export const rowCountOf = (tool: KeyedTool, result: unknown): number => {
       return numberAt(result, "n");
     case "cohort_event_rates":
       return numberAt(result, "rows_read");
+    case "show_my_day":
+      return numberAt(result, "n");
+    case "show_my_period":
+      return numberAt(result, "n");
     case "latest_by_loinc":
       return lengthAt(result, "rows");
     case "coverage": {
@@ -630,6 +634,10 @@ export const runKeyedTool = (
         KEYED_TOOLS.cohort_event_rates.parse(args),
         ports,
       );
+    case "show_my_day":
+      return tools.runShowMyDay(scope, KEYED_TOOLS.show_my_day.parse(args), ports);
+    case "show_my_period":
+      return tools.runShowMyPeriod(scope, KEYED_TOOLS.show_my_period.parse(args), ports);
     // These two read the database directly (no ports), so they cannot be keyed from files.
     case "latest_by_loinc":
       return ports === undefined

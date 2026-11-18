@@ -17,7 +17,13 @@
  *   the key's calls, the model none.
  * - Decline and control pairs (#286) are scored per pair and repeat, also
  *   beside the eight criteria.
+ * - Wearable source attribution and retrieval (#508) are scored per line,
+ *   beside the eight criteria too (`attribution.ts`).
+ * - Claim sources (#612) are counted per line whose turn returned literature,
+ *   beside the eight criteria (`claim-sources.ts`).
  */
+import type { ClaimCoverage } from "../../../infrastructure/claim-sources";
+
 import type { ResultLine } from "../eval-results";
 import {
   CRITERIA,
@@ -29,6 +35,8 @@ import {
   type Scenario,
 } from "../question-set";
 
+import { type AttributionScore, scoreAttribution } from "./attribution";
+import { scoreClaimSources } from "./claim-sources";
 import { type CallAccuracy, scoreCallAccuracy } from "./call-accuracy";
 import { scoreClinicalCaution } from "./clinical-caution";
 import { scoreConsistency } from "./consistency";
@@ -83,6 +91,10 @@ export type ScoredLine = Readonly<{
   calls: CallAccuracy | null;
   /** Stated values no tool result holds; null when the item reads no subject data. */
   noTool: NoToolValues | null;
+  /** Each wearable number's source label and the rows fetched; null when the line has no wearable rows to attribute. */
+  attribution: AttributionScore | null;
+  /** Claims by source status (#612); null when the turn returned no guideline or article. */
+  claims: ClaimCoverage | null;
 }>;
 
 export type LatencyFigures = Readonly<{
@@ -191,6 +203,8 @@ const scoreModel = (input: RunInput, model: ModelKey): ModelScores => {
         unsourcedNumbers: unsourcedNumberCount(input_),
         calls: scoreCallAccuracy(input_, input.cohortCodes ?? null),
         noTool: scoreNoToolValues(input_),
+        attribution: scoreAttribution(input_),
+        claims: scoreClaimSources(input_),
       },
     ];
   });

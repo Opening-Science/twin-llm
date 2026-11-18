@@ -22,5 +22,6 @@ export const GET = withUnlocked(
     getLatestGoogleHealthSummary,
     getLatestVitronicSummary,
     auditPersonalRead: auditPersonalRead((input) => append(database(), input)),
+    appendAudit: (input) => append(database(), input),
   }),
 );

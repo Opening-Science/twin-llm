@@ -8,6 +8,7 @@ import {
   GENOME_IDS_BLOCKED_SENTENCE,
   type FreeTextCheck,
   hasGenomeShapedText,
+  parseFreeTextMatches,
   requestText,
 } from "./free-text-check";
 
@@ -439,7 +440,18 @@ export type RecipientTotal = Readonly<{
   last: Date;
   /** Category to the number of events that carried it, in first-seen order. */
   categories: readonly Readonly<{ category: string; events: number }>[];
+  /** Events whose free text was checked (#346). */
+  freeTextChecked: number;
+  /** Of those, how many held stored values. */
+  freeTextFound: number;
 }>;
+
+/** True when the row's free text was checked and stored values were found (#346). */
+export const freeTextWasFound = (
+  entry: Pick<LedgerEntry, "freeTextChecked" | "freeTextMatches">,
+): boolean =>
+  entry.freeTextChecked &&
+  (parseFreeTextMatches(entry.freeTextMatches)?.matches.length ?? 0) > 0;
 
 const directionOf = (value: string): DisclosureDirection =>
   value === "received" ? "received" : value === "blocked" ? "blocked" : "sent";
@@ -480,6 +492,8 @@ export const ledgerTotals = (
       first: entry.ts,
       last: entry.ts,
       categories: [],
+      freeTextChecked: 0,
+      freeTextFound: 0,
     };
     return new Map(map).set(key, {
       ...base,
@@ -491,6 +505,8 @@ export const ledgerTotals = (
       first: entry.ts < base.first ? entry.ts : base.first,
       last: entry.ts > base.last ? entry.ts : base.last,
       categories: addCategories(base.categories, entry.categories),
+      freeTextChecked: base.freeTextChecked + (entry.freeTextChecked ? 1 : 0),
+      freeTextFound: base.freeTextFound + (freeTextWasFound(entry) ? 1 : 0),
     });
   }, new Map<string, RecipientTotal>());
   return [...totals.values()].sort(

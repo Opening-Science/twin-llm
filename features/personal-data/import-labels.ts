@@ -48,6 +48,12 @@ export const dateRangeLabel = (first: string | null, last: string | null): strin
 export const countLabel = (count: number, one: string, many: string): string =>
   `${formatNumber(count, 0)} ${count === 1 ? one : many}`;
 
+/** `Codes found (first 50 of 1,234)` when the list is cut, else `Codes found`. */
+export const codesFoundLabel = (shown: number, total: number): string =>
+  total > shown
+    ? `Codes found (first ${formatNumber(shown, 0)} of ${formatNumber(total, 0)})`
+    : "Codes found";
+
 export const byteSizeLabel = (bytes: number): string =>
   bytes < 1_000_000
     ? `${formatNumber(bytes / 1000, 1)} kB`

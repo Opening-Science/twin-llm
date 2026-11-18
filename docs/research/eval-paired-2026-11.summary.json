@@ -1,0 +1,5237 @@
+{
+  "issue": 577,
+  "date": "2026-11-12",
+  "commands": [
+    "bun run eval:compare -- 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-oracle320 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-fair320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-oracle320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-fair320 2026-10-30-qwen3-4b-v1-tools320 2026-10-31-qwen3-4b-v1-code303 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-brain-s7 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b 2026-10-30-qwen3-8b-v1-r279 2026-10-30-agent-gp-v1 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7-r288 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b-r288 2026-10-30-qwen3-8b-s7h 2026-10-30-agent-rhythm-s7h-r288 2026-10-30-hb-qwen3-8b 2026-10-30-hb-gp 2026-10-30-hb-qwen3-8b 2026-10-30-hb-brain 2026-11-02-agent-rhythm-s7-8b 2026-11-02-agent-rhythm-s7-4b 2026-11-02-agent-rhythm-s7b-8b 2026-11-02-agent-rhythm-s7b-4b 2026-11-02-agent-rhythm-s7h-8b 2026-11-02-agent-rhythm-s7h-4b 2026-11-02-agent-brain-s7-8b 2026-11-02-agent-brain-s7-4b 2026-11-02-agent-gp-v1-8b 2026-11-02-agent-gp-v1-4b --json",
+    "bun run eval:compare -- 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-oracle320 2026-10-30-qwen3-4b-v1-tools320 2026-10-30-qwen3-4b-v1-fair320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-oracle320 2026-10-30-qwen3-8b-v1-tools320 2026-10-30-qwen3-8b-v1-fair320 2026-10-30-qwen3-4b-v1-tools320 2026-10-31-qwen3-4b-v1-code303 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-brain-s7 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b 2026-10-30-qwen3-8b-v1-r279 2026-10-30-agent-gp-v1 2026-10-30-qwen3-8b-s7-r279 2026-10-30-agent-rhythm-s7-r288 2026-10-30-qwen3-8b-s7b 2026-10-30-agent-rhythm-s7b-r288 2026-10-30-qwen3-8b-s7h 2026-10-30-agent-rhythm-s7h-r288 2026-10-30-hb-qwen3-8b 2026-10-30-hb-gp 2026-10-30-hb-qwen3-8b 2026-10-30-hb-brain 2026-11-02-agent-rhythm-s7-8b 2026-11-02-agent-rhythm-s7-4b 2026-11-02-agent-rhythm-s7b-8b 2026-11-02-agent-rhythm-s7b-4b 2026-11-02-agent-rhythm-s7h-8b 2026-11-02-agent-rhythm-s7h-4b 2026-11-02-agent-brain-s7-8b 2026-11-02-agent-brain-s7-4b 2026-11-02-agent-gp-v1-8b 2026-11-02-agent-gp-v1-4b --unit line --json"
+  ],
+  "scored_at": "ef1f0519e3831884ffffbfb2514f4c089afaddb2",
+  "note": "Paired re-analysis of the October runs and the 2 November specialist runs already on disk under the ignored evaluation/runs/; no model was called. Both runs of each pair rescored with the scorers at scored_at. Primary unit (criteria): one pair per item, its repeats folded by majority, a tie counting as not passed and an item undecided (error or human) when its undecided repeats could swing the majority. Sensitivity (line_criteria): one pair per line (item and repeat). Consistency is per item in both. A pair counts only when both sides are pass or fail; units in one run only, or skipped, error, human or na on either side, are left out and counted in excluded. p is the exact two-sided McNemar test (binomial on discordant pairs); pHolm is Holm-adjusted across the seven criteria of that comparison; pHolmFamily is Holm-adjusted across every criterion of all 19 comparisons of the same unit, a sensitivity column. aOnly: passed in A, failed in B; bOnly the reverse. Query safety and privacy check only the reply in context and code arms, so they are not like for like against tools. Synthetic data only; one sample per line, no human review.",
+  "comparisons": [
+    {
+      "family": "tools vs context",
+      "a": {
+        "run_id": "2026-10-30-qwen3-4b-v1-tools320",
+        "model_id": "qwen3:4b",
+        "arm": "tools",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-qwen3-4b-v1-oracle320",
+        "model_id": "qwen3:4b",
+        "arm": "context-oracle",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 71,
+          "bothPass": 16,
+          "aOnly": 15,
+          "bOnly": 25,
+          "bothFail": 15,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 31,
+            "na": 18
+          },
+          "p": 0.1538599441628321,
+          "pHolm": 0.675782254228352,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 58,
+          "bothPass": 50,
+          "aOnly": 2,
+          "bOnly": 6,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 62,
+            "na": 0
+          },
+          "p": 0.2890625,
+          "pHolm": 0.8671875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 12,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 73,
+          "aOnly": 0,
+          "bOnly": 32,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 4.656612873077393e-10,
+          "pHolm": 3.259629011154175e-9,
+          "pHolmFamily": 6.05359673500061e-8
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 106,
+          "bothPass": 50,
+          "aOnly": 19,
+          "bOnly": 35,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.0402235640957167,
+          "pHolm": 0.2413413845743002,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 116,
+          "bothPass": 62,
+          "aOnly": 28,
+          "bOnly": 17,
+          "bothFail": 9,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.1351564508456704,
+          "pHolm": 0.675782254228352,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 3,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 77,
+          "bothPass": 18,
+          "aOnly": 16,
+          "bOnly": 27,
+          "bothFail": 16,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 37,
+            "na": 20
+          },
+          "p": 0.12628947438543037,
+          "pHolm": 0.5051578975417215,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 64,
+          "bothPass": 55,
+          "aOnly": 2,
+          "bOnly": 7,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 70,
+            "na": 0
+          },
+          "p": 0.1796875,
+          "pHolm": 0.5390625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 82,
+          "aOnly": 0,
+          "bOnly": 35,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 5.820766091346741e-11,
+          "pHolm": 4.0745362639427185e-10,
+          "pHolmFamily": 7.566995918750763e-9
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 120,
+          "bothPass": 58,
+          "aOnly": 20,
+          "bOnly": 40,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.01348929373119186,
+          "pHolm": 0.08093576238715117,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 130,
+          "bothPass": 69,
+          "aOnly": 33,
+          "bOnly": 17,
+          "bothFail": 11,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.032839137564268484,
+          "pHolm": 0.16419568782134242,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 3,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "tools vs context",
+      "a": {
+        "run_id": "2026-10-30-qwen3-4b-v1-tools320",
+        "model_id": "qwen3:4b",
+        "arm": "tools",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-qwen3-4b-v1-fair320",
+        "model_id": "qwen3:4b",
+        "arm": "context-fair",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 67,
+          "bothPass": 2,
+          "aOnly": 29,
+          "bOnly": 3,
+          "bothFail": 33,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 35,
+            "na": 18
+          },
+          "p": 0.0000025560148060321808,
+          "pHolm": 0.000015336088836193085,
+          "pHolmFamily": 0.0003220578655600548
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 48,
+          "bothPass": 22,
+          "aOnly": 22,
+          "bOnly": 3,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 72,
+            "na": 0
+          },
+          "p": 0.00015652179718017578,
+          "pHolm": 0.0007826089859008789,
+          "pHolmFamily": 0.019095659255981445
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 12,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 73,
+          "aOnly": 0,
+          "bOnly": 32,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 4.656612873077393e-10,
+          "pHolm": 3.259629011154175e-9,
+          "pHolmFamily": 6.05359673500061e-8
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 106,
+          "bothPass": 37,
+          "aOnly": 32,
+          "bOnly": 29,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.798152627305718,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 113,
+          "bothPass": 63,
+          "aOnly": 25,
+          "bOnly": 16,
+          "bothFail": 9,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 7,
+            "na": 0
+          },
+          "p": 0.21102359760880063,
+          "pHolm": 0.8440943904352025,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 73,
+          "bothPass": 3,
+          "aOnly": 31,
+          "bOnly": 3,
+          "bothFail": 36,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 41,
+            "na": 20
+          },
+          "p": 7.660128176212311e-7,
+          "pHolm": 0.0000045960769057273865,
+          "pHolmFamily": 0.00009651761502027512
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 55,
+          "bothPass": 26,
+          "aOnly": 23,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 79,
+            "na": 0
+          },
+          "p": 0.000310748815536499,
+          "pHolm": 0.0015537440776824951,
+          "pHolmFamily": 0.03760060667991638
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 82,
+          "aOnly": 0,
+          "bOnly": 35,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 5.820766091346741e-11,
+          "pHolm": 4.0745362639427185e-10,
+          "pHolmFamily": 7.566995918750763e-9
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 120,
+          "bothPass": 45,
+          "aOnly": 33,
+          "bOnly": 34,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 126,
+          "bothPass": 69,
+          "aOnly": 31,
+          "bOnly": 16,
+          "bothFail": 10,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 8,
+            "na": 0
+          },
+          "p": 0.03998605682605216,
+          "pHolm": 0.15994422730420865,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "tools vs context",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-v1-tools320",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-qwen3-8b-v1-oracle320",
+        "model_id": "qwen3:8b",
+        "arm": "context-oracle",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 62,
+          "bothPass": 7,
+          "aOnly": 18,
+          "bOnly": 7,
+          "bothFail": 30,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 40,
+            "na": 18
+          },
+          "p": 0.043285250663757324,
+          "pHolm": 0.25971150398254395,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 107,
+          "bothPass": 101,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 13,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 12,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 50,
+          "aOnly": 0,
+          "bOnly": 56,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 2.7755575615628914e-17,
+          "pHolm": 1.942890293094024e-16,
+          "pHolmFamily": 3.6914915568786455e-15
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 104,
+          "bothPass": 37,
+          "aOnly": 17,
+          "bOnly": 31,
+          "bothFail": 19,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 2,
+            "na": 14
+          },
+          "p": 0.05946337525377032,
+          "pHolm": 0.2973168762688516,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 115,
+          "bothPass": 71,
+          "aOnly": 16,
+          "bOnly": 20,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.617719317029696,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 66,
+          "bothPass": 7,
+          "aOnly": 21,
+          "bOnly": 7,
+          "bothFail": 31,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 48,
+            "na": 20
+          },
+          "p": 0.012540951371192932,
+          "pHolm": 0.07524570822715759,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 118,
+          "bothPass": 112,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 16,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 57,
+          "aOnly": 0,
+          "bOnly": 61,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 8.673617379884035e-19,
+          "pHolm": 6.071532165918825e-18,
+          "pHolmFamily": 1.1535911115245767e-16
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 118,
+          "bothPass": 39,
+          "aOnly": 20,
+          "bOnly": 39,
+          "bothFail": 20,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 2,
+            "na": 14
+          },
+          "p": 0.018337087779101986,
+          "pHolm": 0.09168543889550992,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 129,
+          "bothPass": 81,
+          "aOnly": 18,
+          "bOnly": 22,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.6358280026288412,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "tools vs context",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-v1-tools320",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-qwen3-8b-v1-fair320",
+        "model_id": "qwen3:8b",
+        "arm": "context-fair",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 75,
+          "bothPass": 0,
+          "aOnly": 26,
+          "bOnly": 0,
+          "bothFail": 49,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 27,
+            "na": 18
+          },
+          "p": 2.9802322387695312e-8,
+          "pHolm": 1.7881393432617188e-7,
+          "pHolmFamily": 0.0000037848949432373047
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 107,
+          "bothPass": 85,
+          "aOnly": 17,
+          "bOnly": 2,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 13,
+            "na": 0
+          },
+          "p": 0.000728607177734375,
+          "pHolm": 0.003643035888671875,
+          "pHolmFamily": 0.087432861328125
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 12,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 50,
+          "aOnly": 0,
+          "bOnly": 56,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 2.7755575615628914e-17,
+          "pHolm": 1.942890293094024e-16,
+          "pHolmFamily": 3.6914915568786455e-15
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 104,
+          "bothPass": 28,
+          "aOnly": 26,
+          "bOnly": 25,
+          "bothFail": 25,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 2,
+            "na": 14
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 114,
+          "bothPass": 72,
+          "aOnly": 13,
+          "bOnly": 25,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 6,
+            "na": 0
+          },
+          "p": 0.07295138851623051,
+          "pHolm": 0.29180555406492203,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 3,
+          "aOnly": 1,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 82,
+          "bothPass": 0,
+          "aOnly": 29,
+          "bOnly": 0,
+          "bothFail": 53,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 32,
+            "na": 20
+          },
+          "p": 3.725290298461914e-9,
+          "pHolm": 2.2351741790771484e-8,
+          "pHolmFamily": 4.731118679046631e-7
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 120,
+          "bothPass": 93,
+          "aOnly": 20,
+          "bOnly": 4,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 14,
+            "na": 0
+          },
+          "p": 0.001543879508972168,
+          "pHolm": 0.00771939754486084,
+          "pHolmFamily": 0.18217778205871582
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 57,
+          "aOnly": 0,
+          "bOnly": 61,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 8.673617379884035e-19,
+          "pHolm": 6.071532165918825e-18,
+          "pHolmFamily": 1.1535911115245767e-16
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 118,
+          "bothPass": 30,
+          "aOnly": 29,
+          "bOnly": 33,
+          "bothFail": 26,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 2,
+            "na": 14
+          },
+          "p": 0.7035366713552733,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 127,
+          "bothPass": 80,
+          "aOnly": 16,
+          "bOnly": 27,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 7,
+            "na": 0
+          },
+          "p": 0.12628947438543037,
+          "pHolm": 0.5051578975417215,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 3,
+          "aOnly": 1,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "tools vs context",
+      "a": {
+        "run_id": "2026-10-30-qwen3-4b-v1-tools320",
+        "model_id": "qwen3:4b",
+        "arm": "tools",
+        "git_sha": "301ccb0b72247b0ec43486903d6f7a366765fff4",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-31-qwen3-4b-v1-code303",
+        "model_id": "qwen3:4b",
+        "arm": "code",
+        "git_sha": "9202c1d4d1214c2fd71cbcfcf3ccb89460b2b4d8",
+        "date": "2026-11-01"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 60,
+          "bothPass": 3,
+          "aOnly": 25,
+          "bOnly": 2,
+          "bothFail": 30,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 42,
+            "na": 18
+          },
+          "p": 0.000005647540092468262,
+          "pHolm": 0.00003388524055480957,
+          "pHolmFamily": 0.0007059425115585327
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 49,
+          "bothPass": 28,
+          "aOnly": 15,
+          "bOnly": 3,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 71,
+            "na": 0
+          },
+          "p": 0.007537841796875,
+          "pHolm": 0.037689208984375,
+          "pHolmFamily": 0.881927490234375
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 12,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 73,
+          "aOnly": 0,
+          "bOnly": 32,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 4.656612873077393e-10,
+          "pHolm": 3.259629011154175e-9,
+          "pHolmFamily": 6.05359673500061e-8
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 106,
+          "bothPass": 39,
+          "aOnly": 30,
+          "bOnly": 32,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.8990763136528589,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 115,
+          "bothPass": 80,
+          "aOnly": 11,
+          "bOnly": 21,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.11018416518345475,
+          "pHolm": 0.440736660733819,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 66,
+          "bothPass": 4,
+          "aOnly": 27,
+          "bOnly": 2,
+          "bothFail": 33,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 48,
+            "na": 20
+          },
+          "p": 0.0000016242265701293945,
+          "pHolm": 0.000009745359420776367,
+          "pHolmFamily": 0.00020302832126617432
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 55,
+          "bothPass": 31,
+          "aOnly": 16,
+          "bOnly": 4,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 79,
+            "na": 0
+          },
+          "p": 0.01181793212890625,
+          "pHolm": 0.05908966064453125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 82,
+          "aOnly": 0,
+          "bOnly": 35,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 5.820766091346741e-11,
+          "pHolm": 4.0745362639427185e-10,
+          "pHolmFamily": 7.566995918750763e-9
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 120,
+          "bothPass": 46,
+          "aOnly": 32,
+          "bOnly": 37,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.6304564917867979,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 127,
+          "bothPass": 89,
+          "aOnly": 13,
+          "bOnly": 22,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 7,
+            "na": 0
+          },
+          "p": 0.17546524899080396,
+          "pHolm": 0.7018609959632158,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7-r279",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-rhythm-s7",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7",
+      "questions_sha256": "f673c2da67a87a12913243ce81324063b636d6650a26a1fc398b0932c3e84786",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 23,
+          "bothPass": 4,
+          "aOnly": 9,
+          "bOnly": 3,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 5,
+            "na": 4
+          },
+          "p": 0.14599609375,
+          "pHolm": 0.8759765625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 29,
+          "bothPass": 23,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 3,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 30,
+          "bothPass": 15,
+          "aOnly": 10,
+          "bOnly": 4,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.1795654296875,
+          "pHolm": 0.8978271484375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 27,
+          "bothPass": 6,
+          "aOnly": 15,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.0192108154296875,
+          "pHolm": 0.1344757080078125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 32,
+          "bothPass": 14,
+          "aOnly": 10,
+          "bOnly": 5,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.3017578125,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 30,
+          "bothPass": 22,
+          "aOnly": 4,
+          "bOnly": 1,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 0.375,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 1,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 25,
+          "bothPass": 4,
+          "aOnly": 11,
+          "bOnly": 3,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 7,
+            "na": 6
+          },
+          "p": 0.057373046875,
+          "pHolm": 0.34423828125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 34,
+          "bothPass": 28,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 36,
+          "bothPass": 19,
+          "aOnly": 12,
+          "bOnly": 4,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.076812744140625,
+          "pHolm": 0.384063720703125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 6,
+          "aOnly": 19,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 7
+          },
+          "p": 0.002599477767944336,
+          "pHolm": 0.01819634437561035,
+          "pHolmFamily": 0.3041388988494873
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 19,
+          "aOnly": 11,
+          "bOnly": 5,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.210113525390625,
+          "pHolm": 0.8404541015625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 36,
+          "bothPass": 28,
+          "aOnly": 4,
+          "bOnly": 1,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 0.375,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 1,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7-r279",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-brain-s7",
+        "model_id": "agent:brain",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7",
+      "questions_sha256": "f673c2da67a87a12913243ce81324063b636d6650a26a1fc398b0932c3e84786",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 21,
+          "bothPass": 2,
+          "aOnly": 11,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 6,
+            "na": 4
+          },
+          "p": 0.0009765625,
+          "pHolm": 0.005859375,
+          "pHolmFamily": 0.1162109375
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 26,
+          "bothPass": 21,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 29,
+          "bothPass": 22,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 2
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 26,
+          "bothPass": 6,
+          "aOnly": 14,
+          "bOnly": 0,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.0001220703125,
+          "pHolm": 0.0008544921875,
+          "pHolmFamily": 0.0150146484375
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 31,
+          "bothPass": 7,
+          "aOnly": 16,
+          "bOnly": 3,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.004425048828125,
+          "pHolm": 0.022125244140625,
+          "pHolmFamily": 0.52215576171875
+        },
+        {
+          "criterion": "readability",
+          "pairs": 30,
+          "bothPass": 19,
+          "aOnly": 6,
+          "bOnly": 2,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 1,
+            "na": 0
+          },
+          "p": 0.2890625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 2,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 23,
+          "bothPass": 2,
+          "aOnly": 13,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 8,
+            "na": 6
+          },
+          "p": 0.000244140625,
+          "pHolm": 0.00146484375,
+          "pHolmFamily": 0.02978515625
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 32,
+          "bothPass": 27,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 35,
+          "bothPass": 28,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 2
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 30,
+          "bothPass": 6,
+          "aOnly": 18,
+          "bOnly": 0,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 7
+          },
+          "p": 0.00000762939453125,
+          "pHolm": 0.00005340576171875,
+          "pHolmFamily": 0.000946044921875
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 37,
+          "bothPass": 10,
+          "aOnly": 19,
+          "bOnly": 3,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.0008554458618164062,
+          "pHolm": 0.004277229309082031,
+          "pHolmFamily": 0.10179805755615234
+        },
+        {
+          "criterion": "readability",
+          "pairs": 36,
+          "bothPass": 25,
+          "aOnly": 6,
+          "bOnly": 2,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 1,
+            "human": 1,
+            "na": 0
+          },
+          "p": 0.2890625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 2,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7b",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-rhythm-s7b",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7b",
+      "questions_sha256": "dbb28defe4f1792a3a762ed62dfd37d62c1d6a8ac70fbb942716d79e2c24ad52",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 15,
+          "bothPass": 1,
+          "aOnly": 7,
+          "bOnly": 1,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 16,
+            "na": 3
+          },
+          "p": 0.0703125,
+          "pHolm": 0.3515625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 30,
+          "bothPass": 22,
+          "aOnly": 7,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.015625,
+          "pHolm": 0.09375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 34,
+          "bothPass": 24,
+          "aOnly": 7,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.1796875,
+          "pHolm": 0.5390625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 7,
+          "aOnly": 18,
+          "bOnly": 2,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 3
+          },
+          "p": 0.0004024505615234375,
+          "pHolm": 0.0028171539306640625,
+          "pHolmFamily": 0.04869651794433594
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 34,
+          "bothPass": 19,
+          "aOnly": 8,
+          "bOnly": 5,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5810546875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 29,
+          "bothPass": 17,
+          "aOnly": 7,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.0703125,
+          "pHolm": 0.3515625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 2,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 17,
+          "bothPass": 1,
+          "aOnly": 9,
+          "bOnly": 1,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 16,
+            "na": 5
+          },
+          "p": 0.021484375,
+          "pHolm": 0.107421875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 34,
+          "bothPass": 26,
+          "aOnly": 7,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.015625,
+          "pHolm": 0.09375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 38,
+          "bothPass": 26,
+          "aOnly": 9,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.0654296875,
+          "pHolm": 0.1962890625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 33,
+          "bothPass": 7,
+          "aOnly": 20,
+          "bOnly": 2,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.00012111663818359375,
+          "pHolm": 0.0008478164672851562,
+          "pHolmFamily": 0.014897346496582031
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 21,
+          "aOnly": 10,
+          "bOnly": 5,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.3017578125,
+          "pHolm": 0.603515625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 33,
+          "bothPass": 20,
+          "aOnly": 8,
+          "bOnly": 1,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 0.0390625,
+          "pHolm": 0.15625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 2,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-v1-r279",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-gp-v1",
+        "model_id": "agent:gp",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 89,
+          "bothPass": 13,
+          "aOnly": 10,
+          "bOnly": 4,
+          "bothFail": 62,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 13,
+            "na": 18
+          },
+          "p": 0.1795654296875,
+          "pHolm": 0.71826171875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 107,
+          "bothPass": 100,
+          "aOnly": 0,
+          "bOnly": 5,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 13,
+            "na": 0
+          },
+          "p": 0.0625,
+          "pHolm": 0.4375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 10,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 36,
+          "aOnly": 15,
+          "bOnly": 6,
+          "bothFail": 49,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.0783538818359375,
+          "pHolm": 0.470123291015625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 106,
+          "bothPass": 46,
+          "aOnly": 10,
+          "bOnly": 8,
+          "bothFail": 42,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.8145294189453125,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 118,
+          "bothPass": 72,
+          "aOnly": 12,
+          "bOnly": 23,
+          "bothFail": 11,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 0.0895310789346695,
+          "pHolm": 0.470123291015625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 100,
+          "bothPass": 13,
+          "aOnly": 12,
+          "bOnly": 4,
+          "bothFail": 71,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 14,
+            "na": 20
+          },
+          "p": 0.076812744140625,
+          "pHolm": 0.384063720703125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 120,
+          "bothPass": 111,
+          "aOnly": 0,
+          "bOnly": 7,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 14,
+            "na": 0
+          },
+          "p": 0.015625,
+          "pHolm": 0.09375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 18,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 38,
+          "aOnly": 20,
+          "bOnly": 6,
+          "bothFail": 54,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 0.009355306625366211,
+          "pHolm": 0.06548714637756348,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 120,
+          "bothPass": 50,
+          "aOnly": 11,
+          "bOnly": 10,
+          "bothFail": 49,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 132,
+          "bothPass": 83,
+          "aOnly": 13,
+          "bOnly": 23,
+          "bothFail": 13,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 0.13249816396273673,
+          "pHolm": 0.5299926558509469,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7-r279",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-rhythm-s7-r288",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "db1dac7de5512f859f8a7b98c1c2f3ae132bcc8b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7",
+      "questions_sha256": "f673c2da67a87a12913243ce81324063b636d6650a26a1fc398b0932c3e84786",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 20,
+          "bothPass": 10,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 8,
+            "na": 4
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 27,
+          "bothPass": 23,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 5,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 30,
+          "bothPass": 25,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 27,
+          "bothPass": 21,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 32,
+          "bothPass": 24,
+          "aOnly": 0,
+          "bOnly": 4,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 30,
+          "bothPass": 24,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 2,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 21,
+          "bothPass": 10,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 11,
+            "na": 6
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 32,
+          "bothPass": 28,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 6,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 36,
+          "bothPass": 31,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 25,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 7
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 30,
+          "aOnly": 0,
+          "bOnly": 4,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 36,
+          "bothPass": 30,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 2,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7b",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "e83561496d22da3d9802e32e857cb2c03f7f6a2b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-rhythm-s7b-r288",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "db1dac7de5512f859f8a7b98c1c2f3ae132bcc8b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7b",
+      "questions_sha256": "dbb28defe4f1792a3a762ed62dfd37d62c1d6a8ac70fbb942716d79e2c24ad52",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 10,
+          "bothPass": 3,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 21,
+            "na": 3
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 30,
+          "bothPass": 25,
+          "aOnly": 4,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 34,
+          "bothPass": 31,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 24,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 3
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 34,
+          "bothPass": 26,
+          "aOnly": 1,
+          "bOnly": 3,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 30,
+          "bothPass": 22,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 11,
+          "bothPass": 4,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 22,
+            "na": 5
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 34,
+          "bothPass": 29,
+          "aOnly": 4,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 38,
+          "bothPass": 35,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 33,
+          "bothPass": 26,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 30,
+          "aOnly": 1,
+          "bOnly": 3,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 34,
+          "bothPass": 26,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-qwen3-8b-s7h",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "db1dac7de5512f859f8a7b98c1c2f3ae132bcc8b",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-agent-rhythm-s7h-r288",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "db1dac7de5512f859f8a7b98c1c2f3ae132bcc8b",
+        "date": "2026-10-30"
+      },
+      "question_set": "s7h",
+      "questions_sha256": "5c32d2fdcf1e3fcb3e3097cfc4599f2b48b013e182f47d121b49425723c96beb",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 16,
+          "bothPass": 8,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 16,
+            "na": 8
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 34,
+          "bothPass": 32,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 6,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 40,
+          "bothPass": 38,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 32,
+          "bothPass": 22,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 8
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 40,
+          "bothPass": 28,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 40,
+          "bothPass": 33,
+          "aOnly": 4,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 38
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 16,
+          "bothPass": 8,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 18,
+            "na": 10
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 38,
+          "bothPass": 36,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 6,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 44,
+          "bothPass": 42,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 34,
+          "bothPass": 24,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 10
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 44,
+          "bothPass": 32,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 7,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 44,
+          "bothPass": 37,
+          "aOnly": 4,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 38
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-hb-qwen3-8b",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "b9582658406c7541baef24638c34464d72543bda",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-hb-gp",
+        "model_id": "agent:gp",
+        "arm": "tools",
+        "git_sha": "b9582658406c7541baef24638c34464d72543bda",
+        "date": "2026-10-30"
+      },
+      "question_set": "hb",
+      "questions_sha256": "a2351aa8ff5355af5a6ac6ee794745e53a156e021b5d31c58c38a30f4c8b3dc2",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 7,
+          "bothPass": 4,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 8,
+            "na": 4
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 15,
+          "bothPass": 15,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 4,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 19,
+          "bothPass": 18,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 15,
+          "bothPass": 13,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 4
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 16,
+          "bothPass": 11,
+          "aOnly": 1,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 3,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 19,
+          "bothPass": 13,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 8,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 11
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 10,
+          "bothPass": 4,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 21,
+            "na": 4
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 25,
+          "bothPass": 23,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 10,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 35,
+          "bothPass": 34,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 28,
+          "aOnly": 0,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 4
+          },
+          "p": 0.25,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 32,
+          "bothPass": 21,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 3,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 35,
+          "bothPass": 24,
+          "aOnly": 4,
+          "bOnly": 5,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 8,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 11
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "agent vs base",
+      "a": {
+        "run_id": "2026-10-30-hb-qwen3-8b",
+        "model_id": "qwen3:8b",
+        "arm": "tools",
+        "git_sha": "b9582658406c7541baef24638c34464d72543bda",
+        "date": "2026-10-30"
+      },
+      "b": {
+        "run_id": "2026-10-30-hb-brain",
+        "model_id": "agent:brain",
+        "arm": "tools",
+        "git_sha": "b9582658406c7541baef24638c34464d72543bda",
+        "date": "2026-10-30"
+      },
+      "question_set": "hb",
+      "questions_sha256": "a2351aa8ff5355af5a6ac6ee794745e53a156e021b5d31c58c38a30f4c8b3dc2",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 7,
+          "bothPass": 2,
+          "aOnly": 1,
+          "bOnly": 3,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 8,
+            "na": 4
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 11,
+          "bothPass": 9,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 8,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 19,
+          "bothPass": 19,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 15,
+          "bothPass": 13,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 4
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 17,
+          "bothPass": 10,
+          "aOnly": 3,
+          "bOnly": 3,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 19,
+          "bothPass": 12,
+          "aOnly": 3,
+          "bOnly": 3,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 8,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 11
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 12,
+          "bothPass": 3,
+          "aOnly": 1,
+          "bOnly": 7,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 19,
+            "na": 4
+          },
+          "p": 0.0703125,
+          "pHolm": 0.4921875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 21,
+          "bothPass": 13,
+          "aOnly": 7,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 14,
+            "na": 0
+          },
+          "p": 0.0703125,
+          "pHolm": 0.4921875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 35,
+          "bothPass": 35,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 28,
+          "aOnly": 0,
+          "bOnly": 3,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 4
+          },
+          "p": 0.25,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 33,
+          "bothPass": 17,
+          "aOnly": 7,
+          "bOnly": 7,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 35,
+          "bothPass": 21,
+          "aOnly": 7,
+          "bOnly": 6,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 8,
+          "bothPass": 1,
+          "aOnly": 1,
+          "bOnly": 1,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 11
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "specialist on qwen3:8b vs qwen3:4b",
+      "a": {
+        "run_id": "2026-11-02-agent-rhythm-s7-8b",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "b": {
+        "run_id": "2026-11-02-agent-rhythm-s7-4b",
+        "model_id": "agent:rhythm@qwen3:4b",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "question_set": "s7",
+      "questions_sha256": "f673c2da67a87a12913243ce81324063b636d6650a26a1fc398b0932c3e84786",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 19,
+          "bothPass": 7,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 9,
+            "na": 4
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 23,
+          "bothPass": 13,
+          "aOnly": 6,
+          "bOnly": 1,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 9,
+            "na": 0
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 30,
+          "bothPass": 26,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 27,
+          "bothPass": 20,
+          "aOnly": 0,
+          "bOnly": 4,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.125,
+          "pHolm": 0.875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 32,
+          "bothPass": 27,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 31,
+          "bothPass": 27,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 1,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 0,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 20,
+          "bothPass": 8,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 12,
+            "na": 6
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 27,
+          "bothPass": 15,
+          "aOnly": 8,
+          "bOnly": 1,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 11,
+            "na": 0
+          },
+          "p": 0.0390625,
+          "pHolm": 0.2734375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 36,
+          "bothPass": 31,
+          "aOnly": 1,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 24,
+          "aOnly": 0,
+          "bOnly": 4,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 7
+          },
+          "p": 0.125,
+          "pHolm": 0.75,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 32,
+          "aOnly": 3,
+          "bOnly": 1,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.625,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 37,
+          "bothPass": 33,
+          "aOnly": 2,
+          "bOnly": 1,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 1,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 0,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "specialist on qwen3:8b vs qwen3:4b",
+      "a": {
+        "run_id": "2026-11-02-agent-rhythm-s7b-8b",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "b": {
+        "run_id": "2026-11-02-agent-rhythm-s7b-4b",
+        "model_id": "agent:rhythm@qwen3:4b",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "question_set": "s7b",
+      "questions_sha256": "dbb28defe4f1792a3a762ed62dfd37d62c1d6a8ac70fbb942716d79e2c24ad52",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 17,
+          "bothPass": 4,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 14,
+            "na": 3
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 24,
+          "bothPass": 12,
+          "aOnly": 8,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 10,
+            "na": 0
+          },
+          "p": 0.109375,
+          "pHolm": 0.65625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 34,
+          "bothPass": 32,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 22,
+          "aOnly": 0,
+          "bOnly": 6,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 3
+          },
+          "p": 0.03125,
+          "pHolm": 0.21875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 34,
+          "bothPass": 27,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 32,
+          "bothPass": 21,
+          "aOnly": 3,
+          "bOnly": 4,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 18,
+          "bothPass": 5,
+          "aOnly": 2,
+          "bOnly": 3,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 15,
+            "na": 5
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 28,
+          "bothPass": 15,
+          "aOnly": 9,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 10,
+            "na": 0
+          },
+          "p": 0.0654296875,
+          "pHolm": 0.392578125,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 38,
+          "bothPass": 36,
+          "aOnly": 0,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 33,
+          "bothPass": 24,
+          "aOnly": 0,
+          "bOnly": 6,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 0.03125,
+          "pHolm": 0.21875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 31,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 36,
+          "bothPass": 25,
+          "aOnly": 3,
+          "bOnly": 4,
+          "bothFail": 4,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 32
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "specialist on qwen3:8b vs qwen3:4b",
+      "a": {
+        "run_id": "2026-11-02-agent-rhythm-s7h-8b",
+        "model_id": "agent:rhythm",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "b": {
+        "run_id": "2026-11-02-agent-rhythm-s7h-4b",
+        "model_id": "agent:rhythm@qwen3:4b",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "question_set": "s7h",
+      "questions_sha256": "5c32d2fdcf1e3fcb3e3097cfc4599f2b48b013e182f47d121b49425723c96beb",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 18,
+          "bothPass": 9,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 14,
+            "na": 8
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 29,
+          "bothPass": 20,
+          "aOnly": 7,
+          "bOnly": 0,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 11,
+            "na": 0
+          },
+          "p": 0.015625,
+          "pHolm": 0.109375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 40,
+          "bothPass": 39,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 32,
+          "bothPass": 23,
+          "aOnly": 1,
+          "bOnly": 6,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 8
+          },
+          "p": 0.125,
+          "pHolm": 0.75,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 40,
+          "bothPass": 31,
+          "aOnly": 1,
+          "bOnly": 5,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.21875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 40,
+          "bothPass": 28,
+          "aOnly": 7,
+          "bOnly": 3,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.34375,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 38
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 19,
+          "bothPass": 10,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 8,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 15,
+            "na": 10
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 33,
+          "bothPass": 24,
+          "aOnly": 7,
+          "bOnly": 0,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 11,
+            "na": 0
+          },
+          "p": 0.015625,
+          "pHolm": 0.109375,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 44,
+          "bothPass": 43,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 34,
+          "bothPass": 25,
+          "aOnly": 1,
+          "bOnly": 6,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 10
+          },
+          "p": 0.125,
+          "pHolm": 0.75,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 44,
+          "bothPass": 35,
+          "aOnly": 1,
+          "bOnly": 5,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.21875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 44,
+          "bothPass": 32,
+          "aOnly": 7,
+          "bOnly": 3,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.34375,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 2,
+          "bothPass": 1,
+          "aOnly": 0,
+          "bOnly": 1,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 38
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "specialist on qwen3:8b vs qwen3:4b",
+      "a": {
+        "run_id": "2026-11-02-agent-brain-s7-8b",
+        "model_id": "agent:brain",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "b": {
+        "run_id": "2026-11-02-agent-brain-s7-4b",
+        "model_id": "agent:brain@qwen3:4b",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "question_set": "s7",
+      "questions_sha256": "f673c2da67a87a12913243ce81324063b636d6650a26a1fc398b0932c3e84786",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 26,
+          "bothPass": 3,
+          "aOnly": 3,
+          "bOnly": 2,
+          "bothFail": 18,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 4
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 24,
+          "bothPass": 17,
+          "aOnly": 1,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 8,
+            "na": 0
+          },
+          "p": 0.375,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 30,
+          "bothPass": 18,
+          "aOnly": 4,
+          "bOnly": 5,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 27,
+          "bothPass": 10,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 16,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 5
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 32,
+          "bothPass": 10,
+          "aOnly": 7,
+          "bOnly": 1,
+          "bothFail": 14,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.0703125,
+          "pHolm": 0.4921875,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 31,
+          "bothPass": 23,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 1,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 0,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 30,
+          "bothPass": 3,
+          "aOnly": 3,
+          "bOnly": 2,
+          "bothFail": 22,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 2,
+            "na": 6
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 29,
+          "bothPass": 21,
+          "aOnly": 2,
+          "bOnly": 4,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 9,
+            "na": 0
+          },
+          "p": 0.6875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 36,
+          "bothPass": 20,
+          "aOnly": 5,
+          "bOnly": 8,
+          "bothFail": 3,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 2
+          },
+          "p": 0.5810546875,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 31,
+          "bothPass": 10,
+          "aOnly": 1,
+          "bOnly": 0,
+          "bothFail": 20,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 7
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 38,
+          "bothPass": 11,
+          "aOnly": 9,
+          "bOnly": 1,
+          "bothFail": 17,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 0
+          },
+          "p": 0.021484375,
+          "pHolm": 0.150390625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 37,
+          "bothPass": 28,
+          "aOnly": 2,
+          "bOnly": 5,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 1,
+            "na": 0
+          },
+          "p": 0.453125,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 3,
+          "bothPass": 0,
+          "aOnly": 2,
+          "bOnly": 0,
+          "bothFail": 1,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 0,
+            "error": 0,
+            "human": 0,
+            "na": 29
+          },
+          "p": 0.5,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    },
+    {
+      "family": "specialist on qwen3:8b vs qwen3:4b",
+      "a": {
+        "run_id": "2026-11-02-agent-gp-v1-8b",
+        "model_id": "agent:gp",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "b": {
+        "run_id": "2026-11-02-agent-gp-v1-4b",
+        "model_id": "agent:gp@qwen3:4b",
+        "arm": "tools",
+        "git_sha": "f7a101e8b01aa3f55e61b28a0b5b01073b837f17",
+        "date": "2026-11-02"
+      },
+      "question_set": "v1",
+      "questions_sha256": "248deb6cdf76ba3d2cef16217d60fdc88e95847151d27afe821ffc4391cb0649",
+      "criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 91,
+          "bothPass": 10,
+          "aOnly": 5,
+          "bOnly": 15,
+          "bothFail": 61,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 11,
+            "na": 18
+          },
+          "p": 0.04138946533203125,
+          "pHolm": 0.20694732666015625,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 83,
+          "bothPass": 56,
+          "aOnly": 25,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 37,
+            "na": 0
+          },
+          "p": 0.000005647540092468262,
+          "pHolm": 0.00003388524055480957,
+          "pHolmFamily": 0.0007059425115585327
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 12,
+          "bothPass": 9,
+          "aOnly": 1,
+          "bOnly": 2,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 108
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 106,
+          "bothPass": 25,
+          "aOnly": 2,
+          "bOnly": 52,
+          "bothFail": 27,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 1.6497914145929826e-13,
+          "pHolm": 1.1548539902150878e-12,
+          "pHolmFamily": 2.1612267531168072e-11
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 106,
+          "bothPass": 39,
+          "aOnly": 12,
+          "bOnly": 18,
+          "bothFail": 37,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.361594608053565,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 118,
+          "bothPass": 91,
+          "aOnly": 12,
+          "bOnly": 10,
+          "bothFail": 5,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 0.8318119049072266,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ],
+      "line_criteria": [
+        {
+          "criterion": "correctness",
+          "pairs": 103,
+          "bothPass": 11,
+          "aOnly": 5,
+          "bOnly": 17,
+          "bothFail": 70,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 11,
+            "na": 20
+          },
+          "p": 0.01690053939819336,
+          "pHolm": 0.0845026969909668,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "hallucination",
+          "pairs": 95,
+          "bothPass": 65,
+          "aOnly": 25,
+          "bOnly": 5,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 39,
+            "na": 0
+          },
+          "p": 0.00032491423189640045,
+          "pHolm": 0.0019494853913784027,
+          "pHolmFamily": 0.038989707827568054
+        },
+        {
+          "criterion": "privacy",
+          "pairs": 22,
+          "bothPass": 15,
+          "aOnly": 2,
+          "bOnly": 5,
+          "bothFail": 0,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 112
+          },
+          "p": 0.453125,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "query safety",
+          "pairs": 118,
+          "bothPass": 27,
+          "aOnly": 3,
+          "bOnly": 59,
+          "bothFail": 29,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 16
+          },
+          "p": 1.724922288337538e-14,
+          "pHolm": 1.2074456018362767e-13,
+          "pHolmFamily": 2.259648197722175e-12
+        },
+        {
+          "criterion": "clinical caution",
+          "pairs": 120,
+          "bothPass": 41,
+          "aOnly": 17,
+          "bOnly": 21,
+          "bothFail": 41,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 0,
+            "na": 14
+          },
+          "p": 0.6271025701571489,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "readability",
+          "pairs": 132,
+          "bothPass": 103,
+          "aOnly": 12,
+          "bOnly": 11,
+          "bothFail": 6,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 12,
+            "error": 0,
+            "human": 2,
+            "na": 0
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        },
+        {
+          "criterion": "consistency",
+          "pairs": 7,
+          "bothPass": 1,
+          "aOnly": 2,
+          "bOnly": 2,
+          "bothFail": 2,
+          "excluded": {
+            "unpaired": 0,
+            "skipped": 10,
+            "error": 0,
+            "human": 0,
+            "na": 113
+          },
+          "p": 1,
+          "pHolm": 1,
+          "pHolmFamily": 1
+        }
+      ]
+    }
+  ]
+}

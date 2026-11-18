@@ -32,6 +32,8 @@ import {
   valuesAroundEventInput,
   rhythmIrregularityInput,
   cohortEventRatesInput,
+  showMyDayInput,
+  showMyPeriodInput,
 } from "../../packages/query-tools/schemas";
 
 import { AF_SUBSET_COHORT } from "../../packages/query-tools/event-rates/cohort-rates";
@@ -96,6 +98,8 @@ export const KEYED_TOOLS = {
   values_around_event: valuesAroundEventInput,
   rhythm_irregularity: rhythmIrregularityInput,
   cohort_event_rates: cohortEventRatesInput,
+  show_my_day: showMyDayInput,
+  show_my_period: showMyPeriodInput,
 } as const;
 
 export type KeyedTool = keyof typeof KEYED_TOOLS;
@@ -126,6 +130,8 @@ export const AUDIT_TOOL_NAMES = [
   "values_around_event",
   "rhythm_irregularity",
   "cohort_event_rates",
+  "show_my_day",
+  "show_my_period",
   "guidelines.guideline_search",
   "knowledge.knowledge_search",
   "gbd.gbd_query",
@@ -230,6 +236,12 @@ export const expectSchema = z
       )
       .min(1)
       .optional(),
+    /**
+     * The wearable rows a right answer needs, as stored metric keys
+     * (`whoop.recovery.hrv.2026-10-01`): the truth retrieval recall and
+     * precision are measured against (#508). Left out, retrieval is not scored.
+     */
+    wearable_rows: z.array(z.string().min(1)).min(1).optional(),
     /** Phrases or behaviours that fail the item when present. */
     must_not: z.array(z.string().min(1)).min(1),
   })

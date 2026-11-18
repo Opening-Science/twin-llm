@@ -18,6 +18,10 @@
  * defined: the result says so with `kappa: null` and keeps p_o. When only
  * one side used a single category, kappa is 0 and the standard error
  * formula gives 0, which is not a real certainty: the interval is null.
+ *
+ * Beside kappa (#304): Krippendorff's alpha (ordinal on the five levels,
+ * nominal on pass or fail), and a percentile bootstrap 95 % interval over
+ * lines for both, with a fixed seed so the interval is the same on every run.
  */
 import { lineToken } from "../../features/lab/rater-lines";
 import {
@@ -115,10 +119,193 @@ export type RunAgreementInput = Readonly<{
   raters: ReadonlyMap<string, ReadonlyMap<string, number>>;
 }>;
 
+export type AlphaMetric = "nominal" | "ordinal" | "interval";
+
+export type Alpha = Readonly<{
+  /** Units with at least two values, the ones alpha uses. */
+  units: number;
+  /** Pairable values in those units (n in Krippendorff's notation). */
+  values: number;
+  observed: number;
+  expected: number;
+  /** Null when the expected disagreement is 0 (one value only). */
+  alpha: number | null;
+}>;
+
+/**
+ * Krippendorff's alpha (Krippendorff 2011, "Computing Krippendorff's
+ * Alpha-Reliability", Annenberg School for Communication, Departmental
+ * Papers 43), from the coincidence matrix: each unit's values, one per
+ * coder, null where a coder gave none. Units with fewer than two values are
+ * not pairable and are left out. Any number of coders; missing values allowed.
+ *
+ * alpha = 1 - D_o / D_e, with D_o = sum o_ck d(c,k) / n and
+ * D_e = sum n_c n_k d(c,k) / (n (n - 1)). The difference function d is
+ * nominal (0 or 1), interval ((c - k)^2), or ordinal: the squared sum of
+ * the marginal counts n_g from c to k, less half of n_c and n_k.
+ */
+export const krippendorffAlpha = (
+  units: readonly (readonly (number | null)[])[],
+  metric: AlphaMetric,
+): Alpha | null => {
+  const pairable = units
+    .map((unit) => unit.filter((value): value is number => value !== null))
+    .filter((unit) => unit.length >= 2);
+  if (pairable.length === 0) return null;
+  const categories = [...new Set(pairable.flat())].sort((a, b) => a - b);
+  const index = new Map(categories.map((value, i) => [value, i]));
+  const size = categories.length;
+  const coincidence = Array.from({ length: size }, () => new Array<number>(size).fill(0));
+  for (const unit of pairable) {
+    const weight = 1 / (unit.length - 1);
+    unit.forEach((first, i) =>
+      unit.forEach((second, j) => {
+        if (i === j) return;
+        const row = coincidence[index.get(first) ?? 0];
+        const column = index.get(second) ?? 0;
+        if (row !== undefined) row[column] = (row[column] ?? 0) + weight;
+      }),
+    );
+  }
+  const marginal = coincidence.map((row) => row.reduce((sum, value) => sum + value, 0));
+  const n = marginal.reduce((sum, value) => sum + value, 0);
+  const at = (values: readonly number[], i: number): number => values[i] ?? 0;
+  const difference = (c: number, k: number): number => {
+    if (c === k) return 0;
+    if (metric === "nominal") return 1;
+    if (metric === "interval") return (at(categories, c) - at(categories, k)) ** 2;
+    const [low, high] = c < k ? [c, k] : [k, c];
+    let between = 0;
+    for (let g = low; g <= high; g += 1) between += at(marginal, g);
+    return (between - (at(marginal, c) + at(marginal, k)) / 2) ** 2;
+  };
+  let observedSum = 0;
+  let expectedSum = 0;
+  for (let c = 0; c < size; c += 1) {
+    for (let k = 0; k < size; k += 1) {
+      const d = difference(c, k);
+      observedSum += at(coincidence[c] ?? [], k) * d;
+      expectedSum += at(marginal, c) * at(marginal, k) * d;
+    }
+  }
+  const observed = observedSum / n;
+  const expected = n > 1 ? expectedSum / (n * (n - 1)) : 0;
+  return {
+    units: pairable.length,
+    values: n,
+    observed,
+    expected,
+    alpha: expected > 1e-12 ? 1 - observed / expected : null,
+  };
+};
+
+/** Mulberry32: a small seeded generator, so a bootstrap is the same on every machine. */
+const seededRandom = (seed: number): (() => number) => {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+export const BOOTSTRAP_RESAMPLES = 2000;
+export const BOOTSTRAP_SEED = 304;
+
+export type BootstrapInterval = Readonly<{
+  low: number;
+  high: number;
+  resamples: number;
+  /** Resamples where the statistic was defined; the interval rests on these. */
+  used: number;
+}>;
+
+/** The q-quantile of sorted values, interpolated between neighbours (Hyndman and Fan type 7). */
+const quantile = (sorted: readonly number[], q: number): number => {
+  const position = (sorted.length - 1) * q;
+  const below = Math.floor(position);
+  const low = sorted[below] ?? Number.NaN;
+  const high = sorted[Math.min(below + 1, sorted.length - 1)] ?? low;
+  return low + (high - low) * (position - below);
+};
+
+/**
+ * Percentile bootstrap 95 % interval of a statistic over units (Efron and
+ * Tibshirani 1993, ch. 13): resample the units with replacement, as many as
+ * there are, recompute, and take the 2.5th and 97.5th percentiles. Resamples
+ * where the statistic is not defined (every line in one category, say) are
+ * dropped and counted. Null when there are no units or no resample is defined.
+ */
+export const bootstrapInterval = <T>(
+  units: readonly T[],
+  statistic: (sample: readonly T[]) => number | null,
+  resamples: number = BOOTSTRAP_RESAMPLES,
+  seed: number = BOOTSTRAP_SEED,
+): BootstrapInterval | null => {
+  if (units.length === 0) return null;
+  const random = seededRandom(seed);
+  const values: number[] = [];
+  for (let r = 0; r < resamples; r += 1) {
+    const sample = Array.from(
+      { length: units.length },
+      () => units[Math.floor(random() * units.length)] as T,
+    );
+    const value = statistic(sample);
+    if (value !== null && Number.isFinite(value)) values.push(value);
+  }
+  if (values.length === 0) return null;
+  values.sort((a, b) => a - b);
+  return {
+    low: quantile(values, 0.025),
+    high: quantile(values, 0.975),
+    resamples,
+    used: values.length,
+  };
+};
+
+/** Alpha of paired labels: numbers for ordinal or interval, any text for nominal. */
+const alphaOfPairs = (
+  pairs: readonly (readonly [string, string])[],
+  metric: AlphaMetric,
+): Alpha | null => {
+  const codes = new Map([...new Set(pairs.flat())].sort().map((label, i) => [label, i]));
+  const value = (label: string): number =>
+    metric === "nominal" ? (codes.get(label) ?? 0) : Number(label);
+  return krippendorffAlpha(
+    pairs.map((pair) => [value(pair[0]), value(pair[1])]),
+    metric,
+  );
+};
+
 export type AgreementRow = Readonly<{
   comparison: string;
   result: Kappa | null;
+  /** Percentile bootstrap interval of kappa over lines. */
+  kappaBootstrap: BootstrapInterval | null;
+  metric: AlphaMetric;
+  alpha: Alpha | null;
+  /** Percentile bootstrap interval of alpha over lines. */
+  alphaBootstrap: BootstrapInterval | null;
 }>;
+
+/** Every statistic of one comparison on its paired labels. */
+export const agreementRow = (
+  comparison: string,
+  pairs: readonly (readonly [string, string])[],
+  metric: AlphaMetric,
+): AgreementRow => ({
+  comparison,
+  result: cohenKappa(pairs),
+  kappaBootstrap: bootstrapInterval(pairs, (sample) => cohenKappa(sample)?.kappa ?? null),
+  metric,
+  alpha: alphaOfPairs(pairs, metric),
+  alphaBootstrap: bootstrapInterval(
+    pairs,
+    (sample) => alphaOfPairs(sample, metric)?.alpha ?? null,
+  ),
+});
 
 const acceptable = (level: number): string => (isAcceptable(level) ? "pass" : "fail");
 
@@ -145,17 +332,18 @@ const pooled = <A, B>(
  */
 export const agreementRows = (runs: readonly RunAgreementInput[]): AgreementRow[] => {
   const raters = [...new Set(runs.flatMap((run) => [...run.raters.keys()]))].sort();
-  const againstScorer = raters.map((rater) => ({
-    comparison: `${rater} vs scorer (correctness; 4–5 = pass)`,
-    result: cohenKappa(
+  const againstScorer = raters.map((rater) =>
+    agreementRow(
+      `${rater} vs scorer (correctness; 4–5 = pass)`,
       pooled(
         runs,
         (run) => run.raters.get(rater),
         (run) => run.scorer,
         (level: number, outcome: ScorerOutcome) => [acceptable(level), outcome],
       ),
+      "nominal",
     ),
-  }));
+  );
   const pairsOfRaters = raters.flatMap((first, index) =>
     raters.slice(index + 1).flatMap((second) => {
       const both = (label: (a: number, b: number) => readonly [string, string]) =>
@@ -166,14 +354,16 @@ export const agreementRows = (runs: readonly RunAgreementInput[]): AgreementRow[
           label,
         );
       return [
-        {
-          comparison: `${first} vs ${second} (five levels)`,
-          result: cohenKappa(both((a, b) => [String(a), String(b)])),
-        },
-        {
-          comparison: `${first} vs ${second} (4–5 vs 1–3)`,
-          result: cohenKappa(both((a, b) => [acceptable(a), acceptable(b)])),
-        },
+        agreementRow(
+          `${first} vs ${second} (five levels)`,
+          both((a, b) => [String(a), String(b)]),
+          "ordinal",
+        ),
+        agreementRow(
+          `${first} vs ${second} (4–5 vs 1–3)`,
+          both((a, b) => [acceptable(a), acceptable(b)]),
+          "nominal",
+        ),
       ];
     }),
   );

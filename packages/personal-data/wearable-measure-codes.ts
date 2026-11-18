@@ -6,7 +6,7 @@
  * as a lab name not in the table would be. Nothing here invents a code.
  *
  * Pure data, with no Node import, so the browser can name a code from it too
- * (the tool trace, `features/arena/measure-names.ts`).
+ * (the tool trace, `features/compare/tool-cards.ts`).
  */
 
 const LOINC = "http://loinc.org";

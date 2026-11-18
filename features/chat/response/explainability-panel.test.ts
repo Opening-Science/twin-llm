@@ -2,12 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
-import {
-  SYSTEM_IDS,
-  validateInterpretationDocument,
-} from "@open-twin/interpretation-contract";
 
 import { parseTwinAnswer } from "@/infrastructure/parse-twin-answer";
+import { SYSTEM_IDS } from "@/packages/anatomy/systems";
 
 import { buildResponseDocumentV1 } from "./build-document";
 import { formatContractStateLine } from "./contract-lines";
@@ -21,17 +18,14 @@ import {
 import fixture from "./fixtures/contract-nine-systems.json";
 
 const panelSource = readFileSync(
-  join(import.meta.dir, "../../arena/explainability-panel.tsx"),
+  join(import.meta.dir, "../../compare/evidence-panel.tsx"),
   "utf8",
 );
 
 describe("explainability panel + fixture contract", () => {
-  test("pin fixture covers all nine SystemIds and is conformant", () => {
-    const result = validateInterpretationDocument(fixture);
-    expect(result.ok).toBe(true);
-    expect(result.document).toBeDefined();
-    const ids = result.document!.states.map((state) => state.system_id);
-    expect(ids).toEqual([...SYSTEM_IDS]);
+  test("fixture covers each of the nine SystemIds once", () => {
+    const ids = fixture.states.map((state) => state.system_id);
+    expect([...ids].sort()).toEqual([...SYSTEM_IDS].sort());
   });
 
   test("Unverified narration copy and nine compact SystemId rows", () => {

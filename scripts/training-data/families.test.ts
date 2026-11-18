@@ -246,7 +246,7 @@ describe("data families", () => {
     ]);
     if (trend.reply.kind !== "sections") throw new Error("expected sections");
     expect(trend.reply.sections.reasoning).toStartWith(
-      "I called `subject_window` for subject s-a: the records end on 1 Oct 2026, so the last 30 days run from 2 Sept 2026 to 1 Oct 2026. I called `trend`",
+      "I called `subject_window` for subject s-a: the records end on 1 Oct 2026, so the last 30 days run from 2 Sep 2026 to 1 Oct 2026. I called `trend`",
     );
   });
 

@@ -5,6 +5,7 @@ import { cn } from "@/infrastructure/ui";
 import { categoryTextClass } from "../category-token";
 import {
   ChartFocusFrame,
+  ChartGroup,
   ChartReadout,
   mutedUnlessFocused,
   useChartFocus,
@@ -109,7 +110,7 @@ export const StreakGrid = ({
           })}
     </div>
   );
-  if (!live) return grid;
+  if (!live) return <ChartGroup label={label ?? "Days"}>{grid}</ChartGroup>;
   return (
     <div className="flex flex-col gap-2">
       <ChartReadout

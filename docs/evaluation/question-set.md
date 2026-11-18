@@ -108,8 +108,8 @@ data is in a question, the key or the logs.
 - `tags` marks probes and the latency set. `human` is the note for the review
   sheet.
 - `context.requires` lists env an item needs (S4 needs `GBD_MCP_URL` and
-  `GBD_MCP_TOKEN`); C3 skips such an item when the env is missing, it does not
-  fail it.
+  `GBD_MCP_TOKEN`, met by the local GBD store too); C3 skips such an item when
+  the env is missing, it does not fail it, and prints the unset names first.
 
 ## Answer key
 
@@ -161,9 +161,65 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
-S4 needs the IHME GBD MCP server (`docs/gbd.md`). It is a remote service
-over HTTPS, not a local process or a cache, so an S4 run needs network access.
-Add two names to `.env.eval` (placeholders in `.env.synthetic.example`):
+Each key records the open-twin pin it was built at (`open_twin_sha`), and the
+live checks compare it. A pin bump (`scripts/sync-open-twin.sh`) therefore
+fails them until the keys are rebuilt, even when no entry changes. Rebuild in
+the same PR as the bump, and check that the diff touches only
+`open_twin_sha` and `generated_on`; anything else is a real change to review.
+The v1 and v1h keys were rebuilt at `2fd26911` on 2026-11-17 with every entry
+unchanged. The S7, S7b, S7h and hb keys still name `a9e126c9` and need the
+same rebuild once their cohorts are built (`bun run synthea:s7`).
+
+S4 runs by one of two routes (#273). Pick one before an S4 run; with neither,
+the run prints, before any model call, the scenario, the number of items and
+the exact unset names, for example
+
+```text
+S4: 10 items will be skipped as MISSING_ENV; unset: GBD_MCP_URL, GBD_MCP_TOKEN. ...
+```
+
+and writes every S4 item as `MISSING_ENV` (the items list both names in
+`context.requires`), counted as skipped, not failed.
+
+**Local route (preferred, #387, `docs/gbd.md`).** No variables, no network and
+no token; `LOCAL_ONLY=true` can stay. Import GBD 2023 Results Tool CSVs into
+the eval database covering the measures, causes, locations, sexes, ages and
+years Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09
+and Q-S4-10 are out-of-catalogue probes, and an import that holds them turns
+the probes into answerable questions their expectations do not fit. The
+harness checks this: before a run with any S4 item on the local route it looks
+for a Germany row or a 2015 row and, if either is stored, stops with
+`GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
+not checked.
+
+One Results Tool query ("Cause of death or injury", steps in
+[gbd.md](../gbd.md#exporting-from-the-gbd-results-tool)) covers the v1 and
+v1h S4 items:
+
+| Field    | Tick                                                              |
+| -------- | ----------------------------------------------------------------- |
+| Measure  | Deaths, DALYs, YLDs, YLLs, Prevalence, Incidence                  |
+| Metric   | Number, Rate                                                      |
+| Cause    | All causes, Cardiovascular diseases, Neoplasms, Diabetes mellitus |
+| Location | Global, Switzerland, United Kingdom, United States of America     |
+| Age      | All ages, Age-standardized                                        |
+| Sex      | Both, Male, Female                                                |
+| Year     | 2019, 2020, 2021                                                  |
+
+Not Germany and not 2015. `gbd_estimate` offers no age band, so Q-S4-08 (a
+60-year-old woman) can only be answered with an all-ages or age-standardised
+figure. The query is about 3,500 rows, one file; an export made in parts
+imports as one.
+
+```sh
+bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
+  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
+bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
+```
+
+**Remote route.** The IHME GBD MCP server, a remote service over HTTPS, so
+the run needs network access. Add two names to `.env.eval` (placeholders in
+`.env.synthetic.example`):
 
 - `GBD_MCP_URL`: the https URL of the GBD MCP endpoint (JSON-RPC over HTTP).
 - `GBD_MCP_TOKEN`: the bearer token for that endpoint. It is a secret from the
@@ -177,22 +233,6 @@ Check the connection before a run:
 ```sh
 RUN_LIVE=1 bun --env-file=.env.eval test packages/gbd-mcp/live.test.ts
 bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4
-```
-
-Without both names every S4 item is written as `MISSING_ENV` (the items list
-them in `context.requires`) and counted as skipped, not failed.
-
-S4 can instead run on the local GBD store (#387, `docs/gbd.md`), with no
-network and no token. Import GBD 2023 Results Tool CSVs into the eval
-database covering the measures, causes, locations, sexes, ages and years
-Q-S4-01 to Q-S4-08 ask. Leave Germany and the year 2015 out: Q-S4-09 and
-Q-S4-10 are out-of-catalogue probes, and an import that holds them turns the
-probes into answerable questions their expectations do not fit.
-
-```sh
-bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
-  scripts/gbd/import.ts ~/Downloads/IHME-GBD_2023_DATA-*.csv
-bun run eval -- --models ollama:qwen3:8b --scenario S4 --run-id <date>-qwen3-8b-s4-local
 ```
 
 When the eval database holds any GBD estimate, the harness offers
@@ -1055,7 +1095,11 @@ and entries, and the probes' keyed values. With `RUN_LIVE=1` and
 files and both must match.
 
 Running it: `bun run eval -- --set v1h --models …`, with the cohort ingested
-in the eval database as for v1. No model has been run on v1h yet.
+in the eval database as for v1.
+
+Correction, 12 Nov 2026 (#304): this section said no model had been run on
+v1h. The first run is `2026-11-01-qwen3-4b-v1h` (#380), qwen3:4b with tools
+at `4b58ef5`; its results are in `docs/research/eval-runs-2026-10.md`.
 
 ### Human review (protocol)
 
@@ -1076,6 +1120,27 @@ Two raters, blind, on a stratified sample, with agreement statistics:
    scorer (levels 4 and 5 as a pass) and the two raters against each other,
    Cohen's kappa with its 95 % interval, reported next to the observed
    agreement.
+
+Amendment, 12 Nov 2026 (#304), written before any v1h rating and without
+looking at any v1h output; the sample of step 2 and the rubric are unchanged:
+
+- Step 1: `review.csv` shows the scorers' flags, so it is blind to the model
+  but not to the score. For the two raters,
+  `bun run eval:rater-sheet -- --runs <run-id>,…` writes one sheet pooled
+  across the runs and models: the step-2 sample of each run with question,
+  reference, note and reply under an opaque id, in one salted order, and
+  nothing else. A rater uses either the pooled sheet or the Lab view, and
+  `eval:rater-sheet` turns a filled sheet into the same ratings files the
+  view writes (`second-rater.md`, "The rater sheet").
+- Step 4: beside kappa and its large-sample interval, Krippendorff's alpha
+  (ordinal on the five levels, nominal on pass or fail) and percentile
+  bootstrap 95 % intervals over lines for both, 2,000 resamples, seed 304.
+  Kappa stays the primary statistic; alpha and the bootstrap are reported
+  with it, not in its place.
+- Repeats: a run may use `--repeats n` (`harness.md`), which raises every
+  item to at least n repeats. The step-2 sample then counts each repeat as a
+  line, so every repeat of S5 and S6 is rated. The six v1h consistency
+  items already run three times.
 
 The Lab's rating view reads v1h runs with `?set=v1h` (#304), on a rubric
 version of its own (the hb anchors speak of verdicts, and S3 and S4 items
@@ -1173,3 +1238,24 @@ the questions' hash and the manifest, and every keyed verdict against the
 planted tag (11 of 11 agree). The subject count comes from `cohort_event_rates`
 (`list_subjects` stops at 200) and the checksum from
 `evaluation/cohorts/synthea-v4-1m-af.manifest.json`.
+
+## Two-source wearable test data (#508)
+
+For the attribution study, `bun run wearables:two-source` writes synthetic Oura,
+WHOOP and Google Health summaries with the source rules' decision planted for every
+measure and day: [synthetic-wearables.md](synthetic-wearables.md). Files only; no
+question here reads them yet.
+
+## Mock day: show_my_day items
+
+Six items (`D-01` to `D-06`) about the illustrative mock day
+(`packages/query-tools/fixtures/mock-day.json`), in `evaluation/mock-day.items.v1.json`
+(schema `twin-llm.eval.mock-day.v1`, `scripts/evaluation/mock-day-items.ts`). Each
+expected value is a dotted path into the day as `show_my_day` lays it out (`beats`,
+`red_windows`); `evaluation/mock-day.items.test.ts` recomputes every one from the
+fixture, so the set cannot drift from the code. They cover the one window worth a look,
+the diabetes profile with none, a run that is not a window, insulin with no amount, a
+question that asks for a judgement about the person, and a measured glucose peak.
+
+The C3 harness reads the warehouse and the mock day is not in it, so these items are
+scored once a run can load the mock day.

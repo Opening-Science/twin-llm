@@ -1,4 +1,4 @@
-import { formatNumber } from "@/infrastructure/format-measure";
+import { formatDate, formatNumber } from "@/infrastructure/format-measure";
 import type { LatticeState } from "@/infrastructure/ui-kit/status-lattice-model";
 import { GBD_CITATION_FILE } from "@/packages/gbd-local/citation";
 import type { GbdCsvError } from "@/packages/gbd-local/results-csv";
@@ -71,6 +71,6 @@ export const splitGbdSelection = <T extends Readonly<{ name: string }>>(
 export const gbdImportCountsLabel = (view: GbdImportView): string =>
   `${count(view.rowCount, "row", "rows")}, ${formatNumber(view.newRows, 0)} new when imported, ${formatNumber(view.storedRows, 0)} held now`;
 
-/** The day a file was imported, as YYYY-MM-DD. */
+/** The day a file was imported, as `2 Nov 2026` (its UTC day). */
 export const gbdImportedOn = (view: GbdImportView): string =>
-  view.importedAt.slice(0, 10);
+  formatDate(view.importedAt.slice(0, 10));
