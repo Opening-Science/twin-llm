@@ -11,7 +11,7 @@ import {
   GLUCOSE_PROFILES,
   redWindows,
 } from "./day-beats";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { mockDayReadings } from "./mock-day";
 
 /** The review page for Robin must hold every threshold and every sentence on screen. */
 const DOC = readFileSync(
@@ -28,13 +28,7 @@ const reading = (
 
 /** The mock day plus readings that reach every direction and every window. */
 const READINGS: readonly DayReading[] = [
-  ...MOCK_DAY.readings.map((one) => ({
-    time: one.time,
-    event: one.event,
-    heartRatePerMin: one.heart_rate_per_min,
-    glucoseMgDl: one.glucose_mg_dl,
-    moving: one.moving,
-  })),
+  ...mockDayReadings("blood"),
   reading("23:00", 110, 60, false),
   reading("23:10", 111, 61, false),
   reading("23:20", 70, 100, false),
@@ -92,7 +86,7 @@ describe("docs/day-thresholds.md", () => {
     expect(DOC).toContain(`| change under ${steady.heart_rate} /min `);
     expect(DOC).toContain(`| change under ${steady.glucose} mg/dL `);
     expect(DOC).toContain(
-      `| glucose rise of ${insulinRise} mg/dL or more since the reading before `,
+      `| glucose rise of ${insulinRise} mg/dL or more since the last glucose reading `,
     );
   });
 

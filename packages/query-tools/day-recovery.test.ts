@@ -2,16 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import { DAY_THRESHOLDS, type DayReading } from "./day-beats";
 import { recoveries } from "./day-recovery";
-import MOCK_DAY from "./fixtures/mock-day.json";
+import { mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const MOCK: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const MOCK: readonly DayReading[] = mockDayReadings("blood");
 
 const heart = (
   time: string,
@@ -101,5 +95,24 @@ describe("recoveries", () => {
       { ...DAY_THRESHOLDS, recoveryWithinPerMin: 15 },
     );
     expect(one?.back_at).toBe("17:40");
+  });
+
+  test("a moving reading with no heart rate does not split a workout", () => {
+    const glucoseOnly: DayReading = { ...heart("10:05", null, true), glucoseMgDl: 120 };
+    const found = recoveries([
+      heart("09:50", 60, false),
+      heart("10:00", 140, true),
+      glucoseOnly,
+      heart("10:10", 150, true),
+      heart("10:30", 65, false),
+    ]);
+    expect(found.map((one) => [one.from, one.to, one.peak_per_min, one.back_at])).toEqual(
+      [["10:00", "10:10", 150, "10:30"]],
+    );
+  });
+
+  test("a moving run with no heart rate at all is no workout", () => {
+    const glucoseOnly: DayReading = { ...heart("10:05", null, true), glucoseMgDl: 120 };
+    expect(recoveries([heart("09:50", 60, false), glucoseOnly])).toEqual([]);
   });
 });
