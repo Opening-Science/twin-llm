@@ -45,3 +45,11 @@ export const kioskPlaceholder = (reviewer: string): string =>
 
 /** Under the day strip: midnight, every six hours, midnight. */
 export const KIOSK_STRIP_HOURS = ["00:00", "06:00", "12:00", "18:00", "24:00"] as const;
+
+/** The attract loop: nobody is at the screen yet. */
+export const KIOSK_ATTRACT = "Press anywhere to start";
+export const KIOSK_ATTRACT_NOTE =
+  "See one day of a synthetic person: heart rate and blood sugar, beat by beat, on the twin.";
+
+/** The one control's name before a day starts. */
+export const KIOSK_START = "Start the day";

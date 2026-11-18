@@ -25,8 +25,27 @@ current one tall and solid, a worth-a-look time as a ring over a hatched band
 times the day already wrote, and screen readers skip it because the beat says the same
 in words.
 
-A press anywhere on the screen, or Space, Enter or the right arrow, goes on to the next
-beat; the left arrow goes back. The last beat stays.
+## A visit
+
+With nobody at the screen the kiosk runs its attract loop: the twin turns and the screen
+asks for a press. A press starts the day on its first beat; each press after that goes
+on a beat, and the left arrow goes back one. A press on the last beat ends the day, and
+so does a minute with no press (`IDLE_RESET_MS` in
+`features/digital-twin/kiosk/kiosk-session.ts`). Either way the kiosk is back in the
+attract loop exactly as it started.
+
+Nothing of a visit is kept. The session lives in memory only, no kiosk file touches
+browser storage or cookies (a test reads them to check), and focus is let go on the way
+back to the attract loop.
+
+## Triggers
+
+A trigger is what presses: a function that calls `onPress` (or `onBack`) and returns a
+function that stops listening (`kiosk-trigger.ts`). The screen itself is one, a press
+anywhere on it. The keyboard is another: Space, Enter and the right or down arrow press,
+the left or up arrow go back, so a desk test or a USB button that sends a key works. The
+light ring on the kiosk's stand will be a third with the same shape, once how it talks to
+the browser is decided.
 
 ## Running it on the screen
 

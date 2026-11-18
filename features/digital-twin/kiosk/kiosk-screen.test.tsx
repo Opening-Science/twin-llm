@@ -7,11 +7,13 @@ import { mockKioskDay } from "@/packages/query-tools/mock-kiosk-day";
 
 import { KioskBeatCard } from "./kiosk-beat";
 import {
+  KIOSK_ATTRACT,
+  KIOSK_ATTRACT_NOTE,
   KIOSK_FOOTER,
   KIOSK_MOCK_NOTE,
   KIOSK_NEEDS_WEBGL,
-  KIOSK_NEXT,
   KIOSK_STRIP_HOURS,
+  KIOSK_START,
   KIOSK_SUBTITLE,
   KIOSK_TITLE,
   KIOSK_UTC,
@@ -41,26 +43,24 @@ const NOTES = [
 describe("KioskScreen", () => {
   const html = renderToStaticMarkup(createElement(KioskScreen, { day: DAY }));
 
-  test("shows the title, the first beat of the day as written, and the research line", () => {
+  test("opens on the attract loop: the title, the call to press, and the research line", () => {
     expect(text(html)).toEqual([
       KIOSK_TITLE,
       KIOSK_SUBTITLE,
-      "1 of 18",
-      ...KIOSK_STRIP_HOURS,
-      "03:00",
-      "Deep sleep",
-      "Heart rate steady · about 52 /min · measured",
-      "The heart keeps a steady pace.",
-      "The twin shows: Heart.",
-      ...NOTES,
+      KIOSK_ATTRACT,
+      KIOSK_ATTRACT_NOTE,
       KIOSK_FOOTER,
     ]);
   });
 
-  test("the whole screen is one button that goes on", () => {
+  test("the whole screen is one button, which starts the day", () => {
     expect(html).toContain(
-      `<button type="button" class="kiosk-press" aria-label="${KIOSK_NEXT}">`,
+      `<button type="button" class="kiosk-press" aria-label="${KIOSK_START}">`,
     );
+  });
+
+  test("says which phase it is in, for the attract styles", () => {
+    expect(html).toContain('data-phase="attract"');
   });
 
   test("says the body is synthetic and not advice", () => {
@@ -69,7 +69,7 @@ describe("KioskScreen", () => {
   });
 
   test("is dark whatever the machine's theme", () => {
-    expect(html).toStartWith('<div class="kiosk dark">');
+    expect(html).toStartWith('<div class="kiosk dark"');
   });
 
   test("before hydration shows neither the twin nor the WebGL note", () => {
@@ -79,6 +79,25 @@ describe("KioskScreen", () => {
 });
 
 describe("KioskBeatCard", () => {
+  test("the first beat as written, with the notes that always go with the day", () => {
+    expect(
+      text(
+        renderToStaticMarkup(
+          createElement(KioskBeatCard, { day: DAY, index: 0, focusLabel: "Heart" }),
+        ),
+      ),
+    ).toEqual([
+      "1 of 18",
+      ...KIOSK_STRIP_HOURS,
+      "03:00",
+      "Deep sleep",
+      "Heart rate steady · about 52 /min · measured",
+      "The heart keeps a steady pace.",
+      "The twin shows: Heart.",
+      ...NOTES,
+    ]);
+  });
+
   const card = (index: number) =>
     text(
       renderToStaticMarkup(
