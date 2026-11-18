@@ -30,7 +30,7 @@ describe("knowledge tool isolation", () => {
     expect(chatTools).toContain(
       "make.knowledge(scope, undefined, literatureSourcesForAgent(options?.agent))",
     );
-    expect(turn).toContain("drainKnowledgeTurn(turnId)");
+    expect(turn).toContain("drainKnowledgeTurn(key)");
     expect(turn).toContain("knowledgeSources: knowledge.sources");
   });
 
