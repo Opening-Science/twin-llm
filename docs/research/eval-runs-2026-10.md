@@ -1434,7 +1434,7 @@ comes from matters more than its size:
 - **The pilot's correctness rests on fewer scored answers.** 45 % of its v1h
   correctness lines (15) and 25 % on v1 (29) are `human`, nearly all
   because a keyed value is not in its short one-paragraph answer (14 of 15
-  and 28 of 29). The paired test leaves those out, so 10–0 on v1h is 13
+  and 28 of 29). The paired test leaves those out, so 0–10 on v1h is 13
   scored items, not 32.
 - **Calls are not more exact.** All calls right: 9 of 28 keyed v1h answers
   for the pilot against 15 for the base; the pilot more often reads another
