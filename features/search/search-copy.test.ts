@@ -35,7 +35,7 @@ describe("SEARCH_COPY", () => {
   test("the German privacy line says no more than the English one", () => {
     // Own threads only, matched locally: the same two claims, nothing added.
     expect(SEARCH_COPY.de.privacy).toBe(
-      "Nur deine eigenen Unterhaltungen. Abgeglichen auf diesem Rechner.",
+      "Nur deine eigenen Unterhaltungen. Gesucht wird nur auf diesem Rechner.",
     );
   });
 });

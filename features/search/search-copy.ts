@@ -80,7 +80,7 @@ export const SEARCH_COPY: Translated<SearchCopy> = {
     nothingMatches: "Noch passt nichts dazu.",
     wordsOnly:
       "Nur nach Wörtern gesucht. Starte Ollama mit dem Embedding-Modell, um auch nach Bedeutung zu suchen.",
-    privacy: "Nur deine eigenen Unterhaltungen. Abgeglichen auf diesem Rechner.",
+    privacy: "Nur deine eigenen Unterhaltungen. Gesucht wird nur auf diesem Rechner.",
     hintClose: "Schließen",
     hintChangeType: "Art wechseln",
     hintOpen: "Öffnen",
