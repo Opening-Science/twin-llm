@@ -150,9 +150,40 @@ describe("partA", () => {
     expect(result.h2b.estimate).toBe(0);
     expect(result.h2b.nonInferior).toBe(true);
   });
+
+  test("H2b is evaluated only when H2a is supported", () => {
+    expect(partA(records, QUICK).h2b.evaluated).toBe(false);
+    const betterC2 = records.map((record) =>
+      record.stratum === "disagree" && record.score !== null
+        ? {
+            ...record,
+            score: { ...record.score, disagreementHandled: record.condition === "C2" },
+          }
+        : record,
+    );
+    const result = partA(betterC2, QUICK);
+    expect(result.supported.H2a).toBe(true);
+    expect(result.h2b.evaluated).toBe(true);
+  });
+
+  test("an error on an agree item counts as over-hedged", () => {
+    const failedC2 = records.map((record) =>
+      record.variant === "base" && record.stratum === "agree" && record.condition === "C2"
+        ? { ...record, score: null, error: "down", answer: null }
+        : record,
+    );
+    expect(partA(failedC2, QUICK).h2b.estimate).toBe(1);
+  });
 });
 
 describe("contrastsMarkdown", () => {
+  test("H2b says it was not evaluated when H2a is not supported", () => {
+    const row =
+      contrastsMarkdown(partA(records, QUICK)).find((line) => line.startsWith("| H2b:")) ??
+      "";
+    expect(row).toContain("not evaluated: H2a not supported");
+  });
+
   const h1Row = (lines: readonly string[]) =>
     lines.find((line) => line.startsWith("| H1:")) ?? "";
 
