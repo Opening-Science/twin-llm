@@ -56,3 +56,15 @@ export const spokenAnswer = (
  */
 export const twinTurnOf = (answer: SpokenAnswer): TwinFocusId | null =>
   answer.shownFocus ?? organNamed(answer.text, answer.prompt);
+
+/**
+ * Closing the twin card forgets where a spoken answer turned it, so the card
+ * opens at its start next time rather than jumping back to that organ.
+ */
+export const closeTwinCard = (
+  close: () => void,
+  clearTurn: (turn: null) => void,
+): void => {
+  clearTurn(null);
+  close();
+};

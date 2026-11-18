@@ -43,4 +43,22 @@ describe("spokenUnits", () => {
       "On 2026-11-18 it was 60 to 62 beats per minute",
     );
   });
+
+  test("a German date or clock time keeps its dots; only a decimal gets the comma", () => {
+    expect(
+      spokenUnits("Am 18.11.2026 um 7.30 Uhr lag der Blutzucker bei 5.4 mmol/L.", "de"),
+    ).toBe("Am 18.11.2026 um 7.30 Uhr lag der Blutzucker bei 5,4 Millimol pro Liter.");
+    expect(spokenUnits("Von 7.30–8.15 Uhr, ab 22.45 ruhig.", "de")).toBe(
+      "Von 7.30 bis 8.15 Uhr, ab 22.45 ruhig.",
+    );
+  });
+
+  test("exactly 1 takes the singular", () => {
+    expect(spokenUnits("1 h, 1 min, 1 kcal, 1 bpm and 1.5 h, 21 h", "en")).toBe(
+      "1 hour, 1 minute, 1 kilocalorie, 1 beat per minute and 1.5 hours, 21 hours",
+    );
+    expect(spokenUnits("1 h und 1 min, 1 kg, 11 h", "de")).toBe(
+      "1 Stunde und 1 Minute, 1 Kilogramm, 11 Stunden",
+    );
+  });
 });

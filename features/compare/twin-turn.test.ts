@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { ChatView } from "@/infrastructure/chat-view";
 
 import type { AnswerState, TurnState } from "./conversation";
-import { spokenAnswer, twinTurnOf } from "./spoken-turn";
+import { closeTwinCard, spokenAnswer, twinTurnOf } from "./spoken-turn";
 import { focusRequestOf } from "./twin-card";
 
 const heartView = {
@@ -81,5 +81,16 @@ describe("where the twin turns after a spoken answer", () => {
       },
       at: 7,
     });
+  });
+});
+
+describe("closing the twin card", () => {
+  test("forgets the spoken turn, so reopening starts afresh, not at the old organ", () => {
+    const calls: unknown[] = [];
+    closeTwinCard(
+      () => calls.push("close"),
+      (turn) => calls.push(["turn", turn]),
+    );
+    expect(calls).toEqual([["turn", null], "close"]);
   });
 });
