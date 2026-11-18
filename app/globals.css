@@ -1661,6 +1661,46 @@
     @apply text-muted-foreground pt-4 text-sm;
   }
 
+  /* Push to talk on the prompt bar (features/compare/push-to-talk.tsx): the
+     voice language as a small pill and the microphone as a round button.
+     While held, the button fills with the primary colour and a ring pulses;
+     under reduced motion the fill alone says it is listening. The status
+     line is for screen readers and for a problem in words. */
+  .voice-control {
+    @apply inline-flex items-center gap-1;
+  }
+
+  .voice-language {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 font-mono text-[11px] font-medium tracking-wide outline-none focus-visible:ring-2 disabled:opacity-50;
+  }
+
+  .voice-talk {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring relative inline-flex size-8 shrink-0 touch-none items-center justify-center rounded-full border outline-none select-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .voice-talk[data-listening] {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  .voice-status:empty {
+    @apply sr-only;
+  }
+
+  .voice-status {
+    @apply text-muted-foreground max-w-56 truncate text-xs;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .voice-talk[data-listening]::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      border: 2px solid var(--color-primary);
+      animation: voice-ring 1.2s ease-out infinite;
+    }
+  }
+
   /* --- Bento grid (infrastructure/ui-kit/bento-grid.tsx) -------------------
      Columns come from the grid's measured width (bento-model.ts) as
      `--bento-columns`. The pointer light is one radial gradient in grid
@@ -1796,6 +1836,17 @@
 .compare-twin-body .wearables-hero {
   height: 270px;
   min-height: 0;
+}
+
+@keyframes voice-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25);
+  }
 }
 
 @keyframes placeholder-pulse {
