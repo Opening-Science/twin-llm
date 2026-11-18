@@ -77,3 +77,20 @@ export const worthALookLine = (
 
 /** The button that turns the twin to a window's beat. */
 export const worthALookShow = (from: string): string => `Show the ${from} beat`;
+
+/** Why a week or month was not summarised. */
+export const PERIOD_REFUSED = {
+  "too-many": "Too many readings in this period to summarise.",
+  units: "This period holds glucose in another unit. Nothing is converted.",
+} as const;
+
+/** The week or month card. */
+export const PERIOD_TITLE = "Week and month";
+export const PERIOD_PICK = "Period";
+export const PERIOD_OPTIONS = [
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+] as const;
+export const PERIOD_MOCK =
+  "The illustrative mock is a single day. Pick one of the person's days for a week or month ending on it.";
+export const PERIOD_LOADING = "Loading the period…";
