@@ -237,21 +237,26 @@ export const createThreadExportHandler =
       deps.writePdf ?? threadPdf,
     ).catch(() => null);
     if (file === null) return plain(500, NOT_MADE_SENTENCE);
+    // The ledger counts the bytes that leave, which for a PDF or FHIR file is not the Markdown.
+    const fileBytes = (await file.clone().arrayBuffer()).byteLength;
 
     try {
-      await deps.recordDisclosure(disclosure, {
-        actor,
-        sessionId: threadId,
-        subjectRef: null,
-        tool: "thread.export",
-        args: { format },
-        result: {
-          // Characters, as before; the ledger row counts UTF-8 bytes.
-          size: markdown.length,
-          freeText: kindsAndCounts(decision.freeText),
+      await deps.recordDisclosure(
+        { ...disclosure, payloadBytes: fileBytes },
+        {
+          actor,
+          sessionId: threadId,
+          subjectRef: null,
+          tool: "thread.export",
+          args: { format },
+          result: {
+            // Characters, as before; the ledger row counts UTF-8 bytes.
+            size: markdown.length,
+            freeText: kindsAndCounts(decision.freeText),
+          },
+          rowCount: answerCount(thread),
         },
-        rowCount: answerCount(thread),
-      });
+      );
     } catch {
       return plain(500, NOT_RECORDED_SENTENCE);
     }
