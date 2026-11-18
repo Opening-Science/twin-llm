@@ -7,8 +7,9 @@
  * - `day`: someone pressed. The day plays beat by beat, a press going on.
  *
  * A press on the last beat ends the day, and so does a stretch with no press
- * (`IDLE_RESET_MS`) or a reset (staff at the kiosk pressing Escape). Either way the session goes back to exactly
- * `ATTRACT`, the value it started from: nothing of the visit is kept.
+ * (`IDLE_RESET_MS`) or a reset (staff at the kiosk pressing Escape). Either
+ * way the session goes back to exactly `ATTRACT`, the value it started from:
+ * nothing of the visit is kept.
  */
 
 export type KioskSession =
