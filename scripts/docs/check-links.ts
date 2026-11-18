@@ -173,17 +173,44 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const toPosix = (path: string): string => path.split(sep).join("/");
 
-const markdownUnder = (dir: string): string[] =>
-  readdirSync(join(ROOT, dir), { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .map((entry) => toPosix(relative(ROOT, join(entry.parentPath, entry.name))));
+/** Folders whose Markdown is not a page: installed packages, build output, test fixtures. */
+const NOT_PAGES = /(?:^|\/)(?:node_modules|dist|\.next|fixtures|research-fixtures)\//;
 
-/** The pages checked: the Markdown files at the root and everything under `docs/`. */
+const markdownUnder = (dir: string): string[] =>
+  existsSync(join(ROOT, dir))
+    ? readdirSync(join(ROOT, dir), { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+        .map((entry) => toPosix(relative(ROOT, join(entry.parentPath, entry.name))))
+        .filter((path) => !NOT_PAGES.test(path))
+    : [];
+
+/**
+ * The other folders with Markdown pages a person reads: skills, the knowledge
+ * notes, READMEs beside code and data, the pull request template.
+ */
+const PAGE_FOLDERS = [
+  ".github",
+  "apps",
+  "evaluation",
+  "features",
+  "knowledge",
+  "packages",
+  "public",
+  "python",
+  "scripts",
+  "skills",
+] as const;
+
+/**
+ * The pages checked: the Markdown files at the root, everything under `docs/`
+ * and the pages in `PAGE_FOLDERS`.
+ */
 export const pagesToCheck = (): readonly string[] => [
   ...readdirSync(ROOT)
     .filter((name) => name.endsWith(".md") && statSync(join(ROOT, name)).isFile())
     .sort(),
   ...markdownUnder("docs").sort(),
+  ...PAGE_FOLDERS.flatMap(markdownUnder).sort(),
 ];
 
 const SOURCE = /\.tsx?$/;

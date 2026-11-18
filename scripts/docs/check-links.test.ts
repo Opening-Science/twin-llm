@@ -9,6 +9,7 @@ import {
   extractLinks,
   headingAnchors,
   type LinkFiles,
+  pagesToCheck,
   sourcesToCheck,
 } from "./check-links";
 
@@ -147,5 +148,27 @@ describe("the app's docs links", () => {
       brokenAppDocLinks(file, readFileSync(join(root, file), "utf8"), repo),
     );
     expect(broken).toEqual([]);
+  });
+});
+
+describe("pagesToCheck", () => {
+  test("reads the root, the docs and the pages beside code, skills and data", () => {
+    const pages = pagesToCheck();
+    for (const page of [
+      "README.md",
+      "docs/runbook.md",
+      "skills/sleep/SKILL.md",
+      "knowledge/opentwin/metric-glossary.md",
+      "public/fonts/README.md",
+      "python/README.md",
+      ".github/pull_request_template.md",
+    ])
+      expect(pages).toContain(page);
+  });
+
+  test("leaves out test fixtures and installed packages", () => {
+    const pages = pagesToCheck();
+    expect(pages.some((page) => page.includes("fixtures/"))).toBe(false);
+    expect(pages.some((page) => page.includes("node_modules/"))).toBe(false);
   });
 });
