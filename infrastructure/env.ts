@@ -50,6 +50,9 @@ export const DEFAULT_CARBON_X_TIMEOUT_S = 120;
 /** Ollama's OpenAI-compatible root on this machine when OLLAMA_BASE_URL is unset. */
 export { DEFAULT_OLLAMA_BASE_URL } from "./ollama-context";
 
+/** How long the local speech sidecar may take for one transcript or one spoken answer. */
+export const DEFAULT_VOICE_SIDECAR_TIMEOUT_S = 30;
+
 /** The Carbon-X sidecar's OpenAI-compatible root when CARBON_X_URL is unset. */
 export const DEFAULT_CARBON_X_URL = "http://127.0.0.1:8090/v1";
 
@@ -450,6 +453,15 @@ const serverEnvSchema = z
         .positive("CARBON_X_TIMEOUT_S must be above 0")
         .default(DEFAULT_CARBON_X_TIMEOUT_S),
     ),
+    VOICE_SIDECAR_URL: maybeUrl(),
+    VOICE_SIDECAR_TIMEOUT_S: z.preprocess(
+      blankAsMissing,
+      z.coerce
+        .number()
+        .int("VOICE_SIDECAR_TIMEOUT_S must be a whole number of seconds")
+        .positive("VOICE_SIDECAR_TIMEOUT_S must be above 0")
+        .default(DEFAULT_VOICE_SIDECAR_TIMEOUT_S),
+    ),
     GBD_MCP_URL: maybeUrl(),
     GBD_MCP_TOKEN: maybeText(),
     // Live PubMed lookups (#6): NCBI asks E-utilities callers to name their
@@ -534,6 +546,15 @@ const serverEnvSchema = z
         path: "CARBON_X_URL",
         message:
           "CARBON_X_URL must be on this machine (localhost, 127.0.0.1 or [::1]); genotypes never leave it",
+      });
+    }
+
+    // The speech sidecar hears the person's voice, so it too stays on this machine.
+    if (env.VOICE_SIDECAR_URL !== undefined && !isLoopbackUrl(env.VOICE_SIDECAR_URL)) {
+      report({
+        path: "VOICE_SIDECAR_URL",
+        message:
+          "VOICE_SIDECAR_URL must be on this machine (localhost, 127.0.0.1 or [::1]); a voice never leaves it",
       });
     }
 
@@ -890,6 +911,18 @@ export const genomeEnv = (env: ServerEnv = serverEnv()): GenomeEnv =>
     assumeBuild: env.GENOME_ASSUME_BUILD ?? null,
     carbonXUrl: env.CARBON_X_URL ?? DEFAULT_CARBON_X_URL,
     carbonXTimeoutMs: env.CARBON_X_TIMEOUT_S * 1000,
+  });
+
+export type VoiceEnv = Readonly<{
+  /** The speech sidecar's root; null leaves voice off. Always loopback (checked at startup). */
+  sidecarUrl: string | null;
+  timeoutMs: number;
+}>;
+
+export const voiceEnv = (env: ServerEnv = serverEnv()): VoiceEnv =>
+  Object.freeze({
+    sidecarUrl: env.VOICE_SIDECAR_URL ?? null,
+    timeoutMs: env.VOICE_SIDECAR_TIMEOUT_S * 1000,
   });
 
 export type SyntheaEnv = Readonly<{
