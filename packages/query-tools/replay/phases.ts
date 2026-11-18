@@ -132,6 +132,8 @@ export const STILL_STEPS_PER_15_MIN = 50;
 export const RESTING_STEPS_PER_15_MIN = 300;
 /** A rise in the night from the lowest glucose to waking that counts as a dawn rise. */
 export const DAWN_RISE_MG_DL = 10;
+/** The hour after a walk or run, left out of "raised heart rate while still". */
+export const AFTER_ACTIVITY_MIN = 60;
 /** The tag that starts winding down, as the demo person enters it; no other word does. */
 export const WIND_DOWN_TAG = "Winding down";
 /** How long a meal's phase lasts unless the next meal comes first. */
@@ -314,6 +316,11 @@ export const storyPhases = (
       event.label.trim().toLowerCase() === WIND_DOWN_TAG.toLowerCase(),
   );
   const moving = (at: number): boolean => activities.some((event) => overlaps(event, at));
+  /** In the hour after a walk or run ends: its own peak and recovery, not stillness. */
+  const justMoved = (at: number): boolean =>
+    activities.some(
+      (event) => ms(event.to) <= at && at < ms(event.to) + AFTER_ACTIVITY_MIN * MINUTE,
+    );
   const stepsAt = (at: number): AvailableReading | undefined =>
     steps.find(
       (reading) =>
@@ -455,7 +462,8 @@ export const storyPhases = (
         reading.value > thresholds.heartRateStillAbovePerMin &&
         stepReading !== undefined &&
         stepReading.value < STILL_STEPS_PER_15_MIN &&
-        !moving(ms(reading.at));
+        !moving(ms(reading.at)) &&
+        !justMoved(ms(reading.at));
       if (!raised) return groups;
       const last = groups.at(-1);
       const previous = heart[index - 1];
@@ -540,7 +548,7 @@ export const storyPhases = (
           to,
           rule: {
             id: "phase_elevated_still",
-            text: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while steps stayed under ${STILL_STEPS_PER_15_MIN} per 15 minutes and no walk or run was recorded.`,
+            text: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while steps stayed under ${STILL_STEPS_PER_15_MIN} per 15 minutes, no walk or run was recorded and none ended in the hour before.`,
           },
           events: group.flatMap((reading) => {
             const stepReading = stepsAt(ms(reading.at));

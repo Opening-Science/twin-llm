@@ -129,15 +129,15 @@ rate and glucose the evidence supports. A phase needs its evidence (a recorded s
 walk or run, a tag the person entered) and readings of its own stream inside it; between
 phases nothing is said, and a day without that evidence has fewer phases.
 
-| Heart rate                    | Evidence                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| Sleep                         | Recorded sleep before waking.                                                    |
-| Waking                        | The half hour after it.                                                          |
-| Resting                       | The hour after that, steps recorded and at most 300 per 15 minutes, no activity. |
-| Walking, Running              | A walk or run the device recorded.                                               |
-| Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run.        |
-| Recovery                      | From a run's end until back within the band, or an hour.                         |
-| Winding down and sleep        | From a tag reading exactly "Winding down", or recorded sleep, to the day's end.  |
+| Heart rate                    | Evidence                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Sleep                         | Recorded sleep before waking.                                                                      |
+| Waking                        | The half hour after it.                                                                            |
+| Resting                       | The hour after that, steps recorded and at most 300 per 15 minutes, no activity.                   |
+| Walking, Running              | A walk or run the device recorded.                                                                 |
+| Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run in it or the hour before. |
+| Recovery                      | From a run's end until back within the band, or an hour.                                           |
+| Winding down and sleep        | From a tag reading exactly "Winding down", or recorded sleep, to the day's end.                    |
 
 | Glucose                  | Evidence                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------- |
