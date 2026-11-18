@@ -15,9 +15,10 @@ Under the twin the kiosk plays the illustrative mock day
 (`packages/query-tools/fixtures/mock-day.json`) in the kiosk-day shape
 ([kiosk-day.md](kiosk-day.md)), built on the server by `mockKioskDay` and drawn as
 written: the time and event, the value line, the body sentence, and where the twin
-turns. The twin goes to the beat's layer and lights its organ. A window's beat reads
-"Worth a look" with a mark and a note beside it, never a colour alone. The notice, the
-placeholder note and "Times are UTC" stay on screen with every beat.
+turns. The twin goes to the beat's layer and lights its organ, through the same
+`beatFocus` as the twin page's day panel. A window's beat reads "Worth a look" with the
+day panel's eye and a note beside it, never a colour alone. The notice, the placeholder
+note and "Times are UTC" stay on screen with every beat.
 
 ## A visit
 
