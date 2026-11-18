@@ -176,6 +176,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "vitronic:connect": LINK,
   "vitronic:mint": LINK,
   "vitronic:cycle": "drives a test scan cycle against the scanner; no learning",
+  "vitronic:reference-list":
+    "writes the reference-scan list (identifiers only) to the ignored vitronic folder; no learning",
   "anatomy:fetch": PUBLIC,
   "anatomy:bake-rigged": "bakes shipped anatomy meshes; no data rows",
   "blender:fit-atlas":
