@@ -5,6 +5,7 @@ import {
   checkCitedValues,
   labelAliases,
   parseStatedNumber,
+  statedMatchesReading,
 } from "./cited-value-check";
 
 const score: CheckedReading = {
@@ -312,5 +313,42 @@ describe("checkCitedValues: several readings", () => {
       { status: "matched", stated: "7 h 32 min" },
       { status: "not_matched", stated: "41 ms" },
     ]);
+  });
+});
+
+describe("statedMatchesReading", () => {
+  test("a stated number with its unit, by the same rounding rule", () => {
+    expect(statedMatchesReading("45 ms", hrv)).toBe(true);
+    expect(statedMatchesReading("45.3 ms", hrv)).toBe(true);
+    expect(statedMatchesReading("41 ms", hrv)).toBe(false);
+    expect(statedMatchesReading("96%", spo2)).toBe(false);
+    expect(statedMatchesReading("96.4%", spo2)).toBe(true);
+  });
+
+  test("another unit of the reading's dimension is converted", () => {
+    expect(statedMatchesReading("7 h 32 min", duration)).toBe(true);
+    expect(statedMatchesReading("7.5 h", duration)).toBe(true);
+    expect(statedMatchesReading("7 h", duration)).toBe(false);
+  });
+
+  test("thousands and a plain count", () => {
+    expect(statedMatchesReading("8,432", steps)).toBe(true);
+    expect(statedMatchesReading("8,432 steps", steps)).toBe(true);
+    expect(statedMatchesReading("8,431", steps)).toBe(false);
+  });
+
+  test("a unit of another dimension, no number, or two numbers never match", () => {
+    expect(statedMatchesReading("45 bpm", hrv)).toBe(false);
+    expect(statedMatchesReading("ms", hrv)).toBe(false);
+    expect(statedMatchesReading("45 ms or 45 ms", hrv)).toBe(false);
+  });
+
+  test("a small whole number without a unit stands only for a small reading", () => {
+    expect(statedMatchesReading("8", { ...score, value: 8 })).toBe(true);
+    expect(statedMatchesReading("8", { ...score, value: 82 })).toBe(false);
+  });
+
+  test("a reading whose value is not a number is never matched", () => {
+    expect(statedMatchesReading("82", { ...score, value: "good" })).toBe(false);
   });
 });

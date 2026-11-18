@@ -4,6 +4,7 @@ import { useMeasuredWidth } from "@/infrastructure/charts/chart-frame";
 import {
   dateAxisTicks,
   extent,
+  fitTimeTicks,
   niceTicks,
   tickDecimals,
   timeScale,
@@ -76,7 +77,10 @@ export const LinePlot = ({
   const x = timeScale(domain[0], domain[1], PAD.left, plotWidth);
   const y = (value: number): number =>
     PAD.top + plotHeight - ((value - low) / (high - low || 1)) * plotHeight;
-  const tickLabels = timeTicks ?? dateAxisTicks(domain[0], domain[1]);
+  const tickLabels = fitTimeTicks(
+    timeTicks ?? dateAxisTicks(domain[0], domain[1]),
+    plotWidth,
+  );
   const labelDecimals = Math.max(tickDecimals(ticks), 0);
   return (
     <div ref={ref} className="w-full">

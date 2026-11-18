@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { cn } from "@/infrastructure/ui";
+import { NewTabNote } from "@/infrastructure/ui-kit/new-tab-note";
 
 /**
  * Light markdown for model answers: bold, italic, inline code, links, lists,
@@ -63,6 +64,7 @@ const renderInline = (
           className="text-primary underline underline-offset-2"
         >
           {match[6]}
+          <NewTabNote />
         </a>,
       );
     }

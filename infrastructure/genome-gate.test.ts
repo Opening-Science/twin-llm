@@ -1,0 +1,154 @@
+import { afterEach, describe, expect, test } from "bun:test";
+
+import { resetServerEnvCacheForTests, serverEnv } from "./env";
+import {
+  chatModelIsLocal,
+  chatOnLoopback,
+  genomeChatPermit,
+  genomeRunPermit,
+  vcfVariantsChatPermit,
+} from "./genome-gate";
+import { importedDataChatPermit } from "./imported-data-gate";
+
+/**
+ * The gates read this server's settings on every call. These tests set a
+ * made-up environment, the way an operator would, and check that each gate
+ * passes the right parts of it to the policy: the data mode, the genome
+ * source and whether the chat model is Ollama on this machine.
+ */
+
+const ORIGINAL = { ...process.env };
+
+/** A local MVP with Ollama on this machine. */
+const LOCAL: Readonly<Record<string, string>> = {
+  LOCAL_MVP: "true",
+  AUTH_DISABLED: "true",
+  LOCAL_USER_ID: "local",
+  DATABASE_URL: "postgresql://synthetic@127.0.0.1:5432/none",
+  TWINLLM_STATE_DIR: "/nonexistent/twin-llm-test-state",
+  LOCAL_ONLY: "true",
+  LLM_PROVIDER: "ollama",
+  OLLAMA_BASE_URL: "http://127.0.0.1:11434/v1",
+};
+
+/** Ollama on another host; LOCAL_ONLY must be off for the server to start that way. */
+const OLLAMA_ELSEWHERE: Readonly<Record<string, string>> = {
+  LOCAL_ONLY: "false",
+  OLLAMA_BASE_URL: "http://gpu.example.org:11434/v1",
+};
+
+/**
+ * The consented Exoscale pilot: personal data and a model on a GPU elsewhere,
+ * while OLLAMA_BASE_URL still points at this machine.
+ */
+const EXOSCALE_PILOT: Readonly<Record<string, string>> = {
+  LOCAL_ONLY: "false",
+  LLM_PROVIDER: "exoscale",
+  EXOSCALE_BASE_URLS: "https://gpu.example.org/v1",
+  EXOSCALE_PERSONAL_DATA: "consented-pilot",
+};
+
+const replaceEnv = (values: Readonly<Record<string, string | undefined>>) => {
+  for (const key of Object.keys(process.env)) delete process.env[key];
+  Object.assign(process.env, values);
+  resetServerEnvCacheForTests();
+};
+
+const useEnv = (values: Readonly<Record<string, string>>) =>
+  replaceEnv({ ...ORIGINAL, ...LOCAL, ...values });
+
+afterEach(() => replaceEnv(ORIGINAL));
+
+const refusal = (reason: string) => expect.objectContaining({ ok: false, reason });
+
+describe("chatOnLoopback and chatModelIsLocal", () => {
+  test("Ollama on this machine is local", () => {
+    useEnv({ DATA_MODE: "personal" });
+    expect(chatOnLoopback()).toBe(true);
+    expect(chatModelIsLocal()).toBe(true);
+  });
+
+  test("Ollama on another host is not", () => {
+    useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
+    expect(chatOnLoopback()).toBe(false);
+    expect(chatModelIsLocal()).toBe(false);
+  });
+
+  test("the Exoscale pilot is not local, even with Ollama's address on this machine", () => {
+    useEnv({ DATA_MODE: "personal", ...EXOSCALE_PILOT });
+    expect(chatOnLoopback()).toBe(true);
+    expect(chatModelIsLocal()).toBe(false);
+  });
+});
+
+describe("importedDataChatPermit", () => {
+  test("allows personal mode with Ollama on this machine", () => {
+    useEnv({ DATA_MODE: "personal" });
+    expect(importedDataChatPermit()).toEqual({ ok: true });
+  });
+
+  test("refuses synthetic mode, and Ollama on another host", () => {
+    useEnv({ DATA_MODE: "synthetic" });
+    expect(importedDataChatPermit()).toEqual(refusal("data-mode-not-personal"));
+    useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
+    expect(importedDataChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("refuses the Exoscale pilot with Ollama's address on this machine", () => {
+    useEnv({ DATA_MODE: "personal", ...EXOSCALE_PILOT });
+    expect(importedDataChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+});
+
+describe("vcfVariantsChatPermit", () => {
+  test("allows personal mode with Ollama on this machine, without Ark", () => {
+    useEnv({ DATA_MODE: "personal" });
+    expect(vcfVariantsChatPermit()).toEqual({ ok: true });
+  });
+
+  test("refuses synthetic mode, and Ollama on another host", () => {
+    useEnv({ DATA_MODE: "synthetic" });
+    expect(vcfVariantsChatPermit()).toEqual(refusal("data-mode-not-personal"));
+    useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
+    expect(vcfVariantsChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+});
+
+describe("genomeChatPermit and genomeRunPermit", () => {
+  test("a run needs personal mode and Ark; a chat also needs Ollama local", () => {
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark" });
+    expect(genomeRunPermit()).toEqual({ ok: true });
+    expect(genomeChatPermit()).toEqual({ ok: true });
+  });
+
+  test("without Ark neither may touch a genotype", () => {
+    useEnv({ DATA_MODE: "personal" });
+    expect(genomeRunPermit()).toEqual(refusal("genome-source-not-ark"));
+    expect(genomeChatPermit()).toEqual(refusal("genome-source-not-ark"));
+  });
+
+  test("with Ollama elsewhere the run is fine but the chat is refused", () => {
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", ...OLLAMA_ELSEWHERE });
+    expect(genomeRunPermit()).toEqual({ ok: true });
+    expect(genomeChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("with the Exoscale pilot the run is fine but every chat is refused", () => {
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", ...EXOSCALE_PILOT });
+    expect(genomeRunPermit()).toEqual({ ok: true });
+    expect(vcfVariantsChatPermit()).toEqual(refusal("chat-model-not-local"));
+    expect(genomeChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("Carbon-X on another host: startup refuses it, and so does the chat gate", () => {
+    const elsewhere = "http://gpu.example.org:8090/v1";
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", CARBON_X_URL: elsewhere });
+    expect(() => serverEnv()).toThrow("CARBON_X_URL must be on this machine");
+    // Past startup, the gate still reads the URL itself.
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark" });
+    expect(genomeChatPermit({ ...serverEnv(), CARBON_X_URL: elsewhere })).toEqual(
+      refusal("carbon-x-not-local"),
+    );
+    expect(genomeChatPermit(serverEnv())).toEqual({ ok: true });
+  });
+});

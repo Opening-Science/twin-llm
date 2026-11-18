@@ -17,6 +17,7 @@ export type LocalOnlyEnv = Pick<
   | "OLLAMA_BASE_URL"
   | "GENOME_SOURCE"
   | "GBD_MCP_URL"
+  | "VOICE_SIDECAR_URL"
   | "NEXT_PUBLIC_POSTHOG_KEY"
   | "CLERK_SECRET_KEY"
   | "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
@@ -62,6 +63,10 @@ export const configuredEndpoints = (env: LocalOnlyEnv): readonly Endpoint[] => [
   ...(env.GENOME_SOURCE === "ark"
     ? [{ name: "Genome sidecar (Carbon-X)", local: true }]
     : []),
+  // Startup refuses a speech sidecar URL that is not on this machine.
+  ...(env.VOICE_SIDECAR_URL === undefined
+    ? []
+    : [{ name: "Voice (speech sidecar)", local: true }]),
   ...(env.GBD_MCP_URL === undefined ? [] : [{ name: "GBD server", local: false }]),
   ...(env.NEXT_PUBLIC_POSTHOG_KEY === undefined
     ? []
