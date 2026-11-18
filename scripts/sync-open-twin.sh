@@ -10,7 +10,7 @@ cd "$ROOT"
 OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-2fd26911c43c3007c8b87a88bf8a3647fa90ded0}}"
 OPEN_TWIN_REPO="${OPEN_TWIN_REPO:-https://github.com/Opening-Science/open-twin.git}"
 DEST="${ROOT}/.open-twin"
-PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop anchor-layer)
+PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic anchor-layer)
 
 echo "sync-open-twin: pinning ${OPEN_TWIN_SHA}"
 
@@ -24,6 +24,7 @@ git sparse-checkout set \
   packages/provider-oura \
   packages/provider-google-health \
   packages/provider-whoop \
+  packages/provider-vitronic \
   packages/anchor-layer
 git fetch --depth 1 origin "${OPEN_TWIN_SHA}"
 git checkout "${OPEN_TWIN_SHA}"
@@ -34,7 +35,7 @@ if [[ "${GOT}" != "${OPEN_TWIN_SHA}" ]]; then
 fi
 
 # Standalone installs cannot resolve monorepo workspace:* protocol.
-for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop; do
+for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic; do
   python3 - <<PY
 from pathlib import Path
 p = Path("packages/${pkg}/package.json")
@@ -62,6 +63,8 @@ build_pkg aggregate
 build_pkg provider-oura
 build_pkg provider-google-health
 build_pkg provider-whoop
+# provider-vitronic: FHIR mapping only; the host keeps its own Bearer client (docs/vitronic.md).
+build_pkg provider-vitronic
 # anchor-layer: TwinLLM imports only its data/ JSON export (the loader uses node:fs).
 build_pkg anchor-layer
 
@@ -72,7 +75,8 @@ build_pkg anchor-layer
 FHIR_VERSION="$(python3 -c "import json; print(json.load(open('${DEST}/packages/fhir-core/package.json'))['version'])")"
 # fhir-r4 keeps file:../fhir-core — @open-twin/fhir-core@0.1.0 is not on npm.
 # aggregate keeps file:../fhir-core in dependencies so the first host bun
-# install can resolve it without hitting registry.npmjs.org (404).
+# install can resolve it without hitting registry.npmjs.org (404); so does
+# provider-vitronic, which is newer than the resolutions kept in bun.lock.
 for pkg in provider-oura provider-google-health provider-whoop; do
   python3 - <<PY
 import json
