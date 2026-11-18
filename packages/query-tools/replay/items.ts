@@ -247,6 +247,9 @@ const eventShapeIssues = (event: z.infer<typeof eventSchemaBase>): readonly stri
   ...((event.kind === "meal") !== (event.meal !== undefined)
     ? ["a meal event, and only one, names its meal"]
     : []),
+  ...((event.kind === "meal" || event.kind === "tag") && event.provenance !== "entered"
+    ? ["a meal or a tag is entered by the person"]
+    : []),
 ];
 
 /** The parser for a context event: sleep and activity from a device, meals and tags the person entered. */
