@@ -89,6 +89,16 @@ export const readsLine = (reads: readonly string[]): string =>
 export const toolsLine = (tools: readonly string[]): string =>
   tools.length === 0 ? "uses no tools" : `may use: ${tools.map(toolDoes).join(", ")}`;
 
+/**
+ * The built-in a box holds when it holds nothing else (`/twin`, ` /compact `),
+ * or null. Sent by the button as by Enter, it runs the command and asks no
+ * model; with any text after the name it is an ordinary prompt.
+ */
+export const builtInDraft = (draft: string): Command | null => {
+  const name = /^\/([a-z]+)$/i.exec(draft.trim())?.[1]?.toLowerCase();
+  return BUILT_IN_COMMANDS.find((command) => command.name === name) ?? null;
+};
+
 const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/;
 
 export type SkillDraft = Readonly<{ skill: Command; prompt: string }>;

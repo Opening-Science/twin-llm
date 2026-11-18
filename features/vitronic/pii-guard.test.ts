@@ -7,6 +7,7 @@ const HOST_DIRS = [
   join(ROOT, "packages/vitronic"),
   join(ROOT, "features/vitronic"),
   join(ROOT, "app/api/vitronic"),
+  join(ROOT, "infrastructure/open-twin-adapters/vitronic.ts"),
 ];
 
 const walk = (abs: string, acc: string[]): void => {

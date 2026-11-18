@@ -71,14 +71,14 @@ const aliasesOf = (...folders) =>
  * file behind it: an Oura route then loads Oura's code only, not Google's auth
  * stack (#475). The entries are `oura`, `whoop`, `google-health` and `aggregate`.
  */
-const ADAPTER_ENTRIES = ["oura", "whoop", "google-health", "aggregate"];
+const ADAPTER_ENTRIES = ["oura", "whoop", "google-health", "aggregate", "vitronic"];
 const ADAPTER_ENTRY = {
   group: [
     "**/open-twin-adapters/*",
     ...ADAPTER_ENTRIES.map((entry) => `!**/open-twin-adapters/${entry}`),
   ],
   message:
-    "Import a wearable adapter from its vendor entry (open-twin-adapters/oura, whoop, google-health or aggregate), not a file behind it.",
+    "Import an open-twin adapter from its vendor entry (open-twin-adapters/oura, whoop, google-health, aggregate or vitronic), not a file behind it.",
 };
 
 /**

@@ -90,6 +90,10 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
     exempt:
       "maps responses the sync already fetched into a FHIR bundle; it sends nothing",
   },
+  "infrastructure/open-twin-adapters/vitronic.ts": {
+    exempt:
+      "maps BodyLoop lists the host client already fetched into a FHIR bundle; it never builds the provider's client and sends nothing",
+  },
   "features/oura/summary.ts": { exempt: TYPES_ONLY },
   "features/oura/fixtures/synthetic-sync-data.ts": { exempt: TYPES_ONLY },
   "features/google-health/fixtures/synthetic-sync-responses.ts": { exempt: TYPES_ONLY },
