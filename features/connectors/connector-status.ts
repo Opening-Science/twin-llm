@@ -47,3 +47,18 @@ export const loopbackHostHint = (hostname: string, port: string): string | null 
   const origin = `http://localhost${port ? `:${port}` : ""}`;
   return `You opened TwinLLM at ${hostname}. Sign-in returns go to localhost, so open ${origin}/customize/connectors before linking.`;
 };
+
+/**
+ * What the page says after Unlink: "unlinked" only when the server answered
+ * that it did; otherwise the card says it is still linked.
+ */
+export const unlinkOutcome = (
+  name: string,
+  ok: boolean,
+): Readonly<{ message: string | null; failure: string | null }> =>
+  ok
+    ? { message: `${name} unlinked.`, failure: null }
+    : {
+        message: null,
+        failure: `Couldn’t unlink ${name}. It is still linked; try Unlink again.`,
+      };

@@ -1,4 +1,8 @@
-import { skillSourceLabel, type TurnSkill } from "@/infrastructure/skill-gate";
+import {
+  OWN_SKILL_LABEL,
+  skillSourceLabel,
+  type TurnSkill,
+} from "@/infrastructure/skill-gate";
 import { toolDoes } from "@/infrastructure/tool-titles";
 
 /**
@@ -14,6 +18,8 @@ export type Command = Readonly<{
   /** A skill's tools, shown before it runs. Built-ins have none. */
   tools?: readonly string[];
   kind?: "built-in" | "skill";
+  /** A skill the person made on Customize (#174), which has no eval cases. */
+  own?: true;
 }>;
 
 /** Shows the thread's twin as a card in the chat; asks no model (features/compare/prompt-bar.tsx). */
@@ -45,14 +51,20 @@ export const BUILT_IN_COMMANDS: readonly Command[] = [
 
 /** A runnable skill as the palette lists it: sources by their labels, tools by id (`toolsLine` words them). */
 export const skillCommand = (
-  skill: Pick<TurnSkill, "name" | "description" | "sources" | "tools">,
+  skill: Pick<TurnSkill, "name" | "description" | "sources" | "tools"> &
+    Readonly<{ own?: boolean }>,
 ): Command => ({
   name: skill.name,
   description: skill.description,
   reads: skill.sources.map(skillSourceLabel),
   tools: [...skill.tools],
   kind: "skill",
+  ...(skill.own === true ? { own: true as const } : {}),
 });
+
+/** "Yours · not evaluated" for a person's own skill, as Customize says it; null otherwise. */
+export const ownLine = (command: Command): string | null =>
+  command.own === true ? OWN_SKILL_LABEL : null;
 
 /** Built-ins first; a skill may not take a built-in's name. */
 export const paletteCommands = (skills: readonly Command[]): readonly Command[] => [
@@ -76,6 +88,16 @@ export const readsLine = (reads: readonly string[]): string =>
 /** A skill's tools in the words its answer's steps use, never the tool ids (#480). */
 export const toolsLine = (tools: readonly string[]): string =>
   tools.length === 0 ? "uses no tools" : `may use: ${tools.map(toolDoes).join(", ")}`;
+
+/**
+ * The built-in a box holds when it holds nothing else (`/twin`, ` /compact `),
+ * or null. Sent by the button as by Enter, it runs the command and asks no
+ * model; with any text after the name it is an ordinary prompt.
+ */
+export const builtInDraft = (draft: string): Command | null => {
+  const name = /^\/([a-z]+)$/i.exec(draft.trim())?.[1]?.toLowerCase();
+  return BUILT_IN_COMMANDS.find((command) => command.name === name) ?? null;
+};
 
 const SKILL_DRAFT = /^\/([a-z][a-z0-9-]*)(?:\s+([\s\S]*))?$/;
 
