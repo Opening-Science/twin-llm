@@ -155,7 +155,10 @@ if (isMain) {
   const db = database();
   const log = (line: string) => console.log(line);
   try {
-    const marker = await db.schemaMove.findUnique({ where: { move: MOVE } });
+    // Before the expand migrations (or after a rollback) there is no table to ask.
+    const marker = await db.schemaMove
+      .findUnique({ where: { move: MOVE } })
+      .catch(() => null);
     if (marker === null) {
       console.error(`db:chat-backfill: no ${MOVE} move in progress; run db:deploy first`);
       process.exit(1);

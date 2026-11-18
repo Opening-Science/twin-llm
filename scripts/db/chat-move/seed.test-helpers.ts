@@ -78,6 +78,9 @@ export const seedOldChats = async (
   db: PrismaClient,
   threadsPerUser: number,
 ): Promise<SeedShape> => {
+  // The tasks below target threads up to seed-0-013.
+  if (threadsPerUser < 14)
+    throw new Error("seedOldChats needs at least 14 threads per user");
   let threads = 0;
   let turns = 0;
   let answers = 0;
