@@ -72,6 +72,12 @@ describe("scansToAutoSync", () => {
     expect(scansToAutoSync(many, NOW)[0]).toBe(10);
   });
 
+  test("a scan time in the future is left alone", () => {
+    expect(scansToAutoSync([scan(8, ago(-5 * 60 * 1000), "incomplete")], NOW)).toEqual(
+      [],
+    );
+  });
+
   test("nothing new, nothing to do", () => {
     expect(scansToAutoSync([scan(1, null, "complete")], NOW)).toEqual([]);
     expect(scansToAutoSync([], NOW)).toEqual([]);
@@ -103,5 +109,21 @@ describe("autoSyncScans", () => {
         throw new Error("offline");
       }),
     ).toEqual({ synced: [], stopped: true });
+  });
+
+  test("asks for no further scan once cancelled", async () => {
+    const calls: number[] = [];
+    let cancelled = false;
+    const outcome = await autoSyncScans(
+      [4, 3, 2],
+      async (id) => {
+        calls.push(id);
+        cancelled = true;
+        return true;
+      },
+      () => cancelled,
+    );
+    expect(calls).toEqual([4]);
+    expect(outcome).toEqual({ synced: [4], stopped: false });
   });
 });

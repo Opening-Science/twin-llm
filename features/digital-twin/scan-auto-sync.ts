@@ -44,14 +44,17 @@ export type AutoSyncOutcome = Readonly<{
 /**
  * Syncs the scans one by one through the subject's own sync route and stops
  * at the first failure: a scanner that fails once is usually gone, and the
- * scans left keep their Sync button.
+ * scans left keep their Sync button. Once `cancelled` says so (another
+ * subject was picked, or the page closed) no further scan is asked for.
  */
 export const autoSyncScans = async (
   viatarIds: readonly number[],
   syncOne: (viatarId: number) => Promise<boolean>,
+  cancelled: () => boolean = () => false,
 ): Promise<AutoSyncOutcome> => {
   const synced: number[] = [];
   for (const viatarId of viatarIds) {
+    if (cancelled()) return { synced, stopped: false };
     const ok = await syncOne(viatarId).catch(() => false);
     if (!ok) return { synced, stopped: true };
     synced.push(viatarId);

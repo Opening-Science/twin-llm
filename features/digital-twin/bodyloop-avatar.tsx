@@ -371,6 +371,13 @@ export const BodyLoopAvatar = ({
     };
   }, [preview, bodyLoopConfigured]);
 
+  const selectedSubject = subjects.find((row) => row.id === subjectId);
+  const subjectKind: "scanner" | "file" =
+    selectedSubject?.source === VITRONIC_SUBJECT_SOURCE_SCANNER ||
+    selectedSubject?.isSelf === true
+      ? "scanner"
+      : "file";
+
   useEffect(() => {
     if (preview !== undefined || !subjectId || isDemoSubject(subjectId)) return;
     let cancelled = false;
@@ -392,19 +399,25 @@ export const BodyLoopAvatar = ({
         }
         return nextScans;
       });
+    setAutoSyncing(0);
     setAutoSyncStopped(false);
     void loadLists()
       .then(async (listed) => {
         // Once per open: the lists read after the fetch do not start another round.
-        const fresh = scansToAutoSync(listed, Date.now());
+        // Only scanner subjects: a file subject has nothing on the scanner to fetch.
+        const fresh =
+          subjectKind === "scanner" ? scansToAutoSync(listed, Date.now()) : [];
         if (cancelled || fresh.length === 0) return;
         setAutoSyncing(fresh.length);
-        const outcome = await autoSyncScans(fresh, (viatarId) =>
-          fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ viatarId }),
-          }).then((response) => response.ok),
+        const outcome = await autoSyncScans(
+          fresh,
+          (viatarId) =>
+            fetch(`/api/vitronic/subjects/${subjectId}/sync`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ viatarId }),
+            }).then((response) => response.ok),
+          () => cancelled,
         );
         if (cancelled) return;
         setAutoSyncing(0);
@@ -417,7 +430,7 @@ export const BodyLoopAvatar = ({
     return () => {
       cancelled = true;
     };
-  }, [preview, subjectId]);
+  }, [preview, subjectId, subjectKind]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -441,13 +454,6 @@ export const BodyLoopAvatar = ({
       setAutoRotate(true);
     }, AUTO_ROTATE_IDLE_MS);
   }, [wantRotate]);
-
-  const selectedSubject = subjects.find((row) => row.id === subjectId);
-  const subjectKind: "scanner" | "file" =
-    selectedSubject?.source === VITRONIC_SUBJECT_SOURCE_SCANNER ||
-    selectedSubject?.isSelf === true
-      ? "scanner"
-      : "file";
 
   const listedScans = useMemo(
     () => orderScans(mergeScanRows(scans, snapshots, subjectKind)),
