@@ -4,6 +4,7 @@ import {
   docImageFile,
   docPathForSlug,
   type DocsFiles,
+  docTitle,
   listDocPages,
   readDocPage,
   rewriteDocUrl,
@@ -14,6 +15,7 @@ const FIXTURE: Readonly<Record<string, string>> = {
   "providers.md": "Intro line first.\n\n# LLM providers\n",
   "evaluation/harness.md": "# Evaluation harness\n",
   "untitled.md": "No heading here.\n",
+  "twin-notes.md": "# Twin notes and `/compact`\n",
 };
 
 const files: DocsFiles = {
@@ -141,8 +143,25 @@ describe("listDocPages", () => {
       },
       { slug: "providers", path: "providers.md", title: "LLM providers" },
       { slug: "runbook", path: "runbook.md", title: "Runbook" },
+      { slug: "twin-notes", path: "twin-notes.md", title: "Twin notes and /compact" },
       { slug: "untitled", path: "untitled.md", title: "untitled" },
     ]);
+  });
+});
+
+describe("docTitle", () => {
+  test("reads the H1 as plain text: code and link marks are dropped", () => {
+    expect(docTitle("# Twin notes and `/compact`\n", "twin-notes.md")).toBe(
+      "Twin notes and /compact",
+    );
+    expect(docTitle("# The ``a`b`` tool\n", "x.md")).toBe("The a`b tool");
+    expect(docTitle("# See [the runbook](runbook.md)\n", "x.md")).toBe("See the runbook");
+  });
+
+  test("falls back to the path without .md when there is no H1", () => {
+    expect(docTitle("No heading here.\n", "evaluation/harness.md")).toBe(
+      "evaluation/harness",
+    );
   });
 });
 
