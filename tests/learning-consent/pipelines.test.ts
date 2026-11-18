@@ -176,6 +176,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "vitronic:connect": LINK,
   "vitronic:mint": LINK,
   "vitronic:cycle": "drives a test scan cycle against the scanner; no learning",
+  "vitronic:reference-list":
+    "writes the reference-scan list (identifiers only) to the ignored vitronic folder; no learning",
   "anatomy:fetch": PUBLIC,
   "anatomy:bake-rigged": "bakes shipped anatomy meshes; no data rows",
   "blender:fit-atlas":
@@ -199,6 +201,16 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "writes synthetic scan bundles from a generated Synthea cohort's own height and weight; reads no person's rows or scans",
   "wearables:two-source":
     "writes synthetic two-source summaries and their planted labels to files from a seed (#508); no database, no person's rows",
+  "attribution:w1":
+    "writes the source-attribution study's synthetic items to files from a seed (P6, #508); no database, no person's rows",
+  "attribution:partb":
+    "analyses simulated participants, or a responses file it is given, for the user study and writes the result to a file (P6, #508); no database, no person's rows",
+  "attribution:rater":
+    "writes a blinded rater sheet of synthetic study answers and reads it back to agreement figures (P6, #508); no database, no person's rows",
+  "attribution:study":
+    "runs local models or fakes on the study's synthetic items and writes answers and scores to files (P6, #508); no database, no person's rows",
+  "attribution:stimuli":
+    "writes the user study's synthetic persona, trials and static preview pages to files from a seed (P6, #508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",
