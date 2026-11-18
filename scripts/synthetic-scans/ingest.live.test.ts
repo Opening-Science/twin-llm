@@ -3,7 +3,8 @@
  * subject's Synthea record first, then its scan bundle, then the scan again.
  * Needs a throwaway, migrated DATABASE_URL; the test writes one made-up
  * subject into cohort `synthea-v4-seed1098`, refuses to start if that cohort
- * already has subjects there, and deletes its rows at the end.
+ * already has subjects there, and at the end deletes its own rows and only the
+ * two bundles it ingested, by sha.
  *   RUN_LIVE=1 DATABASE_URL=<throwaway> bun test scripts/synthetic-scans/ingest.live.test.ts
  */
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -12,6 +13,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaClient } from "@/generated/prisma/client";
+import { bundleSha } from "@/packages/warehouse/bundle-sha";
 import { moduleMocker } from "@/tests/support/mock-module";
 
 import { syntheaPatientOf } from "../synthetic-wearables/bundle";
@@ -43,12 +45,18 @@ const SYNTHEA_BUNDLE: unknown = JSON.parse(
     "utf8",
   ).replaceAll(FIXTURE_ID, TEST_ID),
 );
+const scanBundle = () => {
+  const patient = syntheaPatientOf(SYNTHEA_BUNDLE)!;
+  return syntheticScanBundle(patient, syntheticScanOf(SYNTHEA_BUNDLE)!);
+};
+/** The two bundles this test ingests; the clean-up deletes these and no others. */
+const TEST_BUNDLE_SHAS = [bundleSha(SYNTHEA_BUNDLE), bundleSha(scanBundle())];
 
 describe.skipIf(!runLive)("synthetic scans into the warehouse (RUN_LIVE=1)", () => {
   const clear = async () => {
     await db.observation.deleteMany({ where: { subjectRef: TEST_ID } });
     await db.observationNonNumeric.deleteMany({ where: { subjectRef: TEST_ID } });
-    await db.bundle.deleteMany({ where: { cohortId: COHORT } });
+    await db.bundle.deleteMany({ where: { sha: { in: TEST_BUNDLE_SHAS } } });
     await db.subject.deleteMany({ where: { subjectRef: TEST_ID } });
   };
 
@@ -70,9 +78,7 @@ describe.skipIf(!runLive)("synthetic scans into the warehouse (RUN_LIVE=1)", () 
     const record = await ingestBundle(SYNTHEA_BUNDLE, OPTIONS);
     expect(record.rejected).toBeUndefined();
 
-    const patient = syntheaPatientOf(SYNTHEA_BUNDLE)!;
-    const scan = syntheticScanBundle(patient, syntheticScanOf(SYNTHEA_BUNDLE)!);
-    const report = await ingestBundle(scan, OPTIONS);
+    const report = await ingestBundle(scanBundle(), OPTIONS);
     expect(report.rejected).toBeUndefined();
     expect(report.inserted).toBe(3);
     expect(report.nonNumeric).toBe(0);
@@ -103,10 +109,8 @@ describe.skipIf(!runLive)("synthetic scans into the warehouse (RUN_LIVE=1)", () 
   });
 
   test("the same scan again is recognised and writes nothing", async () => {
-    const patient = syntheaPatientOf(SYNTHEA_BUNDLE)!;
-    const scan = syntheticScanBundle(patient, syntheticScanOf(SYNTHEA_BUNDLE)!);
     const before = await db.observation.count({ where: { subjectRef: TEST_ID } });
-    const again = await ingestBundle(scan, OPTIONS);
+    const again = await ingestBundle(scanBundle(), OPTIONS);
     expect(again.alreadyIngested).toBe(true);
     expect(again.inserted).toBe(0);
     expect(await db.observation.count({ where: { subjectRef: TEST_ID } })).toBe(before);
