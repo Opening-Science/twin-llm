@@ -26,6 +26,11 @@ const page = ({ title, href, keywords }: Page): SearchItem => ({
 const BEFORE_LAB: readonly Page[] = [
   { title: "TwinLLM", href: "/", keywords: "new chat, compare models" },
   {
+    title: "Dashboard",
+    href: "/dashboard",
+    keywords: "overview, wearables, Oura, twin, recent chats",
+  },
+  {
     title: "Customize",
     href: "/customize",
     keywords: "skills, agents, your data, import, connectors",

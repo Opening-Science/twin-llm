@@ -3,12 +3,13 @@
  */
 
 export type SectionKey =
-  "home" | "twin" | "customize" | "models" | "lab" | "docs" | "start";
+  "home" | "dashboard" | "twin" | "customize" | "models" | "lab" | "docs" | "start";
 
 export type Section = Readonly<{ key: SectionKey; label: string; href: string }>;
 
 export const SECTIONS: readonly Section[] = [
   { key: "home", label: "TwinLLM", href: "/" },
+  { key: "dashboard", label: "Dashboard", href: "/dashboard" },
   { key: "twin", label: "Digital Twin", href: "/digital-twin" },
   { key: "customize", label: "Customize", href: "/customize" },
   { key: "models", label: "Models", href: "/models" },
