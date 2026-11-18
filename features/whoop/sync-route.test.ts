@@ -236,10 +236,10 @@ describe("POST /api/whoop/sync error surface", () => {
     expect(summary.metrics.map((m) => [m.key, m.value, m.unit ?? null])).toEqual([
       ["whoop.cycle.strain.2026-01-01", 11.5, null],
       ["whoop.cycle.avg_hr.2026-01-01", 71, "bpm"],
-      ["whoop.sleep.performance.2026-01-01", 88, "%"],
-      ["whoop.sleep.efficiency.2026-01-01", 91.3, "%"],
-      ["whoop.sleep.consistency.2026-01-01", 77, "%"],
-      ["whoop.sleep.in_bed_min.2026-01-01", 450, "min"],
+      ["whoop.sleep.performance.2026-01-02", 88, "%"],
+      ["whoop.sleep.efficiency.2026-01-02", 91.3, "%"],
+      ["whoop.sleep.consistency.2026-01-02", 77, "%"],
+      ["whoop.sleep.in_bed_min.2026-01-02", 450, "min"],
     ]);
     expect(JSON.parse(String(data.summary))).toEqual(
       buildWhoopSummary(
