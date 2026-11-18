@@ -174,6 +174,40 @@ describe("answerClaims", () => {
     ]);
   });
 
+  test("an id-shaped link text is a link, never a citation", () => {
+    const [claim] = answerClaims(
+      reply(
+        "The full study is [PMC1234567](https://pmc.example.org/PMC1234567) on the web.",
+      ),
+      parts,
+    );
+    expect(claim?.status).toBe("uncited");
+    expect(claim?.sources).toEqual([]);
+  });
+
+  test("an id inside a code fence is no claim", () => {
+    const claims = answerClaims(
+      reply(
+        "```\nSleep studies report longer nights [PMC1234567].\n```\nCoffee late in the day delays sleep.",
+      ),
+      parts,
+    );
+    expect(claims.map((claim) => [claim.text, claim.status])).toEqual([
+      ["Coffee late in the day delays sleep.", "uncited"],
+    ]);
+  });
+
+  test("a source or an invented id cited twice in one sentence counts once", () => {
+    const [claim] = answerClaims(
+      reply(
+        "Sleep studies [PMC1234567] report longer nights [PMC1234567], not [made-up-2023] or [made-up-2023].",
+      ),
+      parts,
+    );
+    expect(claim?.sources.map((source) => source.label)).toEqual(["PMC1234567"]);
+    expect(claim?.unknown).toEqual(["made-up-2023"]);
+  });
+
   test("a reply without headings is read whole", () => {
     expect(
       answerClaims("The guideline covers ventilation [ean-als-2024].", parts),
