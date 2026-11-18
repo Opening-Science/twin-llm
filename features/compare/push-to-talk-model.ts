@@ -49,6 +49,10 @@ export const pushToTalkLabel = (
   return `Hold to speak in ${LANGUAGE_WORDS[language]}`;
 };
 
+/** Under an answer read aloud: how long until it was heard (#615). */
+export const firstWordsLine = (ms: number): string =>
+  `First words after ${formatElapsed(ms)}`;
+
 /** The hint line after a spoken question: what took how long (#615). */
 export const heardLine = (heard: VoiceHeard): string =>
   `Heard ${formatElapsed(heard.timings.audioMs)} of ${LANGUAGE_WORDS[heard.language]}, written down in ${formatElapsed(heard.timings.sttMs)} (${formatElapsed(heard.timings.totalMs)} in all).`;

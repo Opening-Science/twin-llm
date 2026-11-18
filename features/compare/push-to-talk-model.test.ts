@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   defaultVoiceLanguage,
+  firstWordsLine,
   heardLine,
   pushToTalkLabel,
   transcribeOutcome,
@@ -58,5 +59,10 @@ describe("push to talk", () => {
         timings: { audioMs: 1, sttMs: 1, totalMs: 1 },
       }).ok,
     ).toBe(false);
+  });
+
+  test("an answer read aloud says how long until it was heard", () => {
+    expect(firstWordsLine(420)).toBe("First words after 0.4s");
+    expect(firstWordsLine(1250)).toBe("First words after 1.2s");
   });
 });

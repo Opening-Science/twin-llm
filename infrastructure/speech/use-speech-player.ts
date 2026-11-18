@@ -14,6 +14,8 @@ import { spokenChunks, spokenText } from "./spoken-text";
  */
 
 export type SpeechTimings = Readonly<{
+  /** The answer it was for. */
+  id: string;
   /** From the press (or the answer's end) to the first sound. */
   firstSoundMs: number;
 }>;
@@ -113,7 +115,7 @@ export const useSpeechPlayer = (): SpeechPlayer => {
           next = fetchQuiet(following);
         }
         if (index === 0) {
-          setLastTimings({ firstSoundMs: Math.round(performance.now() - started) });
+          setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
         }
         await play(blob, controller.signal);
       }
