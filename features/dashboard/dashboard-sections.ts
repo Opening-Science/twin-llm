@@ -42,3 +42,16 @@ export const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
     linkLabel: "Ask a new question",
   },
 ];
+
+/**
+ * The spot under the twin where "Replay my day" will open once the replay
+ * work lands (#860–#867). Named here so the link has one place to go; until
+ * then it has no link and says so.
+ */
+export const REPLAY_MY_DAY = {
+  id: "replay-my-day",
+  title: "Replay my day",
+  line: "A day played back on the twin. It opens from here once the replay is built.",
+  href: null,
+  status: "Coming",
+} as const;
