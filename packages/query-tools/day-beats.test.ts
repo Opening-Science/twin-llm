@@ -482,3 +482,29 @@ describe("each measure against its own previous reading (#715)", () => {
     ]);
   });
 });
+
+describe("a change past its steady band leads a steady one (#851)", () => {
+  const at0830 = (heartRate: number, glucose: number) =>
+    dayBeats(
+      [reading("08:00", 60, 90), reading("08:30", heartRate, glucose)],
+      "without_diabetes",
+    ).find((beat) => beat.time === "08:30")?.signal;
+
+  test("a heart-rate rise of 11 /min leads a steady glucose change of 9 mg/dL", () => {
+    // On the scales 11 /min weighs 0.55 and 9 mg/dL 0.6, but 9 mg/dL is steady.
+    expect(at0830(71, 99)).toEqual({
+      measure: "heart_rate",
+      direction: "up",
+      value: 71,
+      unit: "/min",
+    });
+  });
+
+  test("a steady heart rate does not hide a glucose change past its band", () => {
+    expect(at0830(64, 100)).toMatchObject({ measure: "glucose", direction: "up" });
+  });
+
+  test("when both are steady, the larger weighted change still leads", () => {
+    expect(at0830(64, 99)).toMatchObject({ measure: "glucose", direction: "steady" });
+  });
+});
