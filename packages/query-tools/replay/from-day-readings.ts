@@ -1,6 +1,6 @@
 import { type DayReading } from "../day-beats";
 import { median } from "../stats";
-import { type Origin, type ReplayEvent, type ReplayReading } from "./items";
+import { type ReplayEvent, type ReplayReading } from "./items";
 import { localInstant } from "./local-time";
 import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
 
@@ -9,11 +9,18 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  * or the illustrative mock day) as a replay day, so the replay reads the same
  * values the day beats do. Nothing is added: no activity, no meal, no value.
  *
+ * - Every day comes out as a synthetic demonstration with `DEMO_NOTICE`.
+ *   `show_my_day` reads synthetic people only, not recordings of anyone, so
+ *   none is labelled recorded until real recordings come in.
  * - Heart rate, blood glucose and sensor glucose become measured readings of
  *   the named device; blood and sensor stay two series.
- * - An event tag the person entered becomes an entered event at its time. It
- *   is a meal only when it names one plainly ("Breakfast", "Large dinner"),
- *   never when a meal is only mentioned ("Walk after lunch", "After dinner").
+ * - A reading's tag becomes an event at its time. The only tags that arrive
+ *   are the mock day's story lines ("Deep sleep", "Stressful meeting"): the
+ *   warehouse sets none. They were written for the story, not entered by
+ *   anyone, and their source says so. A tag is a meal only when it names one
+ *   plainly ("Breakfast", "Large dinner"), never when a meal is only mentioned
+ *   ("Walk after lunch", "After dinner") or said not to have happened ("No
+ *   lunch", "Skipped breakfast").
  * - `moving` is not turned into an activity: it does not say walk or run.
  * - A reading stands for the usual spacing of its series; a lone reading for
  *   an hour.
@@ -24,13 +31,27 @@ export type DayReadingsSource = Readonly<{
   day: string;
   /** The zone the readings' "HH:MM" times are in: `show_my_day` uses UTC. */
   time_zone: string;
-  origin: Origin;
   /** The device the values came from, as it should be shown. */
   device: string;
 }>;
 
-const MEAL_TAG =
-  /^(?:(?!after |before |post |pre )[a-z]+ )?(breakfast|lunch|snack|dinner)$/i;
+/** A word before a meal that makes the tag about another time, or says the meal did not happen. */
+const NOT_THE_MEAL = [
+  "after",
+  "before",
+  "post",
+  "pre",
+  "no",
+  "skipped",
+  "skip",
+  "missed",
+  "without",
+] as const;
+
+const MEAL_TAG = new RegExp(
+  `^(?:(?!(?:${NOT_THE_MEAL.join("|")}) )[a-z]+ )?(breakfast|lunch|snack|dinner)$`,
+  "i",
+);
 
 /** The meal a tag plainly names, or null. */
 export const mealOfTag = (
@@ -44,6 +65,12 @@ export const mealOfTag = (
     ? found
     : null;
 };
+
+/** Where a tag comes from: the illustrative day's story, never a person's own entry. */
+const STORY_LINE = {
+  kind: "person",
+  name: "Written for the illustrative day's story, not entered by anyone",
+} as const;
 
 const LONE_READING_MIN = 60;
 
@@ -62,7 +89,7 @@ export const replayDayFromDayReadings = (
     subject_ref: source.subject_ref,
     day: source.day,
     time_zone: source.time_zone,
-    origin: source.origin,
+    origin: "synthetic_demo",
   } as const;
   const device = { kind: "device", name: source.device } as const;
   const instantOf = (reading: DayReading): string =>
@@ -115,13 +142,13 @@ export const replayDayFromDayReadings = (
         from: at,
         to: at,
         provenance: "entered",
-        source: { kind: "person", name: "Tag entered by the person" },
+        source: STORY_LINE,
       },
     ];
   });
   return replayDaySchema.parse({
     ...scope,
-    notice: source.origin === "synthetic_demo" ? DEMO_NOTICE : null,
+    notice: DEMO_NOTICE,
     readings: replayReadings,
     events,
     narrations: [],

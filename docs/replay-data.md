@@ -17,7 +17,7 @@ integration.
 | ---------------------------------- | ------------------------------------------------------------------------- |
 | `subject_ref`, `day`, `time_zone`  | The person, the local calendar day (`YYYY-MM-DD`) and its IANA time zone. |
 | `origin`                           | `recorded` or `synthetic_demo`. A day is one or the other, never both.    |
-| `notice`                           | Always set on a synthetic day: a made-up person and day, not advice.      |
+| `notice`                           | `DEMO_NOTICE` on a synthetic day, word for word; null on a recording.     |
 | `readings`, `events`, `narrations` | The items below. Each one repeats the person, day, zone and origin.       |
 
 The parser refuses an item of another person, day, zone or origin, so a screen that
@@ -27,14 +27,16 @@ selections with `replayKeyOf` or `belongsTo`, never by `subject_ref` alone.
 The day is local, not UTC: it runs from local midnight to the next one, so a
 daylight-saving day has 23 or 25 hours (`localDayBounds` in `local-time.ts`). Instants
 are stored in UTC. Show a time with `localClock`, which gives the local `HH:MM` and the
-offset: on the autumn change, 02:30 happens twice.
+offset: on the autumn change, 02:30 happens twice. An event or narration belongs to the
+day when it overlaps it: one that ends exactly at the day's first midnight belongs to the
+day before.
 
 ## Items
 
 | Item      | Holds                                                                                                                                                                                      |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Reading   | `heart_rate` in /min, `glucose` in mg/dL with its specimen (blood or sensor), `steps`, or a device's nightly `resting_heart_rate` (/min) and `hrv_rmssd` (ms); an instant; `interval_min`. |
-| Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered.                                                                     |
+| Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered, and only entered.                                                   |
 | Narration | What usually happens in a body, about heart rate, glucose, insulin or the body, with a focus on the twin.                                                                                  |
 
 A reading is `available` with a value, or `missing` with `value: null` and a reason (a
@@ -97,9 +99,15 @@ gaps between them (missing, or no readings), so a chart never joins across a gap
 ## The days `show_my_day` already reads
 
 `replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
-adding nothing. A tag the person entered becomes an entered event, and a meal only when
-it plainly names one ("Large dinner", not "Walk after lunch"); no new logging is needed.
-`moving` does not become an activity, since it does not say walk or run.
+adding nothing. A tag becomes an event, and a meal only when it plainly names one
+("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no new logging is
+needed. The only tags that arrive today are the mock day's story lines (the warehouse
+sets none), so their source reads "Written for the illustrative day's story, not entered
+by anyone". `moving` does not become an activity, since it does not say walk or run.
+
+Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
+synthetic people only, so none of their days is labelled `recorded`; that origin waits
+for real recordings.
 
 ## Enough data first
 
@@ -120,16 +128,19 @@ was read at.
 rate and glucose the evidence supports. A phase needs its evidence (a recorded sleep,
 walk or run, a tag the person entered) and readings of its own stream inside it; between
 phases nothing is said, and a day without that evidence has fewer phases.
+`phaseGaps(day)` says why, per stream: no heart rate, no glucose (sensor or blood), no
+steps, no sleep or no walk or run recorded, each with the phases it rules out, so a card
+shows that state instead of guessing.
 
-| Heart rate                    | Evidence                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------- |
-| Sleep                         | Recorded sleep before waking.                                                    |
-| Waking                        | The half hour after it.                                                          |
-| Resting                       | The hour after that, steps recorded and at most 300 per 15 minutes, no activity. |
-| Walking, Running              | A walk or run the device recorded.                                               |
-| Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run.        |
-| Recovery                      | From a run's end until back within the band, or an hour.                         |
-| Winding down and sleep        | From the person's winding-down tag, or recorded sleep, to the day's end.         |
+| Heart rate                    | Evidence                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Sleep                         | Recorded sleep before waking.                                                                      |
+| Waking                        | The half hour after it.                                                                            |
+| Resting                       | The hour after that, steps recorded and at most 300 per 15 minutes, no activity.                   |
+| Walking, Running              | A walk or run the device recorded.                                                                 |
+| Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run in it or the hour before. |
+| Recovery                      | From a run's end until back within the band, or an hour.                                           |
+| Winding down and sleep        | From a tag reading exactly "Winding down", or recorded sleep, to the day's end.                    |
 
 | Glucose                  | Evidence                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------- |
@@ -150,14 +161,14 @@ narrated after a meal; the raised heart rate while still is narrated without a c
 Each phase carries a `status` with its words, its rule (`id`, `text`, `basis`), its
 evidence and a one-sentence reason (`status-rules.ts`).
 
-| Rule                               | Basis                 | Gives                                                                                     |
-| ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------- |
-| `heart_rate_still_above`           | placeholder threshold | Worth a look: above 100 /min while still.                                                 |
-| `heart_rate_activity_not_judged`   | demo only             | Usual: waking, walking, running and winding down are not judged by height.                |
-| `heart_rate_near_resting_baseline` | demo only             | Usual within 10 /min of the resting baseline, else Notable; no baseline, Not enough data. |
-| `heart_rate_recovery_within_hour`  | demo only             | Usual when back within the band within an hour, else Notable.                             |
-| `glucose_past_threshold`           | placeholder threshold | Worth a look past 140 mg/dL (without diabetes) or outside 70–180 (with).                  |
-| `glucose_meal_rise`                | demo only             | Notable for a rise of 30 mg/dL or more after a meal, else Usual.                          |
+| Rule                               | Basis                 | Gives                                                                                                                         |
+| ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `heart_rate_still_above`           | placeholder threshold | Worth a look: above 100 /min while still.                                                                                     |
+| `heart_rate_activity_not_judged`   | demo only             | Usual: waking, walking, running and winding down are not judged by height.                                                    |
+| `heart_rate_near_resting_baseline` | demo only             | Usual within 10 /min of the resting baseline, else Notable; no baseline, Not enough data.                                     |
+| `heart_rate_recovery_within_hour`  | demo only             | Usual when back within the band within an hour, else Notable; Not enough data when heart rate was not read through that hour. |
+| `glucose_past_threshold`           | placeholder threshold | Worth a look past 140 mg/dL (without diabetes) or outside 70–180 (with).                                                      |
+| `glucose_meal_rise`                | demo only             | Notable for a rise of 30 mg/dL or more after a meal, else Usual.                                                              |
 
 No rule is approved for recorded data yet (`APPROVED_FOR_RECORDED` is empty), so on a
 recorded day every status is "Not classified", with that reason. Synthetic

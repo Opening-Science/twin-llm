@@ -11,8 +11,8 @@ import {
   type ReplayNarration,
   replayNarrationSchema,
 } from "./items";
-import { localDayBounds } from "./local-time";
-import { recoveryAfter } from "./recovery";
+import { localDayBounds, localInstant } from "./local-time";
+import { type Recovery, recoveryAfter } from "./recovery";
 import { type ReplayDay } from "./replay-day";
 import {
   decide,
@@ -37,8 +37,8 @@ import {
  * A phase exists only when its evidence does: a recorded sleep, walk or run,
  * a tag the person entered, and readings of its own stream inside it. Between
  * phases nothing is said; a day without that evidence has fewer phases, never
- * invented ones. The sixteen phases of #860 all appear on the demo reference
- * day.
+ * invented ones; `phaseGaps` says per stream which evidence is missing. The
+ * sixteen phases of #860 all appear on the demo reference day.
  */
 
 export const HEART_PHASES = [
@@ -132,6 +132,10 @@ export const STILL_STEPS_PER_15_MIN = 50;
 export const RESTING_STEPS_PER_15_MIN = 300;
 /** A rise in the night from the lowest glucose to waking that counts as a dawn rise. */
 export const DAWN_RISE_MG_DL = 10;
+/** The hour after a walk or run, left out of "raised heart rate while still". */
+export const AFTER_ACTIVITY_MIN = 60;
+/** The tag that starts winding down, as the demo person enters it; no other word does. */
+export const WIND_DOWN_TAG = "Winding down";
 /** How long a meal's phase lasts unless the next meal comes first. */
 export const MEAL_WINDOW_MIN = 90;
 
@@ -146,6 +150,9 @@ const between =
 
 const overlaps = (event: ReplayEvent, at: number): boolean =>
   ms(event.from) <= at && at < ms(event.to);
+
+const notBackWithinHour = (recovery: Recovery): boolean =>
+  recovery.back_within_min === null || recovery.back_within_min > 60;
 
 const extremeOf = (
   readings: readonly AvailableReading[],
@@ -280,7 +287,8 @@ export const storyPhases = (
   const bounds = localDayBounds(day.day, day.time_zone);
   const start = bounds.start.getTime();
   const end = bounds.end.getTime();
-  const noon = start + 12 * 60 * MINUTE;
+  // Local noon, not twelve hours after midnight: on a clock-change day those differ by an hour.
+  const noon = localInstant(day.day, "12:00", day.time_zone).getTime();
 
   const heart = seriesOf(day, { stream: "heart_rate" }).filter(isAvailable);
   const steps = seriesOf(day, { stream: "steps" }).filter(isAvailable);
@@ -303,9 +311,16 @@ export const storyPhases = (
   const runs = activities.filter((event) => event.activity === "run");
   const meals = day.events.filter((event) => event.kind === "meal").sort(byStart);
   const windDown = day.events.find(
-    (event) => event.kind === "tag" && /wind/i.test(event.label),
+    (event) =>
+      event.kind === "tag" &&
+      event.label.trim().toLowerCase() === WIND_DOWN_TAG.toLowerCase(),
   );
   const moving = (at: number): boolean => activities.some((event) => overlaps(event, at));
+  /** In the hour after a walk or run ends: its own peak and recovery, not stillness. */
+  const justMoved = (at: number): boolean =>
+    activities.some(
+      (event) => ms(event.to) <= at && at < ms(event.to) + AFTER_ACTIVITY_MIN * MINUTE,
+    );
   const stepsAt = (at: number): AvailableReading | undefined =>
     steps.find(
       (reading) =>
@@ -313,6 +328,27 @@ export const storyPhases = (
     );
 
   // ─── heart rate ───────────────────────────────────────────────────────────
+
+  /**
+   * True when heart rate was read through the hour after `end`: no gap between
+   * readings longer than the time each one stands for, up to the hour's end.
+   */
+  const readThroughHour = (end: number): boolean => {
+    const until = end + 60 * MINUTE;
+    const inHour = heart.filter(
+      (reading) => ms(reading.at) > end && ms(reading.at) <= until,
+    );
+    const last = inHour.at(-1);
+    return (
+      last !== undefined &&
+      until - ms(last.at) <= last.interval_min * MINUTE &&
+      inHour.every((reading, index) => {
+        const previous = inHour[index - 1];
+        const from = previous === undefined ? end : ms(previous.at);
+        return ms(reading.at) - from <= reading.interval_min * MINUTE;
+      })
+    );
+  };
 
   const heartStatus = (
     phase: HeartPhase,
@@ -360,17 +396,24 @@ export const storyPhases = (
                 evidence: ids,
                 reason: "No heart rate before the run to recover to.",
               }
-            : recovery.back_within_min === null || recovery.back_within_min > 60
+            : notBackWithinHour(recovery) && !readThroughHour(ms(recovery.ended_at))
               ? {
-                  status: "notable",
-                  evidence: recovery.evidence,
-                  reason: "Not back within the recovery band within an hour.",
+                  status: "insufficient_data",
+                  evidence: [...recovery.evidence, ...ids],
+                  reason:
+                    "Heart rate was not read through the hour after the run, so whether it came back cannot be said.",
                 }
-              : {
-                  status: "usual",
-                  evidence: recovery.evidence,
-                  reason: `Back within ${recovery.band_per_min} /min of ${recovery.before_per_min} /min by ${recovery.back_within_min} minutes after the run, read ${recovery.resolution_min} minute(s) apart.`,
-                };
+              : notBackWithinHour(recovery)
+                ? {
+                    status: "notable",
+                    evidence: recovery.evidence,
+                    reason: "Not back within the recovery band within an hour.",
+                  }
+                : {
+                    status: "usual",
+                    evidence: recovery.evidence,
+                    reason: `Back within ${recovery.band_per_min} /min of ${recovery.before_per_min} /min by ${recovery.back_within_min} minutes after the run, read ${recovery.resolution_min} minute(s) apart.`,
+                  };
         return decide(day.origin, HEART_RECOVERY, outcome);
       }
       default:
@@ -419,7 +462,8 @@ export const storyPhases = (
         reading.value > thresholds.heartRateStillAbovePerMin &&
         stepReading !== undefined &&
         stepReading.value < STILL_STEPS_PER_15_MIN &&
-        !moving(ms(reading.at));
+        !moving(ms(reading.at)) &&
+        !justMoved(ms(reading.at));
       if (!raised) return groups;
       const last = groups.at(-1);
       const previous = heart[index - 1];
@@ -504,7 +548,7 @@ export const storyPhases = (
           to,
           rule: {
             id: "phase_elevated_still",
-            text: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while steps stayed under ${STILL_STEPS_PER_15_MIN} per 15 minutes and no walk or run was recorded.`,
+            text: `Heart rate above ${thresholds.heartRateStillAbovePerMin} /min while steps stayed under ${STILL_STEPS_PER_15_MIN} per 15 minutes, no walk or run was recorded and none ended in the hour before.`,
           },
           events: group.flatMap((reading) => {
             const stepReading = stepsAt(ms(reading.at));
@@ -764,6 +808,81 @@ export const storyPhases = (
         ms(a.from) - ms(b.from) ||
         (a.stream === b.stream ? 0 : a.stream === "heart_rate" ? -1 : 1),
     );
+};
+
+/** Evidence a day lacks, and the phases of one stream that cannot exist without it. */
+export type PhaseGap = Readonly<{
+  stream: StoryPhase["stream"];
+  missing: "heart_rate" | "glucose" | "steps" | "sleep" | "activity";
+  text: string;
+}>;
+
+/**
+ * Why a day has fewer phases, per stream: the explicit unavailable state a
+ * card shows instead of guessing (#862). Empty when nothing is missing.
+ */
+export const phaseGaps = (day: ReplayDay): readonly PhaseGap[] => {
+  const has = (selector: Parameters<typeof seriesOf>[1]): boolean =>
+    seriesOf(day, selector).some(isAvailable);
+  const sleep = day.events.some((event) => event.kind === "sleep");
+  const activity = day.events.some((event) => event.kind === "activity");
+  const heart: readonly PhaseGap[] = !has({ stream: "heart_rate" })
+    ? [
+        {
+          stream: "heart_rate",
+          missing: "heart_rate",
+          text: "No heart rate recorded, so no heart-rate phases.",
+        },
+      ]
+    : [
+        ...(sleep
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "sleep",
+                text: "No sleep recorded, so no sleep, waking or resting phase.",
+              } as const,
+            ]),
+        ...(has({ stream: "steps" })
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "steps",
+                text: "No steps recorded, so no resting or raised-heart-rate-while-still phase.",
+              } as const,
+            ]),
+        ...(activity
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "activity",
+                text: "No walk or run recorded, so no walking, running or recovery phase.",
+              } as const,
+            ]),
+      ];
+  const glucose: readonly PhaseGap[] =
+    !has({ stream: "glucose", specimen: "sensor" }) &&
+    !has({ stream: "glucose", specimen: "blood" })
+      ? [
+          {
+            stream: "glucose",
+            missing: "glucose",
+            text: "No glucose recorded, sensor or blood, so no glucose phases.",
+          },
+        ]
+      : sleep
+        ? []
+        : [
+            {
+              stream: "glucose",
+              missing: "sleep",
+              text: "No sleep recorded, so no overnight, before-waking or back-to-sleep phase.",
+            },
+          ];
+  return [...heart, ...glucose];
 };
 
 /** The status rules a phase list used, once each: for a "how is this decided" panel. */
