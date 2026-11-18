@@ -135,22 +135,38 @@ export type Claim = Readonly<{
 }>;
 
 /** Case-sensitive, so a sentence ending "… says no." still ends there. */
-const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig|\bNo)\.$/;
+const ABBREVIATIONS = /(?:\be\.g|\bi\.e|\bet al|\bvs|\bapprox|\bcf|\bDr|\bFig)\.$/;
 
-/** A stop, the bracketed ids right after it, then a space or the line's end. */
-const BOUNDARY = /[.!?](?:\s*\[[^\][\n]{1,200}\](?!\())*(?=\s|$)/g;
+/** "No." is short for number only before one ("Trial No. 4"); else it is the answer no. */
+const NUMBER_ABBREVIATION = /\bNo\.$/;
+
+/**
+ * A stop, the marks that close around it (bold, italics, quotes, a bracket),
+ * the bracketed ids right after them, then a space or the line's end.
+ */
+const BOUNDARY = /[.!?][*_"'”’)\]]*(?:\s*\[[^\][\n]{1,200}\](?!\())*(?=\s|$)/g;
+
+/** Whether the stop at `at` closes an abbreviation, so the sentence goes on. */
+const isAbbreviation = (line: string, start: number, at: number): boolean => {
+  const before = line.slice(start, at + 1);
+  return (
+    ABBREVIATIONS.test(before) ||
+    (NUMBER_ABBREVIATION.test(before) && /^\s*\d/.test(line.slice(at + 1)))
+  );
+};
 
 /**
  * A line cut into sentences. A sentence ends at `.`, `!` or `?` followed by
- * a space or the line's end, unless the stop closes an abbreviation; bracketed
- * ids written right after the stop (`… lowers it. [esc-ccs-2019]`) still
- * belong to it.
+ * a space or the line's end, unless the stop closes an abbreviation. Marks
+ * that close around the stop (`**…therapy.**`, `"…early."`) and bracketed
+ * ids written right after it (`… lowers it. [esc-ccs-2019]`) still belong
+ * to it.
  */
 const sentencesOf = (line: string): string[] => {
   const out: string[] = [];
   let start = 0;
   for (const match of line.matchAll(BOUNDARY)) {
-    if (ABBREVIATIONS.test(line.slice(start, match.index + 1))) continue;
+    if (isAbbreviation(line, start, match.index)) continue;
     const end = match.index + match[0].length;
     out.push(line.slice(start, end).trim());
     start = end;
@@ -161,20 +177,30 @@ const sentencesOf = (line: string): string[] => {
 
 const BULLET = /^(?:[-*+]|\d+[.)])\s+/;
 
-/** The answer's sentences, outside headings, code and empty lines. */
+/**
+ * The answer's sentences, outside headings, code, tables and empty lines. A
+ * line that is no new bullet continues the one before it, as the rendered
+ * paragraph does, so a sentence wrapped over two lines is one sentence.
+ */
 const answerSentences = (answer: string): string[] => {
-  const sentences: string[] = [];
+  const paragraphs: string[] = [];
+  let open = false;
   let inCode = false;
   for (const raw of answer.split("\n")) {
     const line = raw.trim();
-    if (line.startsWith("```")) {
-      inCode = !inCode;
+    if (line.startsWith("```")) inCode = !inCode;
+    if (inCode || line.startsWith("```") || line === "" || /^[#|]/.test(line)) {
+      open = false;
       continue;
     }
-    if (inCode || line === "" || line.startsWith("#") || line.startsWith("|")) continue;
-    sentences.push(...sentencesOf(line.replace(BULLET, "")));
+    if (open && !BULLET.test(line)) {
+      paragraphs[paragraphs.length - 1] += ` ${line}`;
+    } else {
+      paragraphs.push(line.replace(BULLET, ""));
+      open = true;
+    }
   }
-  return sentences;
+  return paragraphs.flatMap(sentencesOf);
 };
 
 /** A sentence that only joins or introduces, with fewer than three words, is no claim. */
