@@ -4,7 +4,15 @@ import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
 import { DownloadButton } from "./download-button";
 import { JobLines } from "./job-lines";
 import { type LabJob } from "./lab-jobs";
-import { type EvalRun, runsCsv, runsTable, scoresCsv, scoreTable } from "./eval-runs";
+import {
+  claimsCsv,
+  claimTable,
+  type EvalRun,
+  runsCsv,
+  runsTable,
+  scoresCsv,
+  scoreTable,
+} from "./eval-runs";
 import { LabTable } from "./lab-table";
 import { type BenchmarkData, type ResultsData } from "./load-results";
 
@@ -67,9 +75,33 @@ const RunScores = ({ run }: Readonly<{ run: EvalRun }>) => {
           </div>
         </div>
       ))}
+      <RunClaims run={run} />
     </>
   );
 };
+
+/** The report's claim sources (#612), only when some turn returned literature. */
+const RunClaims = ({ run }: Readonly<{ run: EvalRun }>) =>
+  run.claims.length === 0 ? null : (
+    <div className="flex min-w-0 flex-col gap-2">
+      <h2 className="text-base font-medium break-all">{run.id} · claim sources</h2>
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        Sentences of the answers whose searches returned a guideline passage or an
+        article: cited, marked unsupported, naming an id no search returned, or uncited.
+        Fully covered: at least one claim, every one cited or marked unsupported. It reads
+        what an answer says about its sources, not whether a claim is true.
+      </p>
+      <LabTable table={claimTable(run.id, run.claims)} />
+      <div className="flex flex-wrap gap-2">
+        <DownloadButton
+          label="Download CSV"
+          fileName={`${run.id}-claim-sources.csv`}
+          mimeType="text/csv"
+          text={claimsCsv([run])}
+        />
+      </div>
+    </div>
+  );
 
 export const EvalRunsBody = ({ data }: Readonly<{ data: ResultsData }>) => (
   <div className="flex min-w-0 flex-col gap-4">
