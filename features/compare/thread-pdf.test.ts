@@ -118,6 +118,20 @@ describe("inline marks", () => {
       { text: "snake_case_key stays", style: "regular" },
     ]);
   });
+
+  test("code inside bold or italic is code, and its backticks go", () => {
+    expect(spansOf("**Take `metformin` daily**")).toEqual([
+      { text: "Take ", style: "bold" },
+      { text: "metformin", style: "mono" },
+      { text: " daily", style: "bold" },
+    ]);
+    expect(spansOf("then _read `oura.sleep` first_")).toEqual([
+      { text: "then ", style: "regular" },
+      { text: "read ", style: "italic" },
+      { text: "oura.sleep", style: "mono" },
+      { text: " first", style: "italic" },
+    ]);
+  });
 });
 
 describe("wrapping", () => {

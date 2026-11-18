@@ -26,7 +26,10 @@ export type BrokenLink = Readonly<{
 
 const FENCE = /^\s*(```|~~~)/;
 const INLINE_CODE = /`[^`]*`/g;
-const MD_LINK = /!?\[[^\]]*\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+"[^"]*")?\s*\)/g;
+const MD_LINK =
+  /!?\[[^\]]*\]\(\s*(<[^>]*>|[^\s)]+)(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
+/** A reference-style definition, `[r]: target "title"`, read by `[x][r]`. */
+const LINK_DEFINITION = /^\s{0,3}\[(?!\^)[^\]]+\]:\s*(<[^>]*>|\S+)/;
 const HTML_ATTR = /\b(?:href|src)="([^"]+)"/g;
 const SRCSET = /\bsrcset="([^"]+)"/g;
 const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i;
@@ -47,6 +50,9 @@ export const extractLinks = (markdown: string): readonly MarkdownLink[] => {
       const target = (match[1] ?? "").replace(/^<|>$/g, "");
       links.push({ line, target });
     }
+    const definition = LINK_DEFINITION.exec(text);
+    if (definition !== null)
+      links.push({ line, target: (definition[1] ?? "").replace(/^<|>$/g, "") });
     for (const match of text.matchAll(HTML_ATTR))
       links.push({ line, target: match[1] ?? "" });
     for (const match of text.matchAll(SRCSET))
@@ -136,23 +142,27 @@ export type AppDocLink = Readonly<{
   hash: string | undefined;
 }>;
 
-const APP_DOC_LINK = /["'`]\/docs\/([A-Za-z0-9_-][^"'`\s#?$]*)(?:#([^"'`\s]+))?["'`]/g;
+/** A page, an optional `?query` after it, an optional heading. */
+const APP_DOC_LINK =
+  /["'`]\/docs\/([A-Za-z0-9_-][^"'`\s#?$]*)(?:\?[^"'`\s#]*)?(?:#([^"'`\s]+))?["'`]/g;
 
 /** A slug segment the docs route serves (`docPathForSlug` in `features/docs/docs-pages.ts`). */
 const DOC_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * The `/docs/...` links written out in full in a source file, whatever their
- * spelling. A link built from a value (`/docs/${page.slug}`) is not written
- * out and is not checked.
+ * spelling. A link built from a value (`/docs/${page.slug}`, or a heading
+ * `#${id}`) is not written out and is not checked.
  */
 export const extractAppDocLinks = (source: string): readonly AppDocLink[] =>
   source.split("\n").flatMap((text, index) =>
-    [...text.matchAll(APP_DOC_LINK)].map((match) => ({
-      line: index + 1,
-      slug: match[1] ?? "",
-      hash: match[2],
-    })),
+    [...text.matchAll(APP_DOC_LINK)]
+      .filter((match) => !(match[2] ?? "").includes("${"))
+      .map((match) => ({
+        line: index + 1,
+        slug: match[1] ?? "",
+        hash: match[2],
+      })),
   );
 
 /**

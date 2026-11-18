@@ -1,3 +1,5 @@
+import { collectorKey } from "@/packages/audit/answer-scope";
+
 export type KnowledgeCitation = {
   readonly tool: string;
   /** Document id, `opentwin-<file name>`. */
@@ -19,8 +21,9 @@ export const recordKnowledgeTurn = (
   sessionId: string,
   sources: readonly KnowledgeCitation[],
 ): void => {
-  const prev = turns.get(sessionId) ?? { sources: [] };
-  turns.set(sessionId, { sources: [...prev.sources, ...sources] });
+  const key = collectorKey(sessionId);
+  const prev = turns.get(key) ?? { sources: [] };
+  turns.set(key, { sources: [...prev.sources, ...sources] });
 };
 
 export const drainKnowledgeTurn = (sessionId: string): KnowledgeTurn => {
