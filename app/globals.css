@@ -2021,4 +2021,36 @@
   outline: 3px solid var(--ring);
   outline-offset: -6px;
 }
+
+/* The attract loop's call, under the turning twin. */
+.kiosk-attract {
+  display: grid;
+  gap: 0.5em;
+  justify-items: center;
+  font-size: clamp(0.95rem, 1.5vh, 2rem);
+  text-align: center;
+}
+
+.kiosk-attract-call {
+  font-family: var(--font-display);
+  font-size: 1.9em;
+  line-height: 1.15;
+}
+
+.kiosk-attract-note {
+  max-width: 32em;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kiosk-attract-call {
+    animation: kiosk-breathe 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes kiosk-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
 /* --- Kiosk (end) ------------------------------------------------------------- */
