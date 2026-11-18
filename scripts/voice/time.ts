@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { ROUND_TRIP_SENTENCES, roundTrip } from "./round-trip";
+import { isLocalSidecarUrl, ROUND_TRIP_SENTENCES, roundTrip } from "./round-trip";
 
 /** `bun run voice:time` (docs/voice.md): the round trip in `round-trip.ts`, run and recorded. */
 
@@ -17,7 +17,7 @@ const { values } = parseArgs({
   },
 });
 const url = values.url.replace(/\/+$/, "");
-if (!/^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(url)) {
+if (!isLocalSidecarUrl(url)) {
   console.error("voice:time only talks to a sidecar on this machine");
   process.exit(2);
 }

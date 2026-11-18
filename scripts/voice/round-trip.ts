@@ -54,6 +54,10 @@ export const toSidecarWav = (bytes: Uint8Array): Uint8Array | null => {
   return encodeWav(resample(samples, info.sampleRate, SPEECH_SAMPLE_RATE));
 };
 
+/** The sidecar this measures must run on this machine. */
+export const isLocalSidecarUrl = (url: string): boolean =>
+  /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(url);
+
 export type RoundTrip = Readonly<{
   language: SpeechLanguage;
   sentence: string;
@@ -70,9 +74,13 @@ export const roundTrip = async (
   sentence: string,
   now: () => number = () => performance.now(),
 ): Promise<RoundTrip> => {
+  if (!isLocalSidecarUrl(baseUrl)) {
+    throw new Error("voice:time only talks to a sidecar on this machine");
+  }
   const started = now();
   const spoken = await fetch(`${baseUrl}/v1/speak`, {
     method: "POST",
+    redirect: "error",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ text: sentence, language }),
   });
@@ -82,6 +90,7 @@ export const roundTrip = async (
   if (wav === null) throw new Error("speak did not answer with 16-bit PCM WAV");
   const heard = await fetch(`${baseUrl}/v1/transcribe?language=${language}`, {
     method: "POST",
+    redirect: "error",
     headers: { "content-type": "audio/wav" },
     body: new Blob([wav.slice()], { type: "audio/wav" }),
   });
