@@ -80,3 +80,25 @@ does not have, never a stand-in.
 
 Heart rate, steps and sensor glucose come every 15 minutes; meals and "Winding down" are
 tags the demo person entered.
+
+## A value at a time, and the gaps
+
+`at-time.ts` answers what a card or the 3D view shows at the cursor. `readingAt(day,
+series, cursor)` gives one of:
+
+| State         | Means                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `available`   | The last reading at or before the cursor, with its age in minutes.                                                          |
+| `stale`       | That reading is older than 30 minutes or twice the time it stands for, whichever is longer. Show it as stale, with its age. |
+| `unavailable` | No value, and `text` says why: missing (with the source's reason), not yet, not recorded that day, or not on this day.      |
+
+A missing sample is never bridged with the value before it. Blood and sensor glucose are
+asked for separately. `chartSeries` gives the runs of values to draw as lines and the
+gaps between them (missing, or no readings), so a chart never joins across a gap.
+
+## The days `show_my_day` already reads
+
+`replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
+adding nothing. A tag the person entered becomes an entered event, and a meal only when
+it plainly names one ("Large dinner", not "Walk after lunch"); no new logging is needed.
+`moving` does not become an activity, since it does not say walk or run.
