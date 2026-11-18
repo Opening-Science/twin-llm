@@ -76,6 +76,13 @@ describe("the mock day as a replay day", () => {
     expect(day.events.some((event) => event.kind === "activity")).toBe(false);
   });
 
+  test("its tags are the story's lines, said to be written for it, not entered by anyone", () => {
+    expect(day.events.map((event) => event.label)).toContain("Stressful meeting");
+    expect(new Set(day.events.map((event) => event.source.name))).toEqual(
+      new Set(["Written for the illustrative day's story, not entered by anyone"]),
+    );
+  });
+
   test("the values are the mock day's own", () => {
     const first = day.readings.find((reading) => reading.stream === "heart_rate");
     expect(first?.at).toBe("2026-11-16T03:00:00.000Z");

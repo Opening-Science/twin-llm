@@ -14,10 +14,13 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  *   none is labelled recorded until real recordings come in.
  * - Heart rate, blood glucose and sensor glucose become measured readings of
  *   the named device; blood and sensor stay two series.
- * - An event tag the person entered becomes an entered event at its time. It
- *   is a meal only when it names one plainly ("Breakfast", "Large dinner"),
- *   never when a meal is only mentioned ("Walk after lunch", "After dinner")
- *   or said not to have happened ("No lunch", "Skipped breakfast").
+ * - A reading's tag becomes an event at its time. The only tags that arrive
+ *   are the mock day's story lines ("Deep sleep", "Stressful meeting"): the
+ *   warehouse sets none. They were written for the story, not entered by
+ *   anyone, and their source says so. A tag is a meal only when it names one
+ *   plainly ("Breakfast", "Large dinner"), never when a meal is only mentioned
+ *   ("Walk after lunch", "After dinner") or said not to have happened ("No
+ *   lunch", "Skipped breakfast").
  * - `moving` is not turned into an activity: it does not say walk or run.
  * - A reading stands for the usual spacing of its series; a lone reading for
  *   an hour.
@@ -62,6 +65,12 @@ export const mealOfTag = (
     ? found
     : null;
 };
+
+/** Where a tag comes from: the illustrative day's story, never a person's own entry. */
+const STORY_LINE = {
+  kind: "person",
+  name: "Written for the illustrative day's story, not entered by anyone",
+} as const;
 
 const LONE_READING_MIN = 60;
 
@@ -133,7 +142,7 @@ export const replayDayFromDayReadings = (
         from: at,
         to: at,
         provenance: "entered",
-        source: { kind: "person", name: "Tag entered by the person" },
+        source: STORY_LINE,
       },
     ];
   });
