@@ -25,6 +25,7 @@ import { hasPanel } from "./evidence-lines";
 import { numbersByCall } from "./number-links";
 import { NumberText } from "./number-text";
 import { ProfileFooter, ProfileHeader } from "./profile-frame";
+import { ReadAloud } from "./read-aloud";
 import { StatsFooter } from "./stats-footer";
 import { ClaimSummary } from "./claim-summary";
 import { type Reveal, ToolSteps } from "./tool-steps";
@@ -229,6 +230,7 @@ export const AnswerColumn = ({
           }
         />
         <ClaimSummary text={text} sources={answer.citeSources ?? []} />
+        <ReadAloud id={answer.id} text={text} />
         <AnswerViews {...viewProps} />
         {frame === null ? null : <ProfileFooter frame={frame} />}
       </>

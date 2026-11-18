@@ -18,8 +18,9 @@ import { speechWavProblem, wavInfo } from "./wav";
 /**
  * Talks to the speech sidecar (`contract.ts`). The address must be on this
  * machine: a spoken question is the person's voice, so a URL elsewhere is
- * refused here as well as at startup. The sidecar's error text and the fetch
- * exception never leave this module; callers get a code.
+ * refused here as well as at startup, and a redirect is never followed. The
+ * sidecar's error text and the fetch exception never leave this module;
+ * callers get a code.
  */
 
 export type SpeechConfig = Readonly<{
@@ -88,7 +89,7 @@ export const speechHealth = async (
   if (isFailure(target)) return null;
   const response = await call(
     { ...config, timeoutMs: Math.min(config.timeoutMs, 3000) },
-    (signal) => target.doFetch(`${target.root}/health`, { signal }),
+    (signal) => target.doFetch(`${target.root}/health`, { signal, redirect: "error" }),
     "health",
   );
   if (!(response instanceof Response) || !response.ok) return null;
@@ -113,6 +114,7 @@ export const transcribeSpeech = async (
         headers: { "content-type": "audio/wav" },
         body: new Blob([wav.slice()], { type: "audio/wav" }),
         signal,
+        redirect: "error",
       }),
     "transcribe",
   );
@@ -142,6 +144,7 @@ export const speakText = async (
         headers: { "content-type": "application/json" },
         body: JSON.stringify(request),
         signal,
+        redirect: "error",
       }),
     "speak",
   );

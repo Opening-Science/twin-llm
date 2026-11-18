@@ -616,7 +616,8 @@ recipient.
 - **Events and recipients.** _Changed from the first draft_, which recorded only
   personal requests to the Exoscale pilot, vendor syncs, exports and Ark releases: every
   send to a recipient off this machine is recorded, and a send that carried synthetic data
-  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient.
+  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient, and
+  neither are the Carbon-X and speech sidecars, which startup keeps on loopback.
   Providers that the data-mode policy refuses never get an entry, because nothing is
   sent.
 
@@ -708,8 +709,9 @@ recipient.
   lab values. Download anyway?") with Download and Cancel, audited as
   `thread.export.check` with kinds and counts; nothing leaves, so it writes no ledger
   row. Only Download sends `?confirm=1`, which checks again, writes the `export-file` row
-  and its paired `thread.export` audit row with kinds and counts, and makes the file; a
-  request with neither is refused before anything is read. Cancel writes nothing, since
+  and its paired `thread.export` audit row with kinds and counts, and makes the file. If
+  that step refuses or fails, the notice stays open with the route's sentence and no
+  file is saved. A request with neither is refused before anything is read. Cancel writes nothing, since
   nothing left. The person's own rsIDs and genome sites (#356) give no file on a
   local-only app too: the notice shows the fixed sentence with Close only and the row is
   `blocked`. A guideline or knowledge search query sent to an Ollama on another machine
