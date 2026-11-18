@@ -1,13 +1,14 @@
 /**
  * Host CLI for Part B's analysis (P6, #508).
  *
- *   bun run attribution:partb -- --simulate [--seed 6511] [--out <dir>]
+ *   bun run attribution:partb -- --simulate [--seed 6511] [--power 500] [--out <dir>]
  *   bun run attribution:partb -- --responses <participants.json> --pilot-median <seconds> [--out <dir>]
  *
  * Writes `partb.md` (exclusions, per-arm counts, U1 and U2 with Holm). With
  * --simulate the participants are made up by `simulateParticipants`, for
- * running the analysis before any real data exist; the page says so. No
- * response file is read in simulation, and nothing is sent anywhere.
+ * running the analysis before any real data exist; the page says so, and
+ * --power adds the share of that many simulated studies that support U1 and
+ * U2. No response file is read in simulation, and nothing is sent anywhere.
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -17,6 +18,8 @@ import {
   type Participant,
   partB,
   partBMarkdown,
+  type Power,
+  simulatedPower,
   simulateParticipants,
   SIMULATION_DEFAULTS,
 } from "./participants";
@@ -27,6 +30,19 @@ const flag = (argv: readonly string[], name: string): string | undefined => {
 };
 
 export const DEFAULT_PART_B_SEED = 6511;
+
+const percent = (share: number) => `${(share * 100).toFixed(0)}%`;
+
+/** The power section under a simulated run. */
+export const powerMarkdown = (power: Power): string =>
+  [
+    "",
+    "## Simulated power",
+    "",
+    `Over ${power.replicates} simulated studies at the effects above: U1 supported in ${percent(power.u1)}, U2 in ${percent(power.u2)}.`,
+    "",
+  ].join("\n");
+
 /** The simulation's own pilot median, matching its completion times. */
 export const SIMULATED_PILOT_MEDIAN = 900;
 
@@ -48,9 +64,18 @@ export const runPartB = async (
       io.stderr.write("--seed must be a whole number.\n");
       return 1;
     }
+    const replicates = Number(flag(argv, "--power") ?? 0);
+    if (!Number.isInteger(replicates) || replicates < 0 || replicates > 5000) {
+      io.stderr.write("--power must be a whole number of replicates up to 5000.\n");
+      return 1;
+    }
     const result = partB(simulateParticipants(seed), SIMULATED_PILOT_MEDIAN);
     const note = `Simulated participants (seed ${seed}, ${SIMULATION_DEFAULTS.perArm} per arm, effects set in the simulation): a check of the analysis, not a result.`;
-    await writeText(join(out, "partb.md"), partBMarkdown(result, note));
+    const power =
+      replicates === 0
+        ? ""
+        : powerMarkdown(simulatedPower(seed, replicates, SIMULATION_DEFAULTS));
+    await writeText(join(out, "partb.md"), `${partBMarkdown(result, note)}${power}`);
     io.stdout.write(`Simulated Part B written to ${out}\n`);
     return 0;
   }

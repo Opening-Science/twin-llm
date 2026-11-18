@@ -157,5 +157,8 @@ the trust rating and whether the data panel was opened):
 `bun run attribution:partb -- --simulate` runs this on seeded made-up
 participants with set effects (`simulateParticipants`), so the analysis is
 written and checked before any real data are opened, as the registration
-asks. `--responses <participants.json> --pilot-median <seconds>` runs it on
-a responses file. Both write `partb.md`.
+asks. `--power <n>` adds the share of n simulated studies that support U1
+and U2 at the simulation's effects (`simulatedPower`): a power estimate
+that includes the noise of d′ from 16 trials. `--responses
+<participants.json> --pilot-median <seconds>` runs it on a responses file.
+Both write `partb.md`.

@@ -292,3 +292,29 @@ export const simulateParticipants = (
     }),
   );
 };
+
+export type Power = Readonly<{ replicates: number; u1: number; u2: number }>;
+
+/**
+ * The share of simulated studies in which U1 and U2 are each supported, at
+ * the simulation's effects and arm size: a power estimate that accounts for
+ * the noise of d′ from 16 trials, which a t-test power formula does not.
+ */
+export const simulatedPower = (
+  seed: number,
+  replicates: number,
+  simulation: Simulation = SIMULATION_DEFAULTS,
+  pilotMedianSeconds = 900,
+): Power => {
+  let u1 = 0;
+  let u2 = 0;
+  for (let replicate = 0; replicate < replicates; replicate += 1) {
+    const result = partB(
+      simulateParticipants(seed + replicate, simulation),
+      pilotMedianSeconds,
+    );
+    if (result.holm.U1?.reject === true && (result.u1?.difference ?? 0) > 0) u1 += 1;
+    if (result.holm.U2?.reject === true && (result.u2?.difference ?? 0) > 0) u2 += 1;
+  }
+  return { replicates, u1: u1 / replicates, u2: u2 / replicates };
+};

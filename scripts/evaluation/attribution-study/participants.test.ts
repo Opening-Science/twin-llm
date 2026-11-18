@@ -8,6 +8,7 @@ import {
   partBMarkdown,
   simulateParticipants,
   SIMULATION_DEFAULTS,
+  simulatedPower,
   type TrialResponse,
 } from "./participants";
 import { runPartB } from "./participants-run";
@@ -166,5 +167,33 @@ describe("runPartB", () => {
         async () => {},
       ),
     ).toBe(1);
+  });
+
+  test("--power adds the share of simulated studies that support each contrast", async () => {
+    const written = new Map<string, string>();
+    await runPartB(
+      ["--simulate", "--power", "20", "--out", "out"],
+      io,
+      () => Promise.reject(new Error("no file is read")),
+      async (path, text) => {
+        written.set(path, text);
+      },
+    );
+    expect(written.get("out/partb.md")).toMatch(
+      /Over 20 simulated studies at the effects above: U1 supported in \d+%, U2 in \d+%\./,
+    );
+  });
+});
+
+describe("simulatedPower", () => {
+  test("high at the simulated effects, low with none", () => {
+    expect(simulatedPower(11, 30).u2).toBeGreaterThan(0.8);
+    const flat = simulatedPower(11, 30, {
+      ...SIMULATION_DEFAULTS,
+      dPrime: { D0: 1, D1: 1, D2: 1 },
+      gap: { D0: 0.5, D1: 0.5, D2: 0.5 },
+    });
+    expect(flat.u1).toBeLessThan(0.2);
+    expect(flat.u2).toBeLessThan(0.2);
   });
 });
