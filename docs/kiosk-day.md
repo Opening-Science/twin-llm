@@ -42,7 +42,7 @@ shape.
 | `source`       | `measured` \| `derived` \| `narrated`  | Where the value comes from. Show it.                                                                                      |
 | `measure`      | `heart_rate` \| `glucose` \| `insulin` | Which signal.                                                                                                             |
 | `specimen`     | `blood` \| `sensor` or null            | On a glucose value: a blood reading, or a continuous sensor's, which trails the blood by several minutes. Null otherwise. |
-| `direction`    | `up` \| `down` \| `steady`             | Since the reading before.                                                                                                 |
+| `direction`    | `up` \| `down` \| `steady`             | Since that measure's last reading.                                                                                        |
 | `value`        | number or null                         | Null exactly when `source` is `narrated`. Never invent one.                                                               |
 | `unit`         | `/min` \| `mg/dL` or null              | Null with `value`.                                                                                                        |
 | `line`         | string                                 | The value line to show, as written: "Blood glucose up · about 135 mg/dL · measured".                                      |
