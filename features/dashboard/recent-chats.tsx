@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import type { ShellThread } from "@/infrastructure/recent-threads";
 
-import { RECENT_CHATS, recentChatMeta } from "./dashboard-sections";
+import { RECENT_CHATS } from "./dashboard-sections";
+import { RecentChatMeta } from "./recent-chat-meta";
 
 /**
  * The Chat section's list: the viewer's newest threads as the sidebar lists
  * them (titles already opened and made readable on the server), each one a
- * link to its thread. Nothing of an answer is shown.
+ * link to its thread. Nothing of an answer is shown. Each one's day is the
+ * reader's own (`RecentChatMeta`).
  */
 export const RecentChats = ({
   threads,
@@ -26,7 +28,10 @@ export const RecentChats = ({
           >
             <span className="min-w-0 truncate text-sm font-medium">{thread.title}</span>
             <span className="text-muted-foreground shrink-0 text-xs">
-              {recentChatMeta(thread.updatedAt, thread.modelCount)}
+              <RecentChatMeta
+                updatedAt={thread.updatedAt}
+                modelCount={thread.modelCount}
+              />
             </span>
           </Link>
         </li>

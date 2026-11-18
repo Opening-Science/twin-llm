@@ -64,9 +64,27 @@ export const RECENT_CHATS = {
   empty: "No conversations yet. Ask a question and it shows here and in the sidebar.",
 } as const;
 
-/** "17 Nov 2026 · 1 model": the last activity's day and how many models answered, when any did. */
-export const recentChatMeta = (updatedAt: string, modelCount: number): string => {
-  const day = formatDate(new Date(updatedAt));
+/** The calendar day of `moment` on the `timeZone` clock, as YYYY-MM-DD. */
+const dayIn = (moment: Date, timeZone: string): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(moment);
+
+/**
+ * "17 Nov 2026 · 1 model": the last activity's day and how many models
+ * answered, when any did. The day is the reader's, in `timeZone`, never the
+ * server's: a chat at 00:30 in Berlin is that day, not the UTC day before.
+ */
+export const recentChatMeta = (
+  updatedAt: string,
+  modelCount: number,
+  timeZone: string,
+): string => {
+  const moment = new Date(updatedAt);
+  const day = formatDate(Number.isNaN(moment.getTime()) ? null : dayIn(moment, timeZone));
   return modelCount === 0
     ? day
     : `${day} · ${modelCount} ${modelCount === 1 ? "model" : "models"}`;
