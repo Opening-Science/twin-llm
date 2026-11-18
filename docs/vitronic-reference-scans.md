@@ -30,6 +30,9 @@ checklist); the table above is what each of them needs.
   owner's keys, and the mesh file is then `<sha256>.glb.enc`.
 - A copy of the scanner's own export goes to the same machine's encrypted disk,
   outside every git checkout.
+- Git ignores a mesh or point cloud anywhere in the checkout, in any case:
+  `.glb`, `.glb.enc`, `.gltf`, `.ply`, `.obj`, `.stl`, `.fbx`, `.usdz`, `.e57`,
+  `.pcd`, `.las` and `.laz`. A test refuses one that is tracked anyway.
 - Nothing is uploaded anywhere else.
 
 ## The list
