@@ -1964,6 +1964,12 @@
   color: var(--muted-foreground);
 }
 
+.kiosk-attract-shows {
+  margin-top: 0.6em;
+  color: var(--muted-foreground);
+  font-size: 0.85em;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .kiosk-attract-call {
     animation: kiosk-breathe 3.2s ease-in-out infinite;

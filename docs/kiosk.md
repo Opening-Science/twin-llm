@@ -22,7 +22,9 @@ placeholder note and "Times are UTC" stay on screen with every beat.
 ## A visit
 
 With nobody at the screen the kiosk runs its attract loop: the twin turns and the screen
-asks for a press. A press starts the day on its first beat; each press after that goes
+asks for a press. Meanwhile the twin lights the places the day will visit, one every
+eight seconds, in the day's order (for the mock day: heart, blood vessels, pancreas,
+liver; `kiosk-tour.ts`), so a passer-by sees what the day is about. A press starts the day on its first beat; each press after that goes
 on a beat, and the left arrow goes back one. A press on the last beat ends the day, and
 so does a minute with no press (`IDLE_RESET_MS` in
 `features/digital-twin/kiosk/kiosk-session.ts`). Either way the kiosk is back in the
