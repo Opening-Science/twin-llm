@@ -23,6 +23,16 @@ const ONE_YEAR_S = 60 * 60 * 24 * 365;
 export const localeFromCookie = (value: string | undefined): Locale =>
   value === "de" ? "de" : DEFAULT_LOCALE;
 
+/** The language in a `document.cookie` string, for a page outside the root layout. */
+export const localeFromDocumentCookie = (cookie: string): Locale =>
+  localeFromCookie(
+    cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${LOCALE_COOKIE}=`))
+      ?.slice(LOCALE_COOKIE.length + 1),
+  );
+
 /** The cookie as `document.cookie` takes it. */
 export const localeCookie = (locale: Locale): string =>
   `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=${ONE_YEAR_S}; SameSite=Lax`;
