@@ -64,7 +64,8 @@ describe("counterfactuals", () => {
     }
   });
 
-  test("the rule swap reverses the order or turns hold back into fixed order", () => {
+  test("the rule swap is fixed order, reversed", () => {
+    expect(SWAPPED_ORDER).toEqual(["google_health", "whoop", "oura"]);
     for (const item of items) {
       const swap = counterfactuals(item).find(
         (variant) => variant.variant === "rule_swap",
@@ -72,26 +73,36 @@ describe("counterfactuals", () => {
       if (swap === undefined) continue;
       expect(swap.item.rule).toBe("fixed_order");
       expect(swap.item.expected.kind).toBe("state");
-      if (item.rule === "fixed_order") expect(swap.order).toEqual(SWAPPED_ORDER);
+      expect(swap.order).toEqual(SWAPPED_ORDER);
     }
   });
 
-  test("swapping Oura and WHOOP changes the expected source where both read the day", () => {
-    const both = items.filter(
-      (item) =>
-        item.rule === "fixed_order" &&
-        item.stratum === "agree" &&
-        asked(item).some((metric) => metric.source === "oura") &&
-        asked(item).some((metric) => metric.source === "whoop"),
-    );
-    expect(both.length).toBeGreaterThan(0);
-    for (const item of both) {
+  test("every agree and disagree item gets a swap that changes the answer asked for", () => {
+    for (const item of items) {
+      if (item.stratum !== "agree" && item.stratum !== "disagree") continue;
       const swap = counterfactuals(item).find(
         (variant) => variant.variant === "rule_swap",
       );
-      expect(item.expected.kind === "state" && item.expected.source).toBe("oura");
+      expect(swap).toBeDefined();
+      expect(swap?.item.expected).not.toEqual(item.expected);
+    }
+  });
+
+  test("a resting heart rate item, which Oura never reads, still changes source", () => {
+    const rhr = items.filter(
+      (item) =>
+        item.rule === "fixed_order" &&
+        item.measure === "resting-heart-rate" &&
+        (item.stratum === "agree" || item.stratum === "disagree"),
+    );
+    expect(rhr.length).toBeGreaterThan(0);
+    for (const item of rhr) {
+      const swap = counterfactuals(item).find(
+        (variant) => variant.variant === "rule_swap",
+      );
+      expect(item.expected.kind === "state" && item.expected.source).toBe("whoop");
       expect(swap?.item.expected.kind === "state" && swap.item.expected.source).toBe(
-        "whoop",
+        "google_health",
       );
     }
   });

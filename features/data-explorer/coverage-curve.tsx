@@ -21,6 +21,7 @@ import {
   unitLabel,
   WIDE_SHARE,
 } from "./cohort-stats";
+import { codeKind } from "./code-label";
 
 /**
  * Every LOINC code of a cohort, most widespread first (x: rank), by the share
@@ -184,7 +185,7 @@ export const CoverageCurve = ({
           <TooltipBody
             title={hovered.display}
             rows={[
-              ["LOINC", hovered.loinc],
+              [codeKind(hovered.loinc), hovered.loinc],
               ["Unit", unitLabel(hovered.units)],
               [
                 "Subjects",
