@@ -186,7 +186,9 @@ say”, REFUSE when the question applies it to a person). Live hook:
 ## Claim sources (#612)
 
 `answerClaims` (`infrastructure/claim-sources.ts`) cuts an answer's Answer
-section into sentences and reads the bracketed ids each one writes. An id
+section into sentences and reads the bracketed ids each one writes. It reads
+what the answer shows: each table body cell on its own, and nothing inside code
+or inline code, so an id written as code is never counted. An id
 resolves only against hits the turn's searches returned: a guideline by its
 `id`, an article by its PMC id or document id, an OpenTwin note by its `id`.
 Each claim is then:

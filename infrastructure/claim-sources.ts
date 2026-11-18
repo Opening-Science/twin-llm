@@ -177,20 +177,48 @@ const sentencesOf = (line: string): string[] => {
 
 const BULLET = /^(?:[-*+]|\d+[.)])\s+/;
 
+/** Inline code: the answer shows it as code, never as a citation. */
+const INLINE_CODE = /`[^`]+`/g;
+
+/** Cells of a table row, split as `rich-text.tsx` splits them. */
+const cellsOf = (line: string): string[] =>
+  line
+    .replace(/^\|/, "")
+    .replace(/(?<!\\)\|$/, "")
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim());
+
+const isSeparatorRow = (line: string | undefined): boolean =>
+  line !== undefined &&
+  line.startsWith("|") &&
+  cellsOf(line).every((cell) => /^:?-+:?$/.test(cell));
+
 /**
- * The answer's sentences, outside headings, code, tables and empty lines. A
- * line that is no new bullet continues the one before it, as the rendered
- * paragraph does, so a sentence wrapped over two lines is one sentence.
+ * The answer's sentences as the answer renders them: outside headings, code
+ * and empty lines, with inline code left out and each table body cell read
+ * on its own (the header row and the separator are no claims). A line that
+ * is no new bullet continues the one before it, as the rendered paragraph
+ * does, so a sentence wrapped over two lines is one sentence.
  */
 const answerSentences = (answer: string): string[] => {
   const paragraphs: string[] = [];
   let open = false;
   let inCode = false;
-  for (const raw of answer.split("\n")) {
-    const line = raw.trim();
-    if (line.startsWith("```")) inCode = !inCode;
-    if (inCode || line.startsWith("```") || line === "" || /^[#|]/.test(line)) {
+  const lines = answer.split("\n").map((raw) => raw.trim().replace(INLINE_CODE, ""));
+  for (const [index, line] of lines.entries()) {
+    if (line.startsWith("```")) {
+      inCode = !inCode;
       open = false;
+      continue;
+    }
+    if (inCode || line === "" || line.startsWith("#")) {
+      open = false;
+      continue;
+    }
+    if (line.startsWith("|")) {
+      open = false;
+      if (isSeparatorRow(line) || isSeparatorRow(lines[index + 1])) continue;
+      paragraphs.push(...cellsOf(line));
       continue;
     }
     if (open && !BULLET.test(line)) {

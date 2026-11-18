@@ -6,7 +6,7 @@ import {
   permitGenomeRun,
   permitVcfVariantsRequest,
 } from "./data-mode-policy";
-import { DEFAULT_OLLAMA_BASE_URL, genomeEnv, serverEnv } from "./env";
+import { DEFAULT_OLLAMA_BASE_URL, genomeEnv, type ServerEnv, serverEnv } from "./env";
 import { isLocalChatModel } from "./genome-thread-policy";
 import { isLoopbackUrl } from "./loopback";
 
@@ -19,17 +19,19 @@ import { isLoopbackUrl } from "./loopback";
 export const chatOnLoopback = (): boolean =>
   isLoopbackUrl(serverEnv().OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL);
 
-/** May a chat turn read the released report and ask Carbon-X? */
-export const genomeChatPermit = (): GenomePermitDecision => {
-  const env = serverEnv();
-  return permitGenomeRequest({
+/**
+ * May a chat turn read the released report and ask Carbon-X? Startup already
+ * refuses a Carbon-X URL off this machine; the gate checks it again, and
+ * takes the settings as an argument so a test can reach that check.
+ */
+export const genomeChatPermit = (env: ServerEnv = serverEnv()): GenomePermitDecision =>
+  permitGenomeRequest({
     mode: env.DATA_MODE,
     genomeSource: env.GENOME_SOURCE,
     chatProvider: env.LLM_PROVIDER,
     chatOnLoopback: isLoopbackUrl(env.OLLAMA_BASE_URL ?? DEFAULT_OLLAMA_BASE_URL),
     carbonXOnLoopback: isLoopbackUrl(genomeEnv(env).carbonXUrl),
   });
-};
 
 /**
  * May a chat turn look up variants in an imported VCF (#330)? Personal mode
