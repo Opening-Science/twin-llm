@@ -11,7 +11,7 @@ import {
   demoReplayDays,
 } from "./demo-days";
 import { replayNarrationSchema } from "./items";
-import { localClock, localDayBounds } from "./local-time";
+import { localClock, localDayBounds, localInstant } from "./local-time";
 import {
   GLUCOSE_PHASES,
   HEART_PHASES,
@@ -298,6 +298,31 @@ describe("no evidence, no phase", () => {
     expect(stale.some((one) => one.stream === "glucose" && one.phase === "dinner")).toBe(
       true,
     );
+  });
+
+  test("on the 25-hour day, a nap at 11:30 is before local noon, not the evening's sleep", () => {
+    const dst = day(DEMO_PERSON_A, DEMO_DST_DAY);
+    const night = dst.events.find((one) => one.id === "sleep-night-before");
+    if (night === undefined) throw new Error("no night before");
+    const napped = replayDaySchema.parse({
+      ...dst,
+      events: [
+        ...dst.events.filter((one) => one.id !== "tag-wind-down"),
+        {
+          ...night,
+          id: "nap",
+          from: localInstant(DEMO_DST_DAY, "11:30", DEMO_TIME_ZONE).toISOString(),
+          to: localInstant(DEMO_DST_DAY, "11:50", DEMO_TIME_ZONE).toISOString(),
+        },
+      ],
+    });
+    const evening = phasesOf(napped).filter(
+      (one) => one.phase === "winding_down" || one.phase === "return_to_sleep",
+    );
+    expect(evening.map((one) => [one.phase, clock(one.from)])).toEqual([
+      ["winding_down", "22:45"],
+      ["return_to_sleep", "22:45"],
+    ]);
   });
 
   test("on the 25-hour day, sleep starts at the day's own midnight", () => {
