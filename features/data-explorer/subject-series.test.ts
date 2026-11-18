@@ -105,14 +105,14 @@ describe("subjectStory", () => {
   test("describes the record from counts, with the three codes read most", () => {
     const series = subjectSeries(ROWS);
     expect(subjectStory(subjectOverview(series), series, 12)).toBe(
-      "This synthetic subject has 7 numeric observations of 3 LOINC codes, from 5 Jan 2018 to 2 Feb 2022, and 12 text observations. Most readings: Body weight, Heart rate and Specific gravity.",
+      "This synthetic subject has 7 numeric observations of 3 codes, from 5 Jan 2018 to 2 Feb 2022, and 12 text observations. Most readings: Body weight, Heart rate and Specific gravity.",
     );
   });
 
   test("one of each reads in the singular, and no text observations are left out", () => {
     const series = subjectSeries([ROWS[0]!]);
     expect(subjectStory(subjectOverview(series), series, 0)).toBe(
-      "This synthetic subject has 1 numeric observation of 1 LOINC code, from 1 Mar 2020 to 1 Mar 2020. Most readings: Body weight.",
+      "This synthetic subject has 1 numeric observation of 1 code, from 1 Mar 2020 to 1 Mar 2020. Most readings: Body weight.",
     );
   });
 

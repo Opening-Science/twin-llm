@@ -1,17 +1,18 @@
 import { describe, expect, test } from "bun:test";
 
 import { dayBeatSchema } from "./day-beat";
-import { DAY_THRESHOLDS, type DayReading, dayBeats, redWindows } from "./day-beats";
+import {
+  DAY_THRESHOLDS,
+  type DayReading,
+  dayBeats,
+  type GlucoseProfile,
+  redWindows,
+} from "./day-beats";
 import MOCK_DAY from "./fixtures/mock-day.json";
+import { mockDayReadings } from "./mock-day";
 
 /** The illustrative mock day: hand-written values, not a recording of anyone. */
-const READINGS: readonly DayReading[] = MOCK_DAY.readings.map((reading) => ({
-  time: reading.time,
-  event: reading.event,
-  heartRatePerMin: reading.heart_rate_per_min,
-  glucoseMgDl: reading.glucose_mg_dl,
-  moving: reading.moving,
-}));
+const READINGS: readonly DayReading[] = mockDayReadings("blood");
 
 const reading = (
   time: string,
@@ -343,5 +344,141 @@ describe("sensor glucose", () => {
       "Sensor glucose stays past the threshold for a while. Sensor glucose above 140 mg/dL (placeholder, without diabetes).",
     );
     expect(derived && dayBeatSchema.parse(derived)).toEqual(derived);
+  });
+});
+
+describe("the mock day with its sensor", () => {
+  const summary = (readings: readonly DayReading[], profile: GlucoseProfile) =>
+    dayBeats(readings, profile).map((beat) => [
+      beat.time,
+      beat.source,
+      beat.signal.measure === "glucose" && beat.source !== "narrated"
+        ? `${beat.signal.specimen} glucose`
+        : beat.signal.measure,
+      beat.signal.value,
+    ]);
+
+  test("a monitor wearer's day: glucose beats are sensor beats", () => {
+    // Hand-checked: the sensor's smaller rises leave heart rate leading until the evening.
+    expect(summary(mockDayReadings("sensor"), "without_diabetes")).toEqual([
+      ["03:00", "measured", "heart_rate", 52],
+      ["06:30", "measured", "heart_rate", 70],
+      ["07:30", "measured", "heart_rate", 64],
+      ["08:15", "measured", "heart_rate", 95],
+      ["08:15", "narrated", "insulin", null],
+      ["10:00", "measured", "heart_rate", 66],
+      ["10:30", "measured", "heart_rate", 88],
+      ["12:30", "measured", "heart_rate", 68],
+      ["13:00", "measured", "heart_rate", 100],
+      ["15:30", "measured", "heart_rate", 68],
+      ["18:00", "measured", "heart_rate", 160],
+      ["18:45", "measured", "heart_rate", 85],
+      ["19:30", "measured", "sensor glucose", 98],
+      ["20:30", "measured", "sensor glucose", 152],
+      ["20:30", "narrated", "insulin", null],
+      ["20:30", "derived", "sensor glucose", 152],
+      ["22:30", "measured", "sensor glucose", 112],
+    ]);
+    expect(redWindows(mockDayReadings("sensor"), "with_diabetes")).toEqual([]);
+  });
+
+  test("with both, blood leads each glucose beat and each specimen has its own window", () => {
+    const both = mockDayReadings("both");
+    expect(
+      summary(both, "without_diabetes").filter(([, , measure]) =>
+        String(measure).endsWith("glucose"),
+      ),
+    ).toEqual([
+      ["08:15", "measured", "blood glucose", 135],
+      ["10:00", "measured", "blood glucose", 92],
+      ["19:30", "measured", "blood glucose", 100],
+      ["20:30", "measured", "blood glucose", 175],
+      ["20:30", "derived", "blood glucose", 175],
+      ["20:30", "derived", "sensor glucose", 152],
+      ["22:30", "measured", "blood glucose", 105],
+    ]);
+    expect(
+      redWindows(both, "without_diabetes").map((window) => [
+        window.from,
+        window.specimen,
+        window.extreme,
+      ]),
+    ).toEqual([
+      ["20:30", "blood", 175],
+      ["20:30", "sensor", 152],
+    ]);
+  });
+});
+
+describe("each measure against its own previous reading (#715)", () => {
+  test("a heart-rate reading between two glucose readings does not hide the rise", () => {
+    const beats = dayBeats(
+      [reading("18:30", 70, 85), reading("20:00", 72, null), reading("20:30", 74, 155)],
+      "without_diabetes",
+    );
+    const at2030 = beats.filter((beat) => beat.time === "20:30");
+    expect(at2030.map((beat) => [beat.source, beat.signal])).toEqual([
+      [
+        "measured",
+        {
+          measure: "glucose",
+          specimen: "blood",
+          direction: "up",
+          value: 155,
+          unit: "mg/dL",
+        },
+      ],
+      ["narrated", { measure: "insulin", direction: "up", value: null, unit: null }],
+      // 155 is past the placeholder 140, so the red window opens here too.
+      [
+        "derived",
+        {
+          measure: "glucose",
+          specimen: "blood",
+          direction: "up",
+          value: 155,
+          unit: "mg/dL",
+        },
+      ],
+    ]);
+    expect(at2030[0]?.body.text).toBe("Sugar from food passes into the blood.");
+  });
+
+  test("a glucose reading between two heart-rate readings does not hide the climb", () => {
+    const beats = dayBeats(
+      [
+        reading("07:00", 60, null),
+        reading("07:05", null, 95),
+        reading("07:10", 92, null),
+      ],
+      "without_diabetes",
+    );
+    expect(beats.find((beat) => beat.time === "07:10")?.signal).toEqual({
+      measure: "heart_rate",
+      direction: "up",
+      value: 92,
+      unit: "/min",
+    });
+  });
+
+  test("a reading holding only another measure does not split a red window", () => {
+    const windows = redWindows(
+      [reading("20:30", 70, 155), reading("20:31", 72, null), reading("20:35", 74, 160)],
+      "without_diabetes",
+    );
+    expect(windows.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["glucose", "20:30", "20:35", 160],
+    ]);
+    const heart = redWindows(
+      [
+        reading("09:00", 110, null),
+        reading("09:02", null, 95),
+        reading("09:05", 115, null),
+      ],
+      "without_diabetes",
+    );
+    expect(heart.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["heart_rate", "09:00", "09:05", 115],
+    ]);
   });
 });

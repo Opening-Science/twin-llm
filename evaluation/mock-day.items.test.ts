@@ -15,6 +15,7 @@ import {
   redWindows,
 } from "../packages/query-tools/day-beats";
 import MOCK_DAY from "../packages/query-tools/fixtures/mock-day.json";
+import { mockDayReadings } from "../packages/query-tools/mock-day";
 import { mockDayItemSetSchema } from "../scripts/evaluation/mock-day-items";
 import { readPath } from "../scripts/evaluation/question-set";
 
@@ -27,13 +28,7 @@ const set = mockDayItemSetSchema.parse(
   ) as unknown,
 );
 
-const READINGS: readonly DayReading[] = MOCK_DAY.readings.map((one) => ({
-  time: one.time,
-  event: one.event,
-  heartRatePerMin: one.heart_rate_per_min,
-  glucoseMgDl: one.glucose_mg_dl,
-  moving: one.moving,
-}));
+const READINGS: readonly DayReading[] = mockDayReadings("blood");
 
 const dayAs = (profile: GlucoseProfile) => ({
   beats: dayBeats(READINGS, profile),
