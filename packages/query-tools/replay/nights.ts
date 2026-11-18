@@ -2,7 +2,7 @@ import { MAD_SCALE } from "../stats";
 import { seriesOf, type SeriesSelector } from "./at-time";
 import { type Baseline, evidenceRef, personalBaseline } from "./baseline";
 import { type AvailableReading, isAvailable, type Origin } from "./items";
-import { dayBefore, localDayBounds, minutesBetween } from "./local-time";
+import { dayBefore, localDayBounds, localInstant, minutesBetween } from "./local-time";
 import { type ReplayDay, type ReplayKey } from "./replay-day";
 import { decide, type StatusResult, type StatusRule } from "./status-rules";
 
@@ -328,11 +328,13 @@ const summaryOf = (
   const steps = seriesOf(day, { stream: "steps" }).filter(isAvailable);
   const activities = day.events.filter((event) => event.kind === "activity");
   const bounds = localDayBounds(day.day, day.time_zone);
+  // Local noon, not twelve hours after midnight: on a clock-change day those differ by an hour.
+  const noon = localInstant(day.day, "12:00", day.time_zone).getTime();
   const sleep = day.events.find(
     (event) =>
       event.kind === "sleep" &&
       Date.parse(event.to) > bounds.start.getTime() &&
-      Date.parse(event.to) <= bounds.start.getTime() + 12 * 3_600_000,
+      Date.parse(event.to) <= noon,
   );
   const inNight =
     sleep === undefined

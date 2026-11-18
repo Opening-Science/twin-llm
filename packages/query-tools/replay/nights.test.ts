@@ -7,7 +7,7 @@ import {
   DEMO_TIME_ZONE,
   demoReplayDays,
 } from "./demo-days";
-import { localClock } from "./local-time";
+import { localClock, localInstant } from "./local-time";
 import { type NightSummary, nightSummaries } from "./nights";
 import { replayDaySchema } from "./replay-day";
 
@@ -129,6 +129,22 @@ describe("ten nights of person A", () => {
     if (low.state !== "available" || low.at === null) return;
     expect(localClock(new Date(low.at), DEMO_TIME_ZONE).time < "06:30").toBe(true);
     expect(night.night?.to).toBe("2026-10-27T05:30:00.000Z");
+  });
+
+  test("on the 25-hour day, a sleep that ends at 11:30 is still the night before waking", () => {
+    const lateWake = localInstant("2026-10-25", "11:30", DEMO_TIME_ZONE).toISOString();
+    const history = demoReplayDays(DEMO_PERSON_A).map((one) =>
+      one.day !== "2026-10-25"
+        ? one
+        : replayDaySchema.parse({
+            ...one,
+            events: one.events.map((event) =>
+              event.id === "sleep-night-before" ? { ...event, to: lateWake } : event,
+            ),
+          }),
+    );
+    const [night] = nightSummaries(history, A, ["2026-10-25"]);
+    expect(night?.night?.to).toBe(lateWake);
   });
 
   test("the 25-hour day counts its coverage over 100 quarter-hours", () => {
