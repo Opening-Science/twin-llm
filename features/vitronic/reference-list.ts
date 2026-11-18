@@ -8,11 +8,14 @@
  */
 import "server-only";
 
+import { join } from "node:path";
+
 import type { AppendInput, AppendedEvent } from "@/packages/audit/append";
 import { append } from "@/packages/audit/append";
 import { database } from "@/infrastructure/database";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import type { FieldCipher } from "@/infrastructure/field-cipher";
+import { meshFileName } from "@/infrastructure/mesh-files";
 
 export const VITRONIC_REFERENCE_LIST_AUDIT_TOOL = "vitronic.reference.list";
 
@@ -227,4 +230,25 @@ export const listReferenceScans = async (params: {
     rowCount: rows.length,
   });
   return rows;
+};
+
+/**
+ * The references whose mesh is not on disk. A mesh is stored under its
+ * plaintext SHA-256 in the user's folder, as `<sha>.glb` in a synthetic
+ * install or `<sha>.glb.enc` once sealed in personal mode (#141); either
+ * counts. A row with no mesh hash is incomplete already and is not checked.
+ */
+export const missingMeshes = async (
+  rows: readonly ReferenceRow[],
+  userDir: string,
+  exists: (path: string) => Promise<boolean>,
+): Promise<readonly string[]> => {
+  const missing: string[] = [];
+  for (const row of rows) {
+    if (!row.glbSha256) continue;
+    const plain = join(userDir, meshFileName(row.glbSha256, false));
+    const sealed = join(userDir, meshFileName(row.glbSha256, true));
+    if (!(await exists(plain)) && !(await exists(sealed))) missing.push(row.reference);
+  }
+  return missing;
 };

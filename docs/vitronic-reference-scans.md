@@ -43,8 +43,10 @@ local user (`--user <id>` for another local actor): every subject except Self,
 in scan-number order, so a later scan is added at the end and the earlier
 references keep their numbers. The file is owner-only; the command prints counts
 and the path, never a row, and writes one audit row (`vitronic.reference.list`,
-counts only). Run it again after each session; the `note` column comes out
-empty, so keep notes in a copy.
+counts only). With `--check` it also looks for every listed mesh in the user's
+folder and exits 1, naming the references only, when one is missing. Run it
+again after each session; the `note` column comes out empty, so keep notes in a
+copy.
 
 | Column                | From                                                       |
 | --------------------- | ---------------------------------------------------------- |
@@ -78,7 +80,7 @@ During the session:
 
 Before 15 December:
 
-- [ ] Every row's `glb_sha256` matches a file under `data/vitronic/` (`.glb` or `.glb.enc`)
+- [ ] `bun run vitronic:reference-list -- --check` finds every listed mesh: `<glb_sha256>.glb`, or `<glb_sha256>.glb.enc` once sealed in personal mode
 - [ ] The scanner's own export copied to the encrypted disk
 - [ ] The list and the set backed up together, off GitHub
 - [ ] #614 closed with the number of people and scans only, no labels or ids

@@ -17,15 +17,20 @@ const row = (reference: string, repeat: number, complete: boolean): ReferenceRow
   syncedAt: "2026-11-21T10:00:00.000Z",
   preset: "standard",
   repeat,
-  glbSha256: "",
+  glbSha256: complete ? `sha-${reference}` : "",
   complete,
 });
 
-const run = async (argv: readonly string[], user: string | null = "user-1") => {
+const run = async (
+  argv: readonly string[],
+  user: string | null = "user-1",
+  missing: readonly string[] = [],
+) => {
   const out: string[] = [];
   const err: string[] = [];
   const written = new Map<string, string>();
   const asked: string[] = [];
+  const checked: string[] = [];
   const deps: ReferenceListDeps = {
     vitronicDir: () => "/data/vitronic",
     localActor: () => "local",
@@ -42,13 +47,18 @@ const run = async (argv: readonly string[], user: string | null = "user-1") => {
     writeFile: async (path, text) => {
       written.set(path, text);
     },
+    missingMeshes: async (_rows, userDir) => {
+      checked.push(userDir);
+      return missing;
+    },
+    exists: async () => false,
   };
   const code = await runReferenceList(
     argv,
     { stdout: { write: (s) => out.push(s) }, stderr: { write: (s) => err.push(s) } },
     deps,
   );
-  return { code, out: out.join(""), err: err.join(""), written, asked };
+  return { code, out: out.join(""), err: err.join(""), written, asked, checked };
 };
 
 describe("runReferenceList", () => {
@@ -73,5 +83,23 @@ describe("runReferenceList", () => {
     const result = await run([], null);
     expect(result.code).toBe(1);
     expect(result.written.size).toBe(0);
+  });
+
+  test("--check looks in the user's folder and says when every mesh is there", async () => {
+    const result = await run(["--check"]);
+    expect(result.code).toBe(0);
+    expect(result.checked).toEqual(["/data/vitronic/user-1"]);
+    expect(result.out).toContain("Meshes: all 2 found\n");
+  });
+
+  test("--check names the references whose mesh is missing and exits 1", async () => {
+    const result = await run(["--check"], "user-1", ["R03"]);
+    expect(result.code).toBe(1);
+    expect(result.err).toBe("Meshes: 1 of 2 not found: R03\n");
+    expect(result.written.size).toBe(1);
+  });
+
+  test("without --check nothing is looked for", async () => {
+    expect((await run([])).checked).toEqual([]);
   });
 });
