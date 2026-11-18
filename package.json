@@ -65,6 +65,7 @@
     "vitronic:connect": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/vitronic/connect.ts",
     "vitronic:mint": "bun scripts/vitronic/mint-token.ts",
     "vitronic:cycle": "bun scripts/vitronic/cycle.ts",
+    "vitronic:reference-list": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/vitronic/reference-list.ts",
     "anatomy:fetch": "bun scripts/anatomy/fetch.ts",
     "anatomy:bake-rigged": "bun scripts/anatomy/bake-rigged.ts",
     "blender:fit-atlas": "bun scripts/blender/run.ts fit-atlas",
