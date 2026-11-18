@@ -29,13 +29,16 @@ const whisper = script(
 done
 printf ' heard in %s\\n' "$lang" > "$out.txt"`,
 );
-// Writes the text it was given to the -f file, so the test can read it back.
+// Writes the text it read on stdin to the -f file, and its arguments to
+// "<-f>.argv", so the test can read both back.
 const piper = script(
   "piper",
-  `while [ $# -gt 0 ]; do
-  case "$1" in -f) out="$2"; shift 2;; --) shift; text="$1"; shift;; *) shift;; esac
+  `args="$*"
+while [ $# -gt 0 ]; do
+  case "$1" in -f) out="$2"; shift 2;; *) shift;; esac
 done
-printf '%s' "$text" > "$out"`,
+cat > "$out"
+printf '%s' "$args" > "$out.argv"`,
 );
 const broken = script("broken", `echo "model file missing" >&2; exit 3`);
 
@@ -95,11 +98,19 @@ describe("speech engines", () => {
     ]);
   });
 
-  test("gives Piper the text as one argument, quotes and all, with the language's voice", async () => {
+  test("gives Piper the text on stdin, quotes and all, as one line", async () => {
     const out = join(dir, "answer.wav");
-    const text = `Dein Herz: "ruhig"; $(echo nein) & gut.`;
+    const text = `Dein Herz: "ruhig";\n$(echo nein) & gut.`;
     await speechEngines(SETUP).speak(text, "de", out);
-    expect(readFileSync(out, "utf8")).toBe(text);
+    expect(readFileSync(out, "utf8")).toBe(`Dein Herz: "ruhig"; $(echo nein) & gut.\n`);
+  });
+
+  test("keeps the text out of Piper's arguments, where any user could read it", async () => {
+    const out = join(dir, "private.wav");
+    await speechEngines(SETUP).speak("Your resting heart rate was 52.", "en", out);
+    const argv = readFileSync(`${out}.argv`, "utf8");
+    expect(argv).toBe(`-m /voices/en_GB-alba-medium.onnx -f ${out}`);
+    expect(argv).not.toContain("heart");
   });
 
   test("a failed engine throws with its exit code and error text", async () => {
@@ -110,14 +121,14 @@ describe("speech engines", () => {
   });
 
   test("picks the voice for the language", async () => {
-    const calls: (readonly string[])[] = [];
-    const run: Run = (_command, args) => {
-      calls.push(args);
+    const calls: (readonly unknown[])[] = [];
+    const run: Run = (_command, args, input) => {
+      calls.push([args, input]);
       return Promise.resolve({ code: 0, stderr: "" });
     };
     await speechEngines(SETUP, run).speak("Hello.", "en", "/work/a.wav");
     expect(calls).toEqual([
-      ["-m", "/voices/en_GB-alba-medium.onnx", "-f", "/work/a.wav", "--", "Hello."],
+      [["-m", "/voices/en_GB-alba-medium.onnx", "-f", "/work/a.wav"], "Hello.\n"],
     ]);
   });
 });
