@@ -7,8 +7,12 @@
  *
  *   bun run vitronic:reference-list
  *   bun run vitronic:reference-list -- --user <clerk id>
+ *   bun run vitronic:reference-list -- --check
+ *
+ * `--check` also looks for every listed mesh on disk and exits 1, naming the
+ * references only, when one is missing.
  */
-import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { ReferenceRow } from "../../features/vitronic/reference-list";
@@ -32,6 +36,12 @@ export type ReferenceListDeps = Readonly<{
   }) => Promise<readonly ReferenceRow[]>;
   referenceCsv: (rows: readonly ReferenceRow[]) => string;
   writeFile: (path: string, text: string) => Promise<void>;
+  missingMeshes: (
+    rows: readonly ReferenceRow[],
+    userDir: string,
+    exists: (path: string) => Promise<boolean>,
+  ) => Promise<readonly string[]>;
+  exists: (path: string) => Promise<boolean>;
 }>;
 
 const flag = (argv: readonly string[], name: string): string | undefined => {
@@ -58,13 +68,27 @@ export const runReferenceList = async (
   io.stdout.write(
     `Reference list: ${rows.length} scans of ${subjects} subjects, ${incomplete} incomplete, written to ${path}\n`,
   );
-  return 0;
+  if (!argv.includes("--check")) return 0;
+  const withMesh = rows.filter((row) => row.glbSha256).length;
+  const missing = await deps.missingMeshes(
+    rows,
+    join(deps.vitronicDir(), userId),
+    deps.exists,
+  );
+  if (missing.length === 0) {
+    io.stdout.write(`Meshes: all ${withMesh} found\n`);
+    return 0;
+  }
+  io.stderr.write(
+    `Meshes: ${missing.length} of ${withMesh} not found: ${missing.join(", ")}\n`,
+  );
+  return 1;
 };
 
 const isMain = Boolean((import.meta as { main?: boolean }).main);
 
 if (isMain) {
-  const { listReferenceScans, referenceCsv } =
+  const { listReferenceScans, missingMeshes, referenceCsv } =
     await import("../../features/vitronic/reference-list");
   const { findAppUserId } = await import("../../infrastructure/current-user");
   const { serverEnv, storageEnv } = await import("../../infrastructure/env");
@@ -80,6 +104,12 @@ if (isMain) {
       // mode applies only on create: a list already there keeps its old mode.
       await chmod(path, 0o600);
     },
+    missingMeshes,
+    exists: (path) =>
+      access(path).then(
+        () => true,
+        () => false,
+      ),
   });
   process.exit(code);
 }

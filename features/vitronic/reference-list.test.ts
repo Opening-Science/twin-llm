@@ -5,6 +5,7 @@ import type { FieldCipher } from "@/infrastructure/field-cipher";
 
 import {
   listReferenceScans,
+  missingMeshes,
   REFERENCE_COLUMNS,
   referenceCsv,
   referenceRows,
@@ -145,5 +146,32 @@ describe("listReferenceScans", () => {
       rowCount: 2,
     });
     expect(JSON.stringify(calls.audit[0])).not.toContain("R-A");
+  });
+});
+
+describe("missingMeshes", () => {
+  const rows = referenceRows(SUBJECTS, [
+    scan("sub-a", 3),
+    scan("sub-a", 4),
+    scan("sub-b", 8, false),
+  ]);
+  const sha = (viatarId: number) => `${"a".repeat(63)}${viatarId % 10}`;
+
+  test("a plain or a sealed mesh counts; a row without a mesh hash is not checked", async () => {
+    const onDisk = new Set([`/v/user-1/${sha(3)}.glb`, `/v/user-1/${sha(4)}.glb.enc`]);
+    const asked: string[] = [];
+    const missing = await missingMeshes(rows, "/v/user-1", async (path) => {
+      asked.push(path);
+      return onDisk.has(path);
+    });
+    expect(missing).toEqual([]);
+    expect(asked.some((path) => path.includes(sha(8)))).toBe(false);
+  });
+
+  test("names the references whose mesh is gone", async () => {
+    expect(await missingMeshes(rows, "/v/user-1", async () => false)).toEqual([
+      "R01",
+      "R02",
+    ]);
   });
 });
