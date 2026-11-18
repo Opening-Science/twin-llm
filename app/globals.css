@@ -1981,4 +1981,21 @@
     opacity: 0.55;
   }
 }
+
+/* Above a playing beat: what a press does. Near the idle reset it gets a box,
+   and its words say why. */
+.kiosk-hint {
+  margin-bottom: 0.6em;
+  color: var(--muted-foreground);
+  font-size: clamp(0.85rem, 1.3vh, 1.75rem);
+}
+
+.kiosk-hint[data-kind="leaving"] {
+  width: fit-content;
+  padding: 0.3em 0.8em;
+  border: 2px solid currentColor;
+  border-radius: 0.5em;
+  color: var(--foreground);
+  font-weight: 600;
+}
 /* --- Kiosk (end) ------------------------------------------------------------- */
