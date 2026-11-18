@@ -37,6 +37,8 @@ import type { PromptSend, PromptSourceFacts } from "./conversation";
 import { EffortPicker } from "./effort-picker";
 import { ModePicker } from "./mode-picker";
 import { promptHint } from "./prompt-hint";
+import { PushToTalk } from "./push-to-talk";
+import { heardLine, type VoiceHeard } from "./push-to-talk-model";
 import {
   IMPORT_FILE,
   matchSources,
@@ -52,6 +54,7 @@ import {
 import { SourcesMenu } from "./sources-menu";
 import { SuggestionChips } from "./suggestion-chips";
 import { chipSend, type SuggestedQuestion } from "./suggestion-send";
+import { useVoice } from "./voice-context";
 
 /**
  * The prompt bar (SPEC 3.3, 7): suggested questions on an empty thread, the
@@ -157,7 +160,9 @@ export const PromptBar = ({
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | undefined>(undefined);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [heard, setHeard] = useState<string | null>(null);
   const wearables = useWearableStatus();
+  const voice = useVoice();
 
   const commands = paletteCommands(skills);
   const slash = dismissed === draft ? null : slashQuery(draft);
@@ -207,6 +212,37 @@ export const PromptBar = ({
     setDraft(next);
     setActive(0);
     setNotice(undefined);
+    setHeard(null);
+  };
+
+  /**
+   * A spoken question goes out at once, as typed text would on Enter. When
+   * it cannot (no model picked, a mode problem), it waits in the box with the
+   * reason in the hint line.
+   */
+  const sendSpoken = (spoken: VoiceHeard) => {
+    const spokenSkill = skillDraft(spoken.text, skills);
+    const prompt = spokenSkill?.prompt ?? spoken.text.trim();
+    const models = pickedModels(modes, context, prompt);
+    changeDraft(spoken.text);
+    const blocked = sending || streaming || models.length === 0;
+    if (blocked || modeProblem(modes, context, prompt) !== null) {
+      return;
+    }
+    onSend({
+      prompt,
+      label: null,
+      skill: spokenSkill === null ? null : spokenSkill.skill.name,
+      models,
+      effort,
+      spoken: spoken.language,
+    });
+    setDraft("");
+    setChip(null);
+    setDismissed(null);
+    setConnectOpen(false);
+    setActive(0);
+    setHeard(heardLine(spoken));
   };
 
   const closeMenus = () => {
@@ -431,7 +467,15 @@ export const PromptBar = ({
               void disconnect("google-health").then(wearables.refresh)
             }
           />
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-1.5">
+            {voice.on ? (
+              <PushToTalk
+                language={voice.language}
+                disabled={sending || streaming}
+                onLanguage={voice.setLanguage}
+                onHeard={sendSpoken}
+              />
+            ) : null}
             <AppAuth>
               {(auth) =>
                 auth.isLoaded && !auth.isSignedIn ? (
@@ -456,7 +500,7 @@ export const PromptBar = ({
         aria-live="polite"
         className="text-muted-foreground mt-2 text-center text-xs leading-snug"
       >
-        {hint}
+        {heard ?? hint}
       </p>
     </div>
   );
