@@ -135,3 +135,27 @@ mixed-effects models run on the same records outside this harness.
 For Part B, `detection` gives d′ and criterion c with the log-linear
 correction (0.5 added to hit and false-alarm counts, 1 to trial counts), and
 `welch` gives Welch's t-test with its two-sided p.
+
+## Part B analysis
+
+`participants.ts` takes participants' responses (arm, completion time,
+attention checks, and per trial the truth, the evidence level, the flag,
+the trust rating and whether the data panel was opened):
+
+1. **Exclusions**, before any index is computed and in this order: a
+   failed attention check, a completion time under a third of the pilot
+   median, the same detection answer on all 16 trials, a panel id seen
+   before (the first attempt is kept).
+2. **Indices** per participant: d′ and c from the detection trials (a hit is
+   a mis-attributed answer flagged); the calibration gap, mean trust on
+   validated measures minus limited or no evidence, over correctly
+   attributed answers; panel use.
+3. **Contrasts**: U1, d′ in D1 against D0; U2, the gap in D2 against D1;
+   Welch's t-test, Holm over the two at 0.05, supported only when higher in
+   the later arm.
+
+`bun run attribution:partb -- --simulate` runs this on seeded made-up
+participants with set effects (`simulateParticipants`), so the analysis is
+written and checked before any real data are opened, as the registration
+asks. `--responses <participants.json> --pilot-median <seconds>` runs it on
+a responses file. Both write `partb.md`.
