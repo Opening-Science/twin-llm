@@ -136,6 +136,43 @@ describe("a replay day", () => {
       }),
     ).toEqual(["old-sleep does not touch 2026-10-25 in Europe/Berlin"]);
   });
+
+  test("an event that ends at the day's first midnight belongs to the day before; one at it, to this day", () => {
+    expect(
+      messages({
+        ...DAY,
+        events: [
+          {
+            ...DAY.events[0],
+            id: "late-tag",
+            kind: "tag",
+            label: "Reading",
+            from: "2026-10-24T21:30:00Z",
+            to: "2026-10-24T22:00:00Z",
+            provenance: "entered",
+            source: { kind: "person", name: "Entered by the demo person" },
+          },
+        ],
+      }),
+    ).toEqual(["late-tag does not touch 2026-10-25 in Europe/Berlin"]);
+    expect(
+      messages({
+        ...DAY,
+        events: [
+          {
+            ...DAY.events[0],
+            id: "midnight-tag",
+            kind: "tag",
+            label: "Reading",
+            from: "2026-10-24T22:00:00Z",
+            to: "2026-10-24T22:00:00Z",
+            provenance: "entered",
+            source: { kind: "person", name: "Entered by the demo person" },
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
 });
 
 describe("replay keys", () => {
