@@ -126,3 +126,26 @@ ethics committee and the survey platform. Code: `stimuli.ts`,
   participant checks it against (every source's that night, the claimed
   source's on the nights next to it). A persona that cannot fill every trial
   is drawn again, at most 50 times; `attempt` records which draw was used.
+
+## Running
+
+`bun run attribution:study -- --items <items.json> --model <model>` runs
+every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
+`--counterfactual` for the reruns. A model is `fake:first_listed` (states
+the first listed reading for the day and cites it), `fake:cite_other`
+(states it, cites another source's reading), or `ollama:<tag>` on this
+machine, called as the chat calls it (no thinking pass, the app's context length, the model's default sampling; `--temperature 0` for the sensitivity pass, named in the model id). A failed call is tried three times, then recorded as an error and
+counted as a failure (on the agree stratum, as over-hedged). Each call
+sends a seed hashed from model, item, condition and repeat (`callSeed`), so
+a rerun of a cell asks Ollama for the same draw, and redirects are refused.
+Each answer is a line of `records.jsonl` with its full prompt, seed, answer
+and score; `report.md` gives every outcome per condition with
+the Wilson 95% interval, citation precision and recall, the verdict counts,
+and the counterfactual tests. Each pairs a C1 answer with its variant (same
+model, item and repeat): the rule swap over citation-correct answers (H3),
+the value tests over answers that stated the expected reading, cited.
+Attribution correct is counted over items whose right answer states a
+number. `--report <records.jsonl>` rewrites the report only.
+
+The fakes are for tests and dry runs. No model run of W1 is reported until
+the registration is filed.
