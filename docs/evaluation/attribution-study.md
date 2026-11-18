@@ -79,8 +79,8 @@ fixed order (or turns `hold_back` into `fixed_order`).
 section is traced to the reading whose value it is (`traceStated`); a number
 in the measure's unit that no reading holds is `untraced`. A traced number is
 `correct` when its reading is cited, else the verdict of the nearest cited
-reading of its measure (`wrong_source`, `wrong_day`, `wrong_source_and_day`),
-else `uncited`.
+reading of its measure that no other number is the value of (`wrong_source`,
+`wrong_day`, `wrong_source_and_day`), else `uncited`.
 
 | Outcome                    | Over                     | True when                                                                                                           |
 | -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
@@ -101,7 +101,7 @@ every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
 `--counterfactual` for the reruns. A model is `fake:first_listed` (states
 the first listed reading for the day and cites it), `fake:cite_other`
 (states it, cites another source's reading), or `ollama:<tag>` on this
-machine. A failed call is tried three times, then recorded as an error and
+machine, called as the chat calls it (no thinking pass, the app's context length, the model's default sampling; `--temperature 0` for the sensitivity pass, named in the model id). A failed call is tried three times, then recorded as an error and
 counted as a failure. Each answer is a line of `records.jsonl` with its full
 prompt, answer and score; `report.md` gives every outcome per condition with
 the Wilson 95% interval, citation precision and recall, the verdict counts,

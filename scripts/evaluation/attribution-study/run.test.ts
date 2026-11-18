@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { DEFAULT_OLLAMA_NUM_CTX } from "../../../infrastructure/ollama-context";
+
 import { DEV_OPTIONS, generateW1 } from "../../synthetic-wearables/w1-items";
 
 import { studyPrompt } from "./contexts";
@@ -106,26 +108,47 @@ describe("listedReadings", () => {
 
 describe("ollamaModel", () => {
   test("refuses an address that is not this machine", () => {
-    expect(() => ollamaModel("qwen3:4b", "http://10.0.0.5:11434")).toThrow();
+    expect(() => ollamaModel("qwen3:4b", { baseUrl: "http://10.0.0.5:11434" })).toThrow();
   });
 
-  test("posts the prompt to the local chat endpoint and returns the message", async () => {
-    let body: unknown = null;
+  const recording = () => {
+    const bodies: unknown[] = [];
     const fake = ((_url: URL, init?: RequestInit) => {
-      body = JSON.parse(String(init?.body));
+      bodies.push(JSON.parse(String(init?.body)));
       return Promise.resolve(
         new Response(JSON.stringify({ message: { content: "## Answer\nok" } })),
       );
     }) as unknown as typeof fetch;
-    const model = ollamaModel("qwen3:4b", "http://127.0.0.1:11434/v1", fake);
+    return { bodies, fake };
+  };
+
+  test("posts the prompt as the chat does: no thinking, the app's context", async () => {
+    const { bodies, fake } = recording();
+    const model = ollamaModel("qwen3:4b", {
+      baseUrl: "http://127.0.0.1:11434/v1",
+      fetch: fake,
+    });
+    expect(model.id).toBe("ollama:qwen3:4b");
     expect(await model.answer({ system: "s", user: "u" })).toBe("## Answer\nok");
-    expect(body).toMatchObject({
+    expect(bodies[0]).toEqual({
       model: "qwen3:4b",
       stream: false,
+      think: false,
+      options: { num_ctx: DEFAULT_OLLAMA_NUM_CTX },
       messages: [
         { role: "system", content: "s" },
         { role: "user", content: "u" },
       ],
+    });
+  });
+
+  test("a set temperature is sent and named in the model id", async () => {
+    const { bodies, fake } = recording();
+    const model = ollamaModel("qwen3:4b", { fetch: fake, temperature: 0 });
+    expect(model.id).toBe("ollama:qwen3:4b@temperature=0");
+    await model.answer({ system: "s", user: "u" });
+    expect(bodies[0]).toMatchObject({
+      options: { num_ctx: DEFAULT_OLLAMA_NUM_CTX, temperature: 0 },
     });
   });
 });
