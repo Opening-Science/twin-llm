@@ -79,8 +79,8 @@ fixed order (or turns `hold_back` into `fixed_order`).
 section is traced to the reading whose value it is (`traceStated`); a number
 in the measure's unit that no reading holds is `untraced`. A traced number is
 `correct` when its reading is cited, else the verdict of the nearest cited
-reading of its measure (`wrong_source`, `wrong_day`, `wrong_source_and_day`),
-else `uncited`.
+reading of its measure that no other number is the value of (`wrong_source`,
+`wrong_day`, `wrong_source_and_day`), else `uncited`.
 
 | Outcome                    | Over                     | True when                                                                                                           |
 | -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
