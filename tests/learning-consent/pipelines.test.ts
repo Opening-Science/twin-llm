@@ -201,6 +201,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "writes synthetic two-source summaries and their planted labels to files from a seed (#508); no database, no person's rows",
   "attribution:w1":
     "writes the source-attribution study's synthetic items to files from a seed (P6, #508); no database, no person's rows",
+  "attribution:partb":
+    "analyses simulated participants, or a responses file it is given, for the user study and writes the result to a file (P6, #508); no database, no person's rows",
   "attribution:rater":
     "writes a blinded rater sheet of synthetic study answers and reads it back to agreement figures (P6, #508); no database, no person's rows",
   "attribution:study":

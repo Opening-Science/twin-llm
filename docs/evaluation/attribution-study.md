@@ -217,3 +217,30 @@ blank.
 writes `agreement.md`: per outcome, the rows coded, the scorer's share of
 `y` (prevalence), observed agreement and Cohen's kappa with its 95%
 interval (`cohenKappa`, as the harness's own agreement uses).
+
+## Part B analysis
+
+`participants.ts` takes participants' responses (arm, completion time,
+attention checks, and per trial the truth, the evidence level, the flag,
+the trust rating and whether the data panel was opened):
+
+1. **Exclusions**, before any index is computed and in this order: a
+   failed attention check, a completion time under a third of the pilot
+   median, the same detection answer on all 16 trials, a panel id seen
+   before (the first attempt is kept).
+2. **Indices** per participant: d′ and c from the detection trials (a hit is
+   a mis-attributed answer flagged); the calibration gap, mean trust on
+   validated measures minus limited or no evidence, over correctly
+   attributed answers; panel use.
+3. **Contrasts**: U1, d′ in D1 against D0; U2, the gap in D2 against D1;
+   Welch's t-test, Holm over the two at 0.05, supported only when higher in
+   the later arm.
+
+`bun run attribution:partb -- --simulate` runs this on seeded made-up
+participants with set effects (`simulateParticipants`), so the analysis is
+written and checked before any real data are opened, as the registration
+asks. `--power <n>` adds the share of n simulated studies that support U1
+and U2 at the simulation's effects (`simulatedPower`): a power estimate
+that includes the noise of d′ from 16 trials. `--responses
+<participants.json> --pilot-median <seconds>` runs it on a responses file.
+Both write `partb.md`.
