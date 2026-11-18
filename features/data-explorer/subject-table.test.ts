@@ -4,6 +4,7 @@ import {
   escapeLike,
   pageWindow,
   parseSubjectQuery,
+  searchFormFields,
   subjectQueryString,
 } from "./subject-table";
 
@@ -89,5 +90,39 @@ describe("subjectQueryString", () => {
         page: 2,
       }),
     ).toBe("?cohort=synthea-v4-seed42&q=ab&sort=ref&dir=desc&page=2");
+  });
+});
+
+describe("searchFormFields", () => {
+  const submit = (fields: readonly (readonly [string, string])[], q: string) =>
+    parseSubjectQuery(Object.fromEntries([...fields, ["q", q]]));
+
+  test("a search keeps the sort and its direction, and starts at page 1", () => {
+    const query = { q: "", sort: "ref", dir: "desc", page: 3 } as const;
+    expect(submit(searchFormFields("c1", query), "ab")).toEqual({
+      q: "ab",
+      sort: "ref",
+      dir: "desc",
+      page: 1,
+    });
+    expect(
+      submit(
+        searchFormFields("c1", { ...query, sort: "observations", dir: "asc" }),
+        "ab",
+      ),
+    ).toEqual({ q: "ab", sort: "observations", dir: "asc", page: 1 });
+  });
+
+  test("carries the cohort and leaves out defaults, as the table links do", () => {
+    expect(
+      searchFormFields("c1", { q: "x", sort: "observations", dir: "desc", page: 2 }),
+    ).toEqual([["cohort", "c1"]]);
+    expect(
+      searchFormFields("c1", { q: "", sort: "first", dir: "desc", page: 1 }),
+    ).toEqual([
+      ["cohort", "c1"],
+      ["sort", "first"],
+      ["dir", "desc"],
+    ]);
   });
 });
