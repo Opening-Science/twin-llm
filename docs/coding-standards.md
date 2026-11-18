@@ -13,7 +13,7 @@ what actually runs; fix whichever one is wrong.
 | `bun run typecheck:tests` | The same over the test files (`tsconfig.test.json`)    |
 | `bun run lint`            | ESLint with `--max-warnings=0`: any warning fails      |
 | `bun run lint:claims`     | Banned product-claim wording (see `CONTRIBUTING.md`)   |
-| `bun run lint:links`      | Relative links and headings in the Markdown pages      |
+| `bun run lint:links`      | Links and headings in the Markdown and the app's /docs |
 | `bun run test`            | Unit tests                                             |
 | `bun run test:isolation`  | Test folders that must also pass in their own run      |
 | `bun run skills:check`    | Validates skills and runs their evals (`bun test` too) |
