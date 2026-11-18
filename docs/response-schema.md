@@ -246,7 +246,10 @@ and pin smoke. It is not adapter output.
 
 `features/chat/stream-model-response.ts` builds the document once, in
 `onFinish`, after this turn's audit rows (`session_id = turnId`) are read
-, with the server's `DATA_MODE`. The UI stream holds back its `finish`
+, with the server's `DATA_MODE`. The answers of a Compare or Specialists turn
+share that session, so each document keeps only the rows its own tool calls
+wrote, and only the sources its own searches collected
+(`packages/audit/answer-scope.ts`, #856). The UI stream holds back its `finish`
 chunk until then and sends metrics and document together in one
 `message-metadata` chunk. If the audit read or build fails, the stream still
 finishes, without a document, and the text is stored without one. If storing
