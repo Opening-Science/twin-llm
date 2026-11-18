@@ -10,6 +10,7 @@ import {
   recordKnowledgeTurn,
 } from "@/packages/knowledge/collector";
 import type { QueryToolPorts } from "@/packages/query-tools/ports";
+import { type AuditTransaction, appendInTransaction } from "@/packages/audit/append";
 
 import { type AppliedEffort, applyEffort } from "@/infrastructure/chat-effort";
 
@@ -474,6 +475,128 @@ describe("runTwinTurn at an effort (#366)", () => {
       ],
     );
     expect((await finish.buildDocument()).data_basis.tool_calls).toEqual([lookup]);
+  });
+});
+
+describe("two answers of one turn (#856)", () => {
+  /** The turn's audit session, as both answers write to it. */
+  const rows: ResponseToolCall[] = [];
+  const tx = {
+    $executeRaw: async () => 0,
+    auditEvent: {
+      findFirst: async () => {
+        const last = rows.at(-1);
+        return last === undefined
+          ? null
+          : { seq: BigInt(last.seq), hash: "0".repeat(64) };
+      },
+      create: async ({
+        data,
+      }: {
+        data: { seq: bigint; tool: string; argsSha256: string; resultSha256: string };
+      }) => {
+        rows.push({
+          seq: Number(data.seq),
+          tool: data.tool,
+          args_sha256: data.argsSha256,
+          result_sha256: data.resultSha256,
+          row_count: 1,
+          ts: "2026-11-18T12:00:00.000Z",
+        });
+      },
+    },
+  } as unknown as AuditTransaction;
+
+  /** A lookup that audits itself and collects a source, as the real ones do. */
+  const lookup = (name: string) =>
+    tool({
+      description: "synthetic lookup",
+      inputSchema: z.object({}),
+      execute: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        await appendInTransaction(tx, {
+          actor: "test",
+          sessionId: "turn-856",
+          subjectRef: null,
+          tool: name,
+          args: {},
+          result: [name],
+          rowCount: 1,
+        });
+        recordKnowledgeTurn("turn-856", [{ ...CITATION, id: name }]);
+        return [name];
+      },
+    });
+
+  /** Calls its one tool once, then answers. */
+  const callsOnce = (name: string) => {
+    let calls = 0;
+    return new MockLanguageModelV4({
+      doStream: async () =>
+        streamOf(
+          (calls += 1) > 1
+            ? text("Done")
+            : [
+                { type: "tool-call", toolCallId: name, toolName: name, input: "{}" },
+                {
+                  type: "finish",
+                  finishReason: { unified: "tool-calls", raw: "tool_calls" },
+                  usage,
+                },
+              ],
+        ),
+    });
+  };
+
+  const answer = (answerId: string, name: string) =>
+    new Promise<TwinTurnFinish>((resolve, reject) => {
+      const result = runTwinTurn(
+        {
+          model: callsOnce(name),
+          tools: { [name]: lookup(name) },
+          mode: "synthetic",
+          loadAudit: async () => [...rows],
+        },
+        {
+          turnId: "turn-856",
+          answerId,
+          messages: [{ role: "user", content: "Latest glucose?" }],
+          wearables: NO_WEARABLES,
+        },
+        {
+          onFirstToken: () => undefined,
+          onFinish: async (finish) => resolve(finish),
+          onError: async (error) => reject(error),
+          onAbort: () => reject(new Error("aborted")),
+        },
+      );
+      void result.consumeStream();
+    });
+
+  test("each answer's document holds its own lookups and sources only", async () => {
+    const [general, small] = await Promise.all([
+      answer("agent:gp", "latest_glucose"),
+      answer("qwen3:4b", "glucose_trend"),
+    ]);
+    const generalDocument = await general.buildDocument();
+    const smallDocument = await small.buildDocument();
+
+    expect(rows.map((row) => row.tool).sort()).toEqual([
+      "glucose_trend",
+      "latest_glucose",
+    ]);
+    expect(generalDocument.data_basis.tool_calls.map((row) => row.tool)).toEqual([
+      "latest_glucose",
+    ]);
+    expect(smallDocument.data_basis.tool_calls.map((row) => row.tool)).toEqual([
+      "glucose_trend",
+    ]);
+    expect(generalDocument.data_basis.sources.knowledge.map(({ id }) => id)).toEqual([
+      "latest_glucose",
+    ]);
+    expect(smallDocument.data_basis.sources.knowledge.map(({ id }) => id)).toEqual([
+      "glucose_trend",
+    ]);
   });
 });
 

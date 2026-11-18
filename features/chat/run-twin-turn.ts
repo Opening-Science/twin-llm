@@ -21,6 +21,7 @@ import { UI_CONTEXT_AUDIT_TOOL, type UiContext } from "@/infrastructure/ui-conte
 import { WEARABLE_SOURCES_TOOL_PREFIX } from "@/infrastructure/wearable-source-audit";
 import type { VitronicSummary } from "@/infrastructure/vitronic-types";
 import type { WhoopSummary } from "@/infrastructure/whoop-types";
+import { answerKey, drainAnswerAudit, withinAnswer } from "@/packages/audit/answer-scope";
 import { drainGbdTurn } from "@/packages/gbd-mcp/collector";
 import { drainGuidelineTurn } from "@/packages/guidelines/collector";
 import { drainKnowledgeTurn } from "@/packages/knowledge/collector";
@@ -92,6 +93,12 @@ export type TwinTurnDeps = Readonly<{
 
 export type TwinTurnInput = Readonly<{
   turnId: string;
+  /**
+   * Which of the turn's answers this is (the row id it answers as), when the
+   * turn may have several (#856). Its document then holds only the audit rows
+   * and sources of its own tool calls. Left out, everything of the turn.
+   */
+  answerId?: string;
   messages: ChatRequest["messages"];
   wearables: TwinTurnWearables;
   abortSignal?: AbortSignal;
@@ -204,11 +211,31 @@ const parseTurn = (
 ): ParsedTwinAnswer =>
   parseTwinAnswer(text, wearables, new Set(referenceSources(toolResults).keys()));
 
+/** The tools with every call run as part of one answer of the turn (#856). */
+const toolsOfAnswer = (tools: ToolSet, turnId: string, answerId: string): ToolSet =>
+  Object.fromEntries(
+    Object.entries(tools).map(([name, each]) => {
+      const { execute } = each;
+      return [
+        name,
+        execute === undefined
+          ? each
+          : {
+              ...each,
+              execute: (input: unknown, options: Parameters<typeof execute>[1]) =>
+                withinAnswer(turnId, answerId, () => execute(input, options)),
+            },
+      ];
+    }),
+  );
+
 export const runTwinTurn = (
   deps: TwinTurnDeps,
-  { turnId, messages, wearables, abortSignal }: TwinTurnInput,
+  { turnId, answerId, messages, wearables, abortSignal }: TwinTurnInput,
   hooks: TwinTurnHooks,
 ) => {
+  const tools =
+    answerId === undefined ? deps.tools : toolsOfAnswer(deps.tools, turnId, answerId);
   const system = twinTurnSystem(deps, wearables);
   const maxSteps = deps.effort?.maxSteps ?? MAX_STEPS;
   const thinking = deps.effort ? thinkingProviderOptions(deps.effort) : null;
@@ -223,18 +250,23 @@ export const runTwinTurn = (
     async () => {
       // The skill-run, UI context, effort, stop and wearable sources (#464)
       // rows record the turn; they read nothing, so they are not tool calls.
+      // Another answer of the same turn writes to the same session: keep
+      // only the rows this answer's own tool calls wrote (#856).
+      const own = answerId === undefined ? null : drainAnswerAudit(turnId, answerId);
       const toolCalls = (await deps.loadAudit(turnId)).filter(
         (row) =>
+          (own === null || own.has(row.seq)) &&
           skillOfAuditTool(row.tool) === null &&
           row.tool !== UI_CONTEXT_AUDIT_TOOL &&
           row.tool !== EFFORT_AUDIT_TOOL &&
           row.tool !== CHAT_STOP_AUDIT_TOOL &&
           !row.tool.startsWith(WEARABLE_SOURCES_TOOL_PREFIX),
       );
-      const gbd = drainGbdTurn(turnId);
-      const guidelines = drainGuidelineTurn(turnId);
-      const knowledge = drainKnowledgeTurn(turnId);
-      const literature = drainLiteratureTurn(turnId);
+      const key = answerKey(turnId, answerId ?? null);
+      const gbd = drainGbdTurn(key);
+      const guidelines = drainGuidelineTurn(key);
+      const knowledge = drainKnowledgeTurn(key);
+      const literature = drainLiteratureTurn(key);
       return buildResponseDocumentV1({
         parsed,
         toolCalls,
@@ -271,7 +303,7 @@ export const runTwinTurn = (
       role: message.role,
       content: message.content,
     })),
-    tools: deps.tools,
+    tools,
     stopWhen: isStepCount(maxSteps),
     prepareStep: ({ stepNumber }) => {
       writing.text = "";
