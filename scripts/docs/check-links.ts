@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -176,13 +177,22 @@ const toPosix = (path: string): string => path.split(sep).join("/");
 /** Folders whose Markdown is not a page: installed packages, build output, test fixtures. */
 const NOT_PAGES = /(?:^|\/)(?:node_modules|dist|\.next|fixtures|research-fixtures)\//;
 
-const markdownUnder = (dir: string): string[] =>
-  existsSync(join(ROOT, dir))
-    ? readdirSync(join(ROOT, dir), { recursive: true, withFileTypes: true })
-        .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-        .map((entry) => toPosix(relative(ROOT, join(entry.parentPath, entry.name))))
-        .filter((path) => !NOT_PAGES.test(path))
-    : [];
+/**
+ * The repository's Markdown files, tracked or new and not ignored, so local
+ * output such as `evaluation/runs/` is never read and a new page counts
+ * before it is added.
+ */
+export const repoMarkdown = (): readonly string[] =>
+  execFileSync(
+    "git",
+    ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md"],
+    { cwd: ROOT, encoding: "utf8" },
+  )
+    .split("\0")
+    .filter((path) => path !== "" && existsSync(join(ROOT, path)));
+
+const markdownUnder = (listed: readonly string[], dir: string): string[] =>
+  listed.filter((path) => path.startsWith(`${dir}/`) && !NOT_PAGES.test(path));
 
 /**
  * The other folders with Markdown pages a person reads: skills, the knowledge
@@ -205,13 +215,14 @@ const PAGE_FOLDERS = [
  * The pages checked: the Markdown files at the root, everything under `docs/`
  * and the pages in `PAGE_FOLDERS`.
  */
-export const pagesToCheck = (): readonly string[] => [
-  ...readdirSync(ROOT)
-    .filter((name) => name.endsWith(".md") && statSync(join(ROOT, name)).isFile())
-    .sort(),
-  ...markdownUnder("docs").sort(),
-  ...PAGE_FOLDERS.flatMap(markdownUnder).sort(),
-];
+export const pagesToCheck = (): readonly string[] => {
+  const listed = repoMarkdown();
+  return [
+    ...listed.filter((path) => !path.includes("/")).sort(),
+    ...markdownUnder(listed, "docs").sort(),
+    ...PAGE_FOLDERS.flatMap((dir) => markdownUnder(listed, dir)).sort(),
+  ];
+};
 
 const SOURCE = /\.tsx?$/;
 const TEST = /\.test\.tsx?$|\.test-helpers\.ts$/;

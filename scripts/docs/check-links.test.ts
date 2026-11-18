@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   brokenAppDocLinks,
@@ -10,6 +10,7 @@ import {
   headingAnchors,
   type LinkFiles,
   pagesToCheck,
+  repoMarkdown,
   sourcesToCheck,
 } from "./check-links";
 
@@ -167,28 +168,21 @@ describe("pagesToCheck", () => {
   });
 
   test("misses no folder: every page in the repository is read", () => {
-    // Hidden folders other than .github (worktrees, caches, local plans) and
-    // generated or installed ones hold no pages of the repository.
-    const skip = (name: string) =>
-      (name.startsWith(".") && name !== ".github") ||
-      name === "generated" ||
-      name === "node_modules";
-    const root = join(import.meta.dir, "..", "..");
+    // Hidden folders other than .github hold no pages of the repository.
     const pages = new Set(pagesToCheck());
-    const found = readdirSync(root, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && !skip(entry.name))
-      .flatMap((dir) =>
-        readdirSync(join(root, dir.name), { recursive: true, withFileTypes: true })
-          .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-          .map((entry) =>
-            relative(root, join(entry.parentPath, entry.name)).split(sep).join("/"),
-          ),
-      )
+    const found = repoMarkdown()
+      .filter((path) => !path.startsWith(".") || path.startsWith(".github/"))
       .filter(
         (path) =>
           !/(?:^|\/)(?:node_modules|dist|fixtures|research-fixtures)\//.test(path),
       );
     expect(found.filter((path) => !pages.has(path))).toEqual([]);
+  });
+
+  test("reads no ignored file, such as a local eval report", () => {
+    expect(pagesToCheck().some((page) => page.startsWith("evaluation/runs/"))).toBe(
+      false,
+    );
   });
 
   test("leaves out test fixtures and installed packages", () => {
