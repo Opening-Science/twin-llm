@@ -22,7 +22,7 @@ import {
 import { initialAutoRotate } from "../scan-materials";
 import { BodyScan, ContextLossWatcher, ScanEnvironment } from "../scan-scene";
 import { KIOSK_BODY_MISSING, KIOSK_VIEW_LABEL } from "./kiosk-copy";
-import { type KioskFocus } from "./kiosk-focus";
+import { type BeatFocus } from "../day/beat-focus";
 
 const NO_MARKERS: Parameters<typeof BodyScan>[0]["markers"] = [];
 const NO_MEASURES: Parameters<typeof BodyScan>[0]["measures"] = [];
@@ -47,7 +47,7 @@ type TwinState = "loading" | "ready" | "failed";
 export const KioskTwin = ({
   sex = "male",
   focus = null,
-}: Readonly<{ sex?: KioskSex; focus?: KioskFocus | null }>) => {
+}: Readonly<{ sex?: KioskSex; focus?: BeatFocus | null }>) => {
   const camera = useMemo(() => new PerspectiveCamera(40, 9 / 16, 0.01, 40), []);
   const controlsRef = useRef<OrbitControls | null>(null);
   const onControls = useCallback((controls: OrbitControls | null) => {
