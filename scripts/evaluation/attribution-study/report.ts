@@ -55,10 +55,18 @@ export const shareOf = (hits: number, n: number): Share => {
   };
 };
 
+/** Outcomes where `true` is the failure: an error counts as `true` there. */
+export const FAILURE_IS_TRUE: ReadonlySet<Outcome["field"]> = new Set(["overHedged"]);
+
+/** The outcome of one record, an error (no score) counted as a failure. */
+export const outcomeOf = (record: StudyRecord, field: Outcome["field"]): boolean =>
+  record.score === null ? FAILURE_IS_TRUE.has(field) : record.score[field] === true;
+
 /**
- * An outcome over the records it applies to; an error counts as a failure.
- * Attribution is scored where a right answer states a number (the expected
- * outcome is `state`); every other outcome on its own stratum.
+ * An outcome over the records it applies to; an error counts as a failure
+ * (for over-hedging, a failure is `true`). Attribution is scored where a
+ * right answer states a number (the expected outcome is `state`); every
+ * other outcome on its own stratum.
  */
 export const outcomeShare = (
   records: readonly StudyRecord[],
@@ -69,7 +77,7 @@ export const outcomeShare = (
     stratum === null ? record.expected.kind === "state" : record.stratum === stratum,
   );
   return shareOf(
-    applies.filter((record) => record.score?.[outcome.field] === true).length,
+    applies.filter((record) => outcomeOf(record, outcome.field)).length,
     applies.length,
   );
 };
