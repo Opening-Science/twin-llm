@@ -27,7 +27,9 @@ selections with `replayKeyOf` or `belongsTo`, never by `subject_ref` alone.
 The day is local, not UTC: it runs from local midnight to the next one, so a
 daylight-saving day has 23 or 25 hours (`localDayBounds` in `local-time.ts`). Instants
 are stored in UTC. Show a time with `localClock`, which gives the local `HH:MM` and the
-offset: on the autumn change, 02:30 happens twice.
+offset: on the autumn change, 02:30 happens twice. An event or narration belongs to the
+day when it overlaps it: one that ends exactly at the day's first midnight belongs to the
+day before.
 
 ## Items
 

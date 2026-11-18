@@ -14,9 +14,9 @@ import { inLocalDay, isCalendarDay, isTimeZone, localDayBounds } from "./local-t
  *
  * The parser refuses an item of another person, day, zone or origin, a reading
  * outside the local day (a daylight-saving day is 23 or 25 hours long), an
- * event or narration that does not touch the day, two items with one id, and
- * two values of one stream at one instant. A synthetic demonstration always
- * carries its notice.
+ * event or narration that does not touch the day (one ending at its first
+ * midnight does not), two items with one id, and two values of one stream at
+ * one instant. A synthetic demonstration always carries its notice.
  */
 
 /** Shown with every synthetic demonstration day. */
@@ -62,8 +62,12 @@ const scopeIssues = (day: DayShape): readonly string[] =>
 
 const timeIssues = (day: DayShape): readonly string[] => {
   const bounds = localDayBounds(day.day, day.time_zone);
+  // An event ending exactly at the day's first midnight belongs to the day
+  // before; one that starts there (a tag at 00:00) belongs to this day.
   const touches = (from: string, to: string): boolean =>
-    Date.parse(from) < bounds.end.getTime() && Date.parse(to) >= bounds.start.getTime();
+    Date.parse(from) < bounds.end.getTime() &&
+    (Date.parse(to) > bounds.start.getTime() ||
+      Date.parse(from) >= bounds.start.getTime());
   return [
     ...day.readings.flatMap((reading) =>
       inLocalDay(new Date(reading.at), bounds)
