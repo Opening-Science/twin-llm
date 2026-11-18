@@ -13,6 +13,7 @@ import {
   type CardAccuracyEntry,
   type CitedSource,
 } from "./card-accuracy";
+import { NewTabNote } from "@/infrastructure/ui-kit/new-tab-note";
 
 /**
  * "How accurate is this?" under a dashboard card: what published validation
@@ -37,7 +38,7 @@ const Citation = ({ source }: { readonly source: CitedSource }) => (
       className="text-foreground break-all underline underline-offset-2"
     >
       {source.doi ? `doi:${source.doi}` : "Article"}
-      <span className="sr-only"> (opens in a new tab)</span>
+      <NewTabNote />
     </a>
   </li>
 );

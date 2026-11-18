@@ -93,6 +93,27 @@ describe("CheckDetail (#483)", () => {
       ["Fix", "chmod 600 .env.local"],
     ]);
   });
+  test("says when a link opens a new tab, and only then", () => {
+    const html = renderToStaticMarkup(
+      <CheckDetail
+        check={{
+          ...CHECK,
+          links: [
+            { label: "Paper", href: "https://example.org/paper" },
+            { label: "Runbook", href: "/docs/runbook" },
+          ],
+        }}
+      />,
+    );
+    const links = [...html.matchAll(/<a\b([^>]*)>(.*?)<\/a>/g)].map((m) => [
+      /target="_blank"/.test(m[1] ?? ""),
+      m[2],
+    ]);
+    expect(links).toEqual([
+      [true, 'Paper<span class="sr-only"> (opens in a new tab)</span>'],
+      [false, "Runbook"],
+    ]);
+  });
 });
 
 describe("CommandBlock", () => {
