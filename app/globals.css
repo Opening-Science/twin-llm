@@ -1686,6 +1686,15 @@
     @apply sr-only;
   }
 
+  /* "Read aloud" under a finished answer (features/compare/read-aloud.tsx). */
+  .read-aloud {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 self-start rounded-full border px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-2;
+  }
+
+  .read-aloud[aria-pressed="true"] {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
   .voice-status {
     @apply text-muted-foreground max-w-56 truncate text-xs;
   }
@@ -2066,6 +2075,11 @@
   z-index: 10;
   background: transparent;
   cursor: pointer;
+  /* A tap is a press at once: no double-tap zoom wait, no grey flash, no
+     long-press callout on a touch panel. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .kiosk-press:focus-visible {

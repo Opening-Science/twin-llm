@@ -75,6 +75,27 @@ reversed order (Google Health, WHOOP, Oura), so the source the rule picks
 changes on every item and a held-back value must be stated. A swap that
 would ask for the same answer is not run.
 
+## Scoring
+
+`score.ts` scores one answer against its item. Every number in the Answer
+section is traced to the reading whose value it is (`traceStated`); a number
+in the measure's unit that no reading holds is `untraced`. A traced number is
+`correct` when its reading is cited, else the verdict of the nearest cited
+reading of its measure that no other number is the value of (`wrong_source`,
+`wrong_day`, `wrong_source_and_day`), else `uncited`.
+
+| Outcome                    | Over                     | True when                                                                                                           |
+| -------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Attribution correct (H1)   | items expecting a number | at least one wearable number, every one `correct`                                                                   |
+| Disagreement handled (H2a) | disagree                 | fixed order: expected reading stated, others named, order given; hold back: no asked-day number, every source named |
+| Over-hedged (H2b)          | agree                    | says the sources disagree, holds back or averages, or states no asked-day number                                    |
+| Day correct                | day shift                | the asked day's reading stated and cited, every number `correct`                                                    |
+| Abstention correct         | missing                  | says there is no reading, and every number it states is cited to its own day                                        |
+| Construct mismatch handled | probes                   | says the scores are different and does not average them                                                             |
+
+The phrase lists (`HEDGE`, `RULE_REASON`, `NO_READING`, `DIFFERENT_SCORES`)
+are heuristics; P6 validates them with a second rater.
+
 ## User study stimuli (Part B)
 
 `bun run attribution:stimuli` writes the user study's stimuli to
