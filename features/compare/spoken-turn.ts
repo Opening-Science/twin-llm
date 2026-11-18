@@ -1,4 +1,6 @@
 import type { SpeechLanguage } from "@/infrastructure/speech/contract";
+import { organNamed } from "@/infrastructure/speech/organ-named";
+import type { TwinFocusId } from "@/packages/anatomy/twin-focus";
 
 import { finishedAnswer, isWithheld } from "./answer-text";
 import type { TurnState } from "./conversation";
@@ -19,6 +21,8 @@ export type SpokenAnswer = Readonly<{
   /** The Answer section in words, as the column shows it. */
   text: string;
   prompt: string;
+  /** The focus of a body twin the answer drew itself, if it drew one. */
+  shownFocus: TwinFocusId | null;
 }>;
 
 /**
@@ -37,7 +41,18 @@ export const spokenAnswer = (
     if (answer.status !== "COMPLETE" || answer.stopped === true) return [];
     if (answer.refusal !== undefined || isWithheld(answer.document)) return [];
     const text = finishedAnswer(answer.text).answer;
-    return text === "" ? [] : [{ id: answer.id, text, prompt: turn.prompt }];
+    if (text === "") return [];
+    const shown = (answer.views ?? []).find((view) => view.kind === "twin.body");
+    const shownFocus = shown?.kind === "twin.body" ? shown.spec.focus : null;
+    return [{ id: answer.id, text, prompt: turn.prompt, shownFocus }];
   });
   return answers[0] ?? null;
 };
+
+/**
+ * Where the chat's twin turns after a spoken answer (#616): the body twin the
+ * answer drew, else the organ its words name first, else the question's.
+ * Null when it names none, and the twin stays as it is.
+ */
+export const twinTurnOf = (answer: SpokenAnswer): TwinFocusId | null =>
+  answer.shownFocus ?? organNamed(answer.text, answer.prompt);
