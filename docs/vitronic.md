@@ -155,7 +155,14 @@ Chat receives numeric summary keys only (`vitronic.property.*` and
 newest snapshot. Other subjects never reach the prompt. Positions, contours, and
 the mesh are never attached to a chat turn or ResponseDocument. Digital Twin: subject dropdown → scan dropdown (date, scan number, synced,
 preset) → viewer. The scan list shows synced scans first, newest first, then
-incomplete and unsynced ones. The viewer opens the subject's pinned default scan
+incomplete and unsynced ones. When a subject's scans load, the ones the scanner
+lists that were never stored, and incomplete ones under an hour old (the
+scanner may still have been building the mesh), are synced without a press
+(#613): newest first, at most three per open, one by one through
+`POST /api/vitronic/subjects/:id/sync`, stopping at the first failure; then the
+lists are read again (`features/digital-twin/scan-auto-sync.ts`). It runs once
+per open. A status line says how many are being fetched, or that the scanner
+stopped answering, and the Sync button is disabled while it runs. The viewer opens the subject's pinned default scan
 (**Set as default** / **Clear default**, marked `default` in the list) while it
 is still synced, otherwise the newest synced scan. The pin is a viewer
 preference only: chat still reads the isSelf subject's newest snapshot. `GLTFLoader` draws the Z-up scan mesh; `OrbitControls` (three
