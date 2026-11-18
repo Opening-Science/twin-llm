@@ -98,9 +98,19 @@ describe("a replay day", () => {
     ).toEqual(["recorded is recorded, the day is synthetic_demo"]);
   });
 
-  test("a synthetic day carries its notice", () => {
+  test("a synthetic day carries its notice, word for word; a recording carries none", () => {
     expect(messages({ ...DAY, notice: null })).toEqual([
       "a synthetic demonstration day carries its notice",
+    ]);
+    expect(messages({ ...DAY, notice: "Any words at all." })).toEqual([
+      "a synthetic demonstration day carries its notice",
+    ]);
+    const recorded = JSON.parse(
+      JSON.stringify(DAY).replaceAll('"origin":"synthetic_demo"', '"origin":"recorded"'),
+    ) as Record<string, unknown>;
+    expect(messages({ ...recorded, notice: null })).toEqual([]);
+    expect(messages(recorded)).toEqual([
+      "a recorded day carries no demonstration notice",
     ]);
   });
 

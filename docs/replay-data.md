@@ -17,7 +17,7 @@ integration.
 | ---------------------------------- | ------------------------------------------------------------------------- |
 | `subject_ref`, `day`, `time_zone`  | The person, the local calendar day (`YYYY-MM-DD`) and its IANA time zone. |
 | `origin`                           | `recorded` or `synthetic_demo`. A day is one or the other, never both.    |
-| `notice`                           | Always set on a synthetic day: a made-up person and day, not advice.      |
+| `notice`                           | `DEMO_NOTICE` on a synthetic day, word for word; null on a recording.     |
 | `readings`, `events`, `narrations` | The items below. Each one repeats the person, day, zone and origin.       |
 
 The parser refuses an item of another person, day, zone or origin, so a screen that
