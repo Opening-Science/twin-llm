@@ -137,7 +137,7 @@ phases nothing is said, and a day without that evidence has fewer phases.
 | Walking, Running              | A walk or run the device recorded.                                               |
 | Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run.        |
 | Recovery                      | From a run's end until back within the band, or an hour.                         |
-| Winding down and sleep        | From the person's winding-down tag, or recorded sleep, to the day's end.         |
+| Winding down and sleep        | From a tag reading exactly "Winding down", or recorded sleep, to the day's end.  |
 
 | Glucose                  | Evidence                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------- |

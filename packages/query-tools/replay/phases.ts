@@ -132,6 +132,8 @@ export const STILL_STEPS_PER_15_MIN = 50;
 export const RESTING_STEPS_PER_15_MIN = 300;
 /** A rise in the night from the lowest glucose to waking that counts as a dawn rise. */
 export const DAWN_RISE_MG_DL = 10;
+/** The tag that starts winding down, as the demo person enters it; no other word does. */
+export const WIND_DOWN_TAG = "Winding down";
 /** How long a meal's phase lasts unless the next meal comes first. */
 export const MEAL_WINDOW_MIN = 90;
 
@@ -304,7 +306,9 @@ export const storyPhases = (
   const runs = activities.filter((event) => event.activity === "run");
   const meals = day.events.filter((event) => event.kind === "meal").sort(byStart);
   const windDown = day.events.find(
-    (event) => event.kind === "tag" && /wind/i.test(event.label),
+    (event) =>
+      event.kind === "tag" &&
+      event.label.trim().toLowerCase() === WIND_DOWN_TAG.toLowerCase(),
   );
   const moving = (at: number): boolean => activities.some((event) => overlaps(event, at));
   const stepsAt = (at: number): AvailableReading | undefined =>
