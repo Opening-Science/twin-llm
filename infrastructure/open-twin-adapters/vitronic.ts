@@ -9,7 +9,7 @@ import {
   MEASUREMENT_SCHEMAS,
   type MeasurementData,
 } from "@open-twin/provider-vitronic/api/schemas/shared";
-import type { Bundle } from "fhir/r4";
+import type { Bundle, Reference } from "fhir/r4";
 
 import { personSubject, withPersonPatient } from "./person-subject";
 
@@ -59,28 +59,47 @@ const parseLists = (lists: VitronicScanLists) => {
   return { parsed, dropped };
 };
 
+export type VitronicScan = Readonly<{
+  scanId: string;
+  effectiveDateTime?: string | null;
+  lists: VitronicScanLists;
+}>;
+
 /**
- * Every Observation names the person's subject (`subjectKey` is the host's
- * key, e.g. a VitronicSubject id). The scan id seeds the Observation ids, so
- * syncing the same scan again gives the same resources.
+ * The scan's Observations under a subject the caller already holds, with no
+ * Patient added: the caller supplies the one `subject` points at. The scan id
+ * and `subjectKey` seed the Observation ids, so mapping the same scan again
+ * gives the same resources.
  */
-export const buildVitronicFhirBundle = (
-  scan: Readonly<{
-    scanId: string;
-    effectiveDateTime?: string | null;
-    lists: VitronicScanLists;
-  }>,
-  options: Readonly<{ subjectKey: string; timestamp: string }>,
+export const buildVitronicBundleForSubject = (
+  scan: VitronicScan,
+  options: Readonly<{ subject: Reference; subjectKey: string; timestamp: string }>,
 ): VitronicFhirResult => {
   const { parsed, dropped } = parseLists(scan.lists);
   const effectiveDateTime = scanDateTime(scan.effectiveDateTime);
   const bundle = buildBundleFromVitronicResponse({
     scan_id: scan.scanId,
-    subject: personSubject(options.subjectKey),
+    subject: options.subject,
     subjectKey: options.subjectKey,
     timestamp: options.timestamp,
     ...(effectiveDateTime ? { effectiveDateTime } : {}),
     ...parsed,
+  });
+  return { bundle, dropped };
+};
+
+/**
+ * A person's scan: every Observation names the person's shared subject
+ * (`subjectKey` is the host's key, e.g. a VitronicSubject id), and the Patient
+ * it points at carries only that key.
+ */
+export const buildVitronicFhirBundle = (
+  scan: VitronicScan,
+  options: Readonly<{ subjectKey: string; timestamp: string }>,
+): VitronicFhirResult => {
+  const { bundle, dropped } = buildVitronicBundleForSubject(scan, {
+    ...options,
+    subject: personSubject(options.subjectKey),
   });
   return {
     bundle: withPersonPatient(bundle, {

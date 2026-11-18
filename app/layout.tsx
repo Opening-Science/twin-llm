@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { PostHogProvider } from "@/features/analytics/posthog-provider";
+import { htmlLang } from "@/infrastructure/locale/locale";
+import { LocaleProvider } from "@/infrastructure/locale/locale-provider";
+import { serverLocale } from "@/infrastructure/locale/server-locale";
 import { ThemeProvider } from "@/features/theme/theme-provider";
 import { isClerkEnabled } from "@/infrastructure/public-env";
 
@@ -18,15 +21,20 @@ export const metadata: Metadata = {
 const WithAuth = ({ children }: Readonly<{ children: ReactNode }>) =>
   isClerkEnabled() ? <ClerkProvider>{children}</ClerkProvider> : children;
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const locale = await serverLocale();
   return (
     // The theme script sets the class on <html> before React hydrates.
-    <html lang="en" suppressHydrationWarning className="h-full">
+    <html lang={htmlLang(locale)} suppressHydrationWarning className="h-full">
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <WithAuth>
-            <PostHogProvider>{children}</PostHogProvider>
-          </WithAuth>
+          <LocaleProvider locale={locale}>
+            <WithAuth>
+              <PostHogProvider>{children}</PostHogProvider>
+            </WithAuth>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>
