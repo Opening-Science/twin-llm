@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { formatMetricValue } from "../../infrastructure/format-measure";
 import { randomFor } from "../../infrastructure/seeded-random";
 import {
   SOURCE_TOLERANCE,
@@ -123,6 +124,10 @@ describe("generateW1", () => {
         "oura",
         "whoop",
       ]);
+      // Scores are plain numbers, as the summaries store them: no "{score}" in a prompt.
+      for (const metric of probe.metrics) {
+        expect(formatMetricValue(metric)).toBe(String(metric.value));
+      }
     }
   });
 
