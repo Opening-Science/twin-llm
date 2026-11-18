@@ -37,14 +37,14 @@ checklist); the table above is what each of them needs.
 The list is what makes the set usable after the scanner has moved: one row per
 scan, kept as `reference-scans.csv` in the vitronic data folder
 (`VITRONIC_DATA_DIR`, else `data/vitronic/`) on the operator's machine, inside
-the folder git already ignores. It holds identifiers only, never measure
-values. `bun run vitronic:reference-list` writes it from what TwinLLM has
-stored for the local user (`--user <id>` for another local actor): every
-subject except Self, subjects in the order they were created, each one's scans
-by scan number. The file is owner-only; the command prints counts and the path,
-never a row, and writes one audit row (`vitronic.reference.list`, counts only).
-Run it again after each session; the `note` column comes out empty, so keep
-notes in a copy.
+the folder git already ignores. It holds identifiers only, never measure values.
+`bun run vitronic:reference-list` writes it from what TwinLLM has stored for the
+local user (`--user <id>` for another local actor): every subject except Self,
+in scan-number order, so a later scan is added at the end and the earlier
+references keep their numbers. The file is owner-only; the command prints counts
+and the path, never a row, and writes one audit row (`vitronic.reference.list`,
+counts only). Run it again after each session; the `note` column comes out
+empty, so keep notes in a copy.
 
 | Column                | From                                                       |
 | --------------------- | ---------------------------------------------------------- |

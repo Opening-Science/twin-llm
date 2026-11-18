@@ -61,10 +61,12 @@ export const REFERENCE_COLUMNS = [
 ] as const;
 
 /**
- * Subjects in the order they were created, each one's scans by scan number;
- * `repeat` counts a subject's scans from 1 and `reference` runs across the
- * whole list (R01, R02, …). A scan is complete with both a mesh and markers,
- * as the Body twin's scan list says.
+ * Rows in scan-number order across the whole list, so a later scan of any
+ * subject is added at the end and every earlier `reference` (R01, R02, …)
+ * keeps its number when the list is written again. `repeat` counts each
+ * subject's scans from 1. Scans of the same number (two subjects, never in
+ * practice) follow the order the subjects were created. A scan is complete
+ * with both a mesh and markers, as the Body twin's scan list says.
  */
 export const referenceRows = (
   subjects: readonly ReferenceSubject[],
@@ -73,27 +75,36 @@ export const referenceRows = (
   const ordered = [...subjects].sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id),
   );
-  const rows: ReferenceRow[] = [];
-  for (const subject of ordered) {
-    const scans = snapshots
-      .filter((scan) => scan.subjectId === subject.id)
-      .sort((a, b) => a.viatarId - b.viatarId);
-    scans.forEach((scan, index) => {
-      rows.push({
-        reference: `R${String(rows.length + 1).padStart(2, "0")}`,
+  const rank = new Map(ordered.map((subject, index) => [subject.id, index] as const));
+  const byId = new Map(ordered.map((subject) => [subject.id, subject] as const));
+  const scans = snapshots
+    .filter((scan) => byId.has(scan.subjectId))
+    .sort(
+      (a, b) =>
+        a.viatarId - b.viatarId ||
+        (rank.get(a.subjectId) ?? 0) - (rank.get(b.subjectId) ?? 0),
+    );
+  const repeats = new Map<string, number>();
+  return scans.flatMap((scan, index) => {
+    const subject = byId.get(scan.subjectId);
+    if (!subject) return [];
+    const repeat = (repeats.get(subject.id) ?? 0) + 1;
+    repeats.set(subject.id, repeat);
+    return [
+      {
+        reference: `R${String(index + 1).padStart(2, "0")}`,
         subjectLabel: subject.label,
         consentRecordedAt: subject.consentRecordedAt.toISOString(),
         consentBy: subject.consentBy,
         viatarId: scan.viatarId,
         syncedAt: scan.syncedAt.toISOString(),
         preset: scan.presetName ?? "",
-        repeat: index + 1,
+        repeat,
         glbSha256: scan.glbSha256 ?? "",
         complete: Boolean(scan.glbSha256) && scan.hasMarkers,
-      });
-    });
-  }
-  return rows;
+      },
+    ];
+  });
 };
 
 /** RFC 4180: a field with a comma, quote or line break is quoted, quotes doubled. */

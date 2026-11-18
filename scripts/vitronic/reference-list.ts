@@ -8,7 +8,7 @@
  *   bun run vitronic:reference-list
  *   bun run vitronic:reference-list -- --user <clerk id>
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { ReferenceRow } from "../../features/vitronic/reference-list";
@@ -77,6 +77,8 @@ if (isMain) {
     writeFile: async (path, text) => {
       await mkdir(join(path, ".."), { recursive: true });
       await writeFile(path, text, { mode: 0o600 });
+      // mode applies only on create: a list already there keeps its old mode.
+      await chmod(path, 0o600);
     },
   });
   process.exit(code);

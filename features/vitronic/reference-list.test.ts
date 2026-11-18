@@ -41,22 +41,30 @@ const scan = (subjectId: string, viatarId: number, complete = true) => ({
 });
 
 describe("referenceRows", () => {
-  test("subjects in the order they were created, scans by number, repeats counted per subject", () => {
+  test("rows by scan number across the list, repeats counted per subject", () => {
     const rows = referenceRows(SUBJECTS, [
       scan("sub-b", 9),
       scan("sub-a", 5),
       scan("sub-a", 3),
-      scan("sub-b", 8, false),
+      scan("sub-b", 4, false),
     ]);
     expect(
       rows.map((row) => [row.reference, row.subjectLabel, row.viatarId, row.repeat]),
     ).toEqual([
       ["R01", "R-A", 3, 1],
-      ["R02", "R-A", 5, 2],
-      ["R03", "R-B", 8, 1],
+      ["R02", "R-B", 4, 1],
+      ["R03", "R-A", 5, 2],
       ["R04", "R-B", 9, 2],
     ]);
-    expect(rows.map((row) => row.complete)).toEqual([true, true, false, true]);
+    expect(rows.map((row) => row.complete)).toEqual([true, false, true, true]);
+  });
+
+  test("a later scan of the first subject keeps every earlier reference", () => {
+    const before = [scan("sub-a", 3), scan("sub-b", 4), scan("sub-a", 5)];
+    const first = referenceRows(SUBJECTS, before);
+    const again = referenceRows(SUBJECTS, [...before, scan("sub-a", 12)]);
+    expect(again.slice(0, first.length)).toEqual([...first]);
+    expect(again.at(-1)).toMatchObject({ reference: "R04", viatarId: 12, repeat: 3 });
   });
 
   test("a scan of a subject not asked for is left out", () => {
