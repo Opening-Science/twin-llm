@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/infrastructure/ui";
 
-import { CUSTOMIZE_TABS, currentTab } from "./customize-tabs";
+import { CUSTOMIZE_TABS, currentTab, useCustomizeNav } from "./customize-tabs";
 
 /**
  * Customize's sections as a column of links on a wide screen (#457): the
@@ -15,16 +15,21 @@ import { CUSTOMIZE_TABS, currentTab } from "./customize-tabs";
  */
 export const CustomizeSections = ({ className }: Readonly<{ className?: string }>) => {
   const current = currentTab(usePathname());
+  const { copy, lang } = useCustomizeNav();
   return (
-    <nav aria-label="Customize" className={cn("customize-sections", className)}>
-      {CUSTOMIZE_TABS.map(({ href, label }) => (
+    <nav
+      lang={lang}
+      aria-label={copy.navLabel}
+      className={cn("customize-sections", className)}
+    >
+      {CUSTOMIZE_TABS.map(({ key, href }) => (
         <Link
           key={href}
           href={href}
           aria-current={href === current ? "page" : undefined}
           className="customize-section-link"
         >
-          {label}
+          {copy.tabs[key]}
         </Link>
       ))}
     </nav>
