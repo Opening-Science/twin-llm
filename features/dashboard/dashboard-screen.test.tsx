@@ -35,4 +35,15 @@ describe("DashboardScreen", () => {
     );
     expect(twin).toContain('<p id="twin-slot">Twin preview</p>');
   });
+
+  test("the twin section holds the Replay my day spot, with no link yet", () => {
+    const html = renderToStaticMarkup(createElement(DashboardScreen, { slots: {} }));
+    const twin = html.slice(
+      html.indexOf('aria-labelledby="dashboard-twin"'),
+      html.indexOf('aria-labelledby="dashboard-chat"'),
+    );
+    const spot = twin.slice(twin.indexOf('id="replay-my-day"'));
+    expect(spot).toContain("Replay my day");
+    expect(spot).not.toContain("<a ");
+  });
 });
