@@ -96,7 +96,24 @@ Triggers named `chat_move_mirror` on `threads`, `turns` and
 in the same transaction (`scripts/db/chat-move/mirror-sql.ts`; rollback is
 `DROP_MIRROR_SQL` there). A trigger on `scheduled_tasks` sets an exchange's
 `schedule_id` when a run records its turn, and clears it when the task is
-deleted. Rows older than the triggers are copied by the backfill.
+deleted. Rows older than the triggers are copied by the backfill:
+
+```bash
+bun run db:deploy          # expand + mirror migrations
+bun run db:chat-backfill   # copy older rows, add the keys, mark backfilled
+```
+
+It reads in batches of 1,000 by id (`--batch-size=` to change), each batch
+one transaction, and can be stopped and run again: it resumes from
+`schema_move_cursors`, and a run after a finished one inserts nothing.
+Copies already written by the triggers are left as they are. A scheduled
+turn's `schedule_id` is the task whose `last_turn_id` names it, else the
+one task on its thread, else null; `origin` always keeps the old flag. The
+last step adds the foreign keys and the check that only scheduled
+exchanges have a schedule, each `NOT VALID` and then validated; an orphaned
+copy makes it fail and the move stays `expanded`. To undo it, run
+`UNDO_FINISH_SQL` from `scripts/db/chat-move/backfill-sql.ts`; the copies
+stay and the triggers keep them current.
 
 The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
 `timestamptz` as if the session time zone were UTC, so on a server set to

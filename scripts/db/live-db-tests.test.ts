@@ -103,6 +103,6 @@ describe("unlistedLiveTests", () => {
     ]) {
       expect(await Bun.file(join(REPO, file)).exists()).toBe(true);
     }
-    expect(EXPECTED_LIVE_DB_TESTS).toBe(33);
+    expect(EXPECTED_LIVE_DB_TESTS).toBe(42);
   });
 });
