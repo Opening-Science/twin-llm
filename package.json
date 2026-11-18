@@ -142,6 +142,7 @@
     "@open-twin/fhir-r4": "file:.open-twin/packages/fhir-r4",
     "@open-twin/provider-google-health": "file:.open-twin/packages/provider-google-health",
     "@open-twin/provider-oura": "file:.open-twin/packages/provider-oura",
+    "@open-twin/provider-vitronic": "file:.open-twin/packages/provider-vitronic",
     "@open-twin/provider-whoop": "file:.open-twin/packages/provider-whoop",
     "@openrouter/ai-sdk-provider": "3.0.0",
     "@pdf-lib/fontkit": "1.1.1",
