@@ -1,3 +1,4 @@
+import { type GlucoseSpecimen } from "./day-beat";
 import {
   DAY_THRESHOLDS,
   type DayReading,
@@ -8,7 +9,8 @@ import {
 /**
  * Glucose over a week or a month: average, and the share of readings below,
  * within and above the profile's range from `day-thresholds.json`
- * (placeholders for Robin). Pure, free of I/O.
+ * (placeholders for Robin). Pure, free of I/O. One specimen at a time: blood
+ * glucose, or sensor glucose from a continuous monitor, never the two pooled.
  *
  * "Time in range" here is the share of readings. It equals the share of time
  * only when readings are evenly spaced, as a continuous monitor's are; the
@@ -27,6 +29,8 @@ export type GlucoseDayRow = Readonly<{
 }>;
 
 export type GlucosePeriod = Readonly<{
+  /** Which glucose was read: blood, or a continuous sensor's. */
+  specimen: GlucoseSpecimen;
   /** Glucose readings in the period. */
   n: number;
   /** Days with at least one glucose reading. */
@@ -68,11 +72,16 @@ const rangeOf = (
       }
     : { low: null, high: thresholds.glucoseWithoutDiabetesAboveMgDl };
 
-/** Average and time in range of the glucose readings across the days given. */
+/** One specimen's value in a reading, or null. */
+const valueOf = (reading: DayReading, specimen: GlucoseSpecimen): number | null =>
+  specimen === "sensor" ? (reading.sensorGlucoseMgDl ?? null) : reading.glucoseMgDl;
+
+/** Average and time in range of one specimen's readings across the days given. */
 export const glucosePeriod = (
   days: readonly PeriodDay[],
   profile: GlucoseProfile,
   thresholds: DayThresholds = DAY_THRESHOLDS,
+  specimen: GlucoseSpecimen = "blood",
 ): GlucosePeriod => {
   const { low, high } = rangeOf(profile, thresholds);
   const isBelow = (value: number): boolean => low !== null && value < low;
@@ -81,9 +90,10 @@ export const glucosePeriod = (
     .sort((a, b) => a.day.localeCompare(b.day))
     .map((one) => ({
       day: one.day,
-      values: one.readings.flatMap((reading) =>
-        reading.glucoseMgDl === null ? [] : [reading.glucoseMgDl],
-      ),
+      values: one.readings.flatMap((reading) => {
+        const value = valueOf(reading, specimen);
+        return value === null ? [] : [value];
+      }),
     }))
     .filter((one) => one.values.length > 0);
   const values = byDay.flatMap((one) => one.values);
@@ -91,6 +101,7 @@ export const glucosePeriod = (
   const below = values.filter(isBelow).length;
   const above = values.filter(isAbove).length;
   return {
+    specimen,
     n: values.length,
     days: byDay.length,
     average_mg_dl: values.length === 0 ? null : round(mean(values), 1),

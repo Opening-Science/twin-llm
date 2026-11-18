@@ -409,3 +409,102 @@ describe("the mock day with its sensor", () => {
     ]);
   });
 });
+
+describe("each measure against its own previous reading (#715)", () => {
+  test("a heart-rate reading between two glucose readings does not hide the rise", () => {
+    const beats = dayBeats(
+      [reading("18:30", 70, 85), reading("20:00", 72, null), reading("20:30", 74, 155)],
+      "without_diabetes",
+    );
+    const at2030 = beats.filter((beat) => beat.time === "20:30");
+    expect(at2030.map((beat) => [beat.source, beat.signal])).toEqual([
+      [
+        "measured",
+        {
+          measure: "glucose",
+          specimen: "blood",
+          direction: "up",
+          value: 155,
+          unit: "mg/dL",
+        },
+      ],
+      ["narrated", { measure: "insulin", direction: "up", value: null, unit: null }],
+      // 155 is past the placeholder 140, so the red window opens here too.
+      [
+        "derived",
+        {
+          measure: "glucose",
+          specimen: "blood",
+          direction: "up",
+          value: 155,
+          unit: "mg/dL",
+        },
+      ],
+    ]);
+    expect(at2030[0]?.body.text).toBe("Sugar from food passes into the blood.");
+  });
+
+  test("a glucose reading between two heart-rate readings does not hide the climb", () => {
+    const beats = dayBeats(
+      [
+        reading("07:00", 60, null),
+        reading("07:05", null, 95),
+        reading("07:10", 92, null),
+      ],
+      "without_diabetes",
+    );
+    expect(beats.find((beat) => beat.time === "07:10")?.signal).toEqual({
+      measure: "heart_rate",
+      direction: "up",
+      value: 92,
+      unit: "/min",
+    });
+  });
+
+  test("a reading holding only another measure does not split a red window", () => {
+    const windows = redWindows(
+      [reading("20:30", 70, 155), reading("20:31", 72, null), reading("20:35", 74, 160)],
+      "without_diabetes",
+    );
+    expect(windows.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["glucose", "20:30", "20:35", 160],
+    ]);
+    const heart = redWindows(
+      [
+        reading("09:00", 110, null),
+        reading("09:02", null, 95),
+        reading("09:05", 115, null),
+      ],
+      "without_diabetes",
+    );
+    expect(heart.map((w) => [w.measure, w.from, w.to, w.extreme])).toEqual([
+      ["heart_rate", "09:00", "09:05", 115],
+    ]);
+  });
+});
+
+describe("a change past its steady band leads a steady one (#851)", () => {
+  const at0830 = (heartRate: number, glucose: number) =>
+    dayBeats(
+      [reading("08:00", 60, 90), reading("08:30", heartRate, glucose)],
+      "without_diabetes",
+    ).find((beat) => beat.time === "08:30")?.signal;
+
+  test("a heart-rate rise of 11 /min leads a steady glucose change of 9 mg/dL", () => {
+    // On the scales 11 /min weighs 0.55 and 9 mg/dL 0.6, but 9 mg/dL is steady.
+    expect(at0830(71, 99)).toEqual({
+      measure: "heart_rate",
+      direction: "up",
+      value: 71,
+      unit: "/min",
+    });
+  });
+
+  test("a steady heart rate does not hide a glucose change past its band", () => {
+    expect(at0830(64, 100)).toMatchObject({ measure: "glucose", direction: "up" });
+  });
+
+  test("when both are steady, the larger weighted change still leads", () => {
+    expect(at0830(64, 99)).toMatchObject({ measure: "glucose", direction: "steady" });
+  });
+});
