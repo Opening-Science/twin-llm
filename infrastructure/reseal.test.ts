@@ -4,6 +4,7 @@ import { openNumber, plainCipher, sealedCipher } from "./field-cipher";
 import { sealedTextKeyId } from "./field-crypto";
 import {
   observationLookupValue,
+  PERSONAL_COPIES,
   personalTable,
   type PersonalTable,
   variantSiteValue,
@@ -340,5 +341,42 @@ describe("migrating stored OAuth and BodyLoop tokens (#341)", () => {
         String(rotated?.accessTokenEnc),
       ),
     ).toBe(envValue("access"));
+  });
+});
+
+describe("the chat copies are checked, never resealed", () => {
+  const ANSWERS = PERSONAL_COPIES.find((entry) => entry.table === "answers");
+  if (ANSWERS === undefined) throw new Error("answers copy missing");
+  const copy = (id: string, body: string) => ({
+    id,
+    owner: OWNER,
+    body_sealed: body,
+    reasoning_sealed: null,
+    evidence_sealed: null,
+    document_sealed: null,
+    tool_trace_sealed: null,
+  });
+
+  test("a plain value left in a copy is a finding for the doctor and the Lab", async () => {
+    const sealed = sealedCipher(OLD).sealText("model_responses", "text", "a1", "Made-up");
+    const table = memoryTable(ANSWERS, [copy("a1", sealed), copy("a2", "plain made-up")]);
+    expect(await plaintextFindings(table.ports.query)).toEqual([
+      { table: "answers", column: "body_sealed", rows: 1 },
+    ]);
+  });
+
+  test("the doctor points a plain copy at the parity check, not at vault:migrate", () => {
+    expect(
+      formatPlaintextFindings([{ table: "answers", column: "body_sealed", rows: 1 }]),
+    ).toEqual([
+      "  [!!] answers.body_sealed: 1 copied row(s) not sealed; run bun run db:chat-parity (docs/storage.md, Chat tables move)",
+    ]);
+  });
+
+  test("a copy still under a retiring key keeps that key from being removed", async () => {
+    const old = sealedCipher(OLD).sealText("model_responses", "text", "a1", "Made-up");
+    const table = memoryTable(ANSWERS, [copy("a1", old)]);
+    expect(await rowsWithKey(table.ports.query, OWNER, OLD.keyId)).toBe(1);
+    expect(await rowsWithKey(table.ports.query, OWNER, NEW.keyId)).toBe(0);
   });
 });
