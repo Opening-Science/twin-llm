@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 
 import {
   brokenAppDocLinks,
@@ -164,6 +164,31 @@ describe("pagesToCheck", () => {
       ".github/pull_request_template.md",
     ])
       expect(pages).toContain(page);
+  });
+
+  test("misses no folder: every page in the repository is read", () => {
+    // Hidden folders other than .github (worktrees, caches, local plans) and
+    // generated or installed ones hold no pages of the repository.
+    const skip = (name: string) =>
+      (name.startsWith(".") && name !== ".github") ||
+      name === "generated" ||
+      name === "node_modules";
+    const root = join(import.meta.dir, "..", "..");
+    const pages = new Set(pagesToCheck());
+    const found = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !skip(entry.name))
+      .flatMap((dir) =>
+        readdirSync(join(root, dir.name), { recursive: true, withFileTypes: true })
+          .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+          .map((entry) =>
+            relative(root, join(entry.parentPath, entry.name)).split(sep).join("/"),
+          ),
+      )
+      .filter(
+        (path) =>
+          !/(?:^|\/)(?:node_modules|dist|fixtures|research-fixtures)\//.test(path),
+      );
+    expect(found.filter((path) => !pages.has(path))).toEqual([]);
   });
 
   test("leaves out test fixtures and installed packages", () => {
