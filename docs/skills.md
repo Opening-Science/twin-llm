@@ -124,8 +124,9 @@ call (in words, `infrastructure/tool-titles.ts`, never by id), so a person sees 
 before running one.
 
 Picking a skill writes `/sleep ` into the prompt; a prompt that starts with an offered
-skill is sent tagged with it, and the rest of the text is the question (the skill's
-description when there is none). On `POST /api/chat` the server, before any model call:
+skill, in any case (`/Sleep` is `/sleep`, as the palette matches it), is sent tagged
+with it, and the rest of the text is the question (the skill's description when there
+is none). On `POST /api/chat` the server, before any model call:
 
 1. refuses a skill it does not offer (`skill-not-offered`);
 2. refuses a provider the skill does not list (`provider-not-allowed-by-skill`), with a

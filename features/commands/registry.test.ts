@@ -138,6 +138,14 @@ describe("skillDraft", () => {
     });
   });
 
+  test("the skill's name in any case is that skill, as the palette matches it", () => {
+    expect(skillDraft("/Sleep last 30 nights", skills)).toEqual({
+      skill: SLEEP_COMMAND,
+      prompt: "last 30 nights",
+    });
+    expect(skillDraft("/SLEEP", skills)?.skill).toEqual(SLEEP_COMMAND);
+  });
+
   test("anything else is an ordinary prompt", () => {
     expect(skillDraft("/sleepy last nights", skills)).toBeNull();
     expect(skillDraft("/connect oura", skills)).toBeNull();
