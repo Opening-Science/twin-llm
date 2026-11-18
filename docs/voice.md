@@ -104,6 +104,21 @@ box. The hint line then says what took how long, such as "Heard 1.8s of German, 
 down in 0.6s (0.7s in all)". A blocked or missing microphone, or a failure, is one
 sentence beside the button.
 
+## Reading answers aloud
+
+The answer to a spoken question is read back once it is finished, in the language it was
+asked in: the first finished answer of that turn with words to say, once. One that failed,
+was stopped or is withheld is not read. Every other finished answer gets a Read aloud
+button while voice is on, in the language picked on the prompt bar; pressed again it
+stops. One answer plays at a time.
+
+What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
+code, tables, images, web addresses and bracketed citation ids are left out, a link keeps
+its words, and a heading or list item ends as a sentence. The text goes to
+`/api/voice/speak` in pieces of whole sentences of up to 400 characters, so the first
+plays while the next is made, and nothing is kept once it has played. A spoken turn is
+known only to the open page; a reloaded thread is not read back on its own.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
