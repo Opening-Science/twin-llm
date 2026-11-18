@@ -382,16 +382,20 @@ export const pickedModels = (
         : state.mode === "specialists"
           ? specialistIds(state, context, prompt)
           : compareRows(state, context, prompt);
-  return [...new Set(ids)]
+  const sent = [...new Set(ids)]
     .filter((id) => offered(id, context))
-    .slice(0, MAX_SELECTED_MODELS)
-    .flatMap((id) => {
-      const row = findCatalogRow(id, context.catalog);
-      if (row === null) return [];
-      return [
-        { id, name: turnModelName({ id, name: row.name }, context.catalog, prompt) },
-      ];
-    });
+    .slice(0, MAX_SELECTED_MODELS);
+  return sent.flatMap((id) => {
+    const row = findCatalogRow(id, context.catalog);
+    if (row === null) return [];
+    const name = turnModelName(
+      { id, name: row.name },
+      context.catalog,
+      prompt,
+      sent.length,
+    );
+    return [{ id, name }];
+  });
 };
 
 /**

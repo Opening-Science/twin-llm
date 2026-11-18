@@ -101,7 +101,7 @@ describe("a reopened thread starts where its last turn stopped (SPEC 7.2)", () =
     expect(state.mode).toBe("specialists");
     expect(pickedModels(state, ctx(), "")).toEqual([
       { id: "agent:diet@qwen3:8b", name: "Diet specialist · Qwen3 8B" },
-      { id: "agent:sleep", name: "Sleep" },
+      { id: "agent:sleep", name: "Sleep · Qwen3 8B" },
     ]);
   });
 
@@ -384,6 +384,18 @@ describe("summary, footer and problems", () => {
     expect(pickerFooter(setMode(base, "specialists"), ctx(), "")).toBe(
       "1 of at most 3 answers.",
     );
+  });
+
+  test("a specialist on its own model names that model beside another answer (#859)", () => {
+    const state = {
+      ...setMode(initialModeState(ctx(), null), "compare"),
+      compare: ["agent:gp", "qwen3:4b"],
+      compareChosen: true,
+    };
+    expect(pickedModels(state, ctx(), "")).toEqual([
+      { id: "agent:gp", name: "General · Qwen3 8B" },
+      { id: "qwen3:4b", name: "Qwen3 4B" },
+    ]);
   });
 
   test("only offered ids are sent, at most three", () => {
