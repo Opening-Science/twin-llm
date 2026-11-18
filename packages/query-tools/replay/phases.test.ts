@@ -15,6 +15,7 @@ import { localClock, localDayBounds, localInstant } from "./local-time";
 import {
   GLUCOSE_PHASES,
   HEART_PHASES,
+  phaseGaps,
   rulesOf,
   type StoryPhase,
   storyPhases,
@@ -320,6 +321,49 @@ describe("narration", () => {
 describe("no evidence, no phase", () => {
   test("a day with nothing recorded has no phases", () => {
     expect(phasesOf(day(DEMO_PERSON_A, "2026-10-22"))).toEqual([]);
+  });
+
+  test("why there are fewer phases is said per stream, never left to guess", () => {
+    const gaps = (date: string) =>
+      phaseGaps(day(DEMO_PERSON_A, date)).map((one) => [
+        one.stream,
+        one.missing,
+        one.text,
+      ]);
+    expect(phaseGaps(REFERENCE)).toEqual([]);
+    expect(gaps("2026-10-22")).toEqual([
+      ["heart_rate", "heart_rate", "No heart rate recorded, so no heart-rate phases."],
+      [
+        "glucose",
+        "glucose",
+        "No glucose recorded, sensor or blood, so no glucose phases.",
+      ],
+    ]);
+    expect(gaps("2026-10-28")).toEqual([
+      [
+        "heart_rate",
+        "steps",
+        "No steps recorded, so no resting or raised-heart-rate-while-still phase.",
+      ],
+      [
+        "heart_rate",
+        "activity",
+        "No walk or run recorded, so no walking, running or recovery phase.",
+      ],
+      [
+        "glucose",
+        "glucose",
+        "No glucose recorded, sensor or blood, so no glucose phases.",
+      ],
+    ]);
+    const sleepless = replayDaySchema.parse({
+      ...REFERENCE,
+      events: REFERENCE.events.filter((one) => one.kind !== "sleep"),
+    });
+    expect(phaseGaps(sleepless).map((one) => [one.stream, one.missing])).toEqual([
+      ["heart_rate", "sleep"],
+      ["glucose", "sleep"],
+    ]);
   });
 
   test("without steps or glucose: no glucose phase, no resting, no raised-while-still", () => {

@@ -37,8 +37,8 @@ import {
  * A phase exists only when its evidence does: a recorded sleep, walk or run,
  * a tag the person entered, and readings of its own stream inside it. Between
  * phases nothing is said; a day without that evidence has fewer phases, never
- * invented ones. The sixteen phases of #860 all appear on the demo reference
- * day.
+ * invented ones; `phaseGaps` says per stream which evidence is missing. The
+ * sixteen phases of #860 all appear on the demo reference day.
  */
 
 export const HEART_PHASES = [
@@ -808,6 +808,81 @@ export const storyPhases = (
         ms(a.from) - ms(b.from) ||
         (a.stream === b.stream ? 0 : a.stream === "heart_rate" ? -1 : 1),
     );
+};
+
+/** Evidence a day lacks, and the phases of one stream that cannot exist without it. */
+export type PhaseGap = Readonly<{
+  stream: StoryPhase["stream"];
+  missing: "heart_rate" | "glucose" | "steps" | "sleep" | "activity";
+  text: string;
+}>;
+
+/**
+ * Why a day has fewer phases, per stream: the explicit unavailable state a
+ * card shows instead of guessing (#862). Empty when nothing is missing.
+ */
+export const phaseGaps = (day: ReplayDay): readonly PhaseGap[] => {
+  const has = (selector: Parameters<typeof seriesOf>[1]): boolean =>
+    seriesOf(day, selector).some(isAvailable);
+  const sleep = day.events.some((event) => event.kind === "sleep");
+  const activity = day.events.some((event) => event.kind === "activity");
+  const heart: readonly PhaseGap[] = !has({ stream: "heart_rate" })
+    ? [
+        {
+          stream: "heart_rate",
+          missing: "heart_rate",
+          text: "No heart rate recorded, so no heart-rate phases.",
+        },
+      ]
+    : [
+        ...(sleep
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "sleep",
+                text: "No sleep recorded, so no sleep, waking or resting phase.",
+              } as const,
+            ]),
+        ...(has({ stream: "steps" })
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "steps",
+                text: "No steps recorded, so no resting or raised-heart-rate-while-still phase.",
+              } as const,
+            ]),
+        ...(activity
+          ? []
+          : [
+              {
+                stream: "heart_rate",
+                missing: "activity",
+                text: "No walk or run recorded, so no walking, running or recovery phase.",
+              } as const,
+            ]),
+      ];
+  const glucose: readonly PhaseGap[] =
+    !has({ stream: "glucose", specimen: "sensor" }) &&
+    !has({ stream: "glucose", specimen: "blood" })
+      ? [
+          {
+            stream: "glucose",
+            missing: "glucose",
+            text: "No glucose recorded, sensor or blood, so no glucose phases.",
+          },
+        ]
+      : sleep
+        ? []
+        : [
+            {
+              stream: "glucose",
+              missing: "sleep",
+              text: "No sleep recorded, so no overnight, before-waking or back-to-sleep phase.",
+            },
+          ];
+  return [...heart, ...glucose];
 };
 
 /** The status rules a phase list used, once each: for a "how is this decided" panel. */
