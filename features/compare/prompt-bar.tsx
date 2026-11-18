@@ -474,6 +474,7 @@ export const PromptBar = ({
                 disabled={sending || streaming}
                 onLanguage={voice.setLanguage}
                 onHeard={sendSpoken}
+                onListen={voice.player.stop}
               />
             ) : null}
             <AppAuth>
