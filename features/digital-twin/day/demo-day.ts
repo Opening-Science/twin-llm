@@ -8,7 +8,7 @@ import {
   redWindows,
 } from "@/packages/query-tools/day-beats";
 import { type KioskDay, toKioskDay } from "@/packages/query-tools/kiosk-day";
-import { MOCK_DAY_DATE, mockDayReadings } from "@/packages/query-tools/mock-day";
+import { MOCK_DAY_REF, mockKioskDay } from "@/packages/query-tools/mock-kiosk-day";
 import {
   GLUCOSE_LOINCS,
   HEART_RATE_LOINC,
@@ -41,7 +41,7 @@ const UNIT_OF = (loinc: string): string =>
   loinc === HEART_RATE_LOINC ? "/min" : "mg/dL";
 
 /** The subject_ref the mock day carries; never a warehouse subject. */
-export const MOCK_DAY_REF = "synthetic-mock-day";
+export { MOCK_DAY_REF };
 
 export type DemoDayResult =
   | Readonly<{ kind: "day"; day: KioskDay }>
@@ -96,18 +96,10 @@ export const demoDay = (
   };
 };
 
-/** The mock day's readings: blood and sensor glucose side by side. */
-const MOCK_READINGS = mockDayReadings("both");
-
-/** The illustrative mock day (`fixtures/mock-day.json`): made-up values, activity recorded. */
+/**
+ * The illustrative mock day (`fixtures/mock-day.json`): made-up values,
+ * activity recorded, blood and sensor glucose side by side. Built by the
+ * same `mockKioskDay` the kiosk plays.
+ */
 export const mockDay = (profile: GlucoseProfile): KioskDay =>
-  toKioskDay({
-    subject_ref: MOCK_DAY_REF,
-    day: MOCK_DAY_DATE,
-    profile,
-    beats: dayBeats(MOCK_READINGS, profile),
-    red_windows: redWindows(MOCK_READINGS, profile),
-    thresholds: { status: DAY_THRESHOLDS.status, reviewer: DAY_THRESHOLDS.reviewer },
-    activity: "recorded",
-    timezone: "UTC",
-  });
+  mockKioskDay(profile, "both");
