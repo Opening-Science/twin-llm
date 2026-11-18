@@ -113,3 +113,24 @@ number. `--report <records.jsonl>` rewrites the report only.
 
 The fakes are for tests and dry runs. No model run of W1 is reported until
 the registration is filed.
+
+## Second rater
+
+`bun run attribution:rater -- --records <records.jsonl> --items <items.json>`
+draws a stratified sample of base answers (150 by default, in proportion to
+the strata, at least one each, seeded) and writes `sheet.csv` for the rater
+and `key.json` to keep apart. The procedure is the one in
+[second-rater.md](second-rater.md); only the sheet differs.
+
+A row shows the question, every reading the model was given with its
+source and day, the selection rule, the keys the answer cited, the Answer
+section, and which outcomes to code. It shows no model, condition, item id,
+expected answer or automatic score; the rule is on every row, so C0 rows do
+not stand out. Each row has an opaque `sheet_id` (HMAC-SHA256 under a salt
+kept in the key). The rater writes `y` or `n` per outcome, or leaves it
+blank.
+
+`--agreement --sheet <filled.csv> --key <key.json> --records <records.jsonl>`
+writes `agreement.md`: per outcome, the rows coded, the scorer's share of
+`y` (prevalence), observed agreement and Cohen's kappa with its 95%
+interval (`cohenKappa`, as the harness's own agreement uses).
