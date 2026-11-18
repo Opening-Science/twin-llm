@@ -426,6 +426,24 @@ describe("the export route (SERVER-SPEC 3.7)", () => {
     expect(run.audit[0]?.args).toEqual({ format: "pdf" });
   });
 
+  test.each(["markdown", "fhir", "pdf", "print"] as const)(
+    "confirmed %s: the ledger row records the file's own size",
+    async (format) => {
+      const sizes: (number | null)[] = [];
+      const { exportThread } = handler({
+        writePdf: async () => new Uint8Array(1360),
+        record: async (disclosure) => {
+          sizes.push(disclosure.payloadBytes);
+          return { seq: 1n, auditSeq: 1n };
+        },
+      });
+      const response = await exportThread("t", format, "confirmed");
+      const bytes = (await response.arrayBuffer()).byteLength;
+      expect(sizes).toEqual([bytes]);
+      if (format === "pdf") expect(bytes).toBe(1360);
+    },
+  );
+
   test("a failed ledger write makes no file", async () => {
     const { exportThread } = handler({
       record: async () => {

@@ -477,15 +477,22 @@ export const turnAgentOf = (
 
 /**
  * The name a turn stores for a picked row: "Auto → Diet specialist" for Auto,
- * else the row's own name.
+ * else the row's own name. Beside other answers (`answers` > 1) a specialist
+ * on its own model is named with that model, as a pair is ("General ·
+ * qwen3:8b"), so a column never hides what it ran on (#859).
  */
 export const turnModelName = (
   model: Readonly<{ id: string; name: string }>,
   catalog: readonly AgentRow[],
   prompt: string,
+  answers = 1,
 ): string => {
-  if (model.id !== AUTO_MODEL_ID)
-    return findCatalogRow(model.id, catalog)?.name ?? model.name;
+  if (model.id !== AUTO_MODEL_ID) {
+    const row = findCatalogRow(model.id, catalog);
+    return row?.agent !== undefined && answers > 1 && parsePairedModelId(row.id) === null
+      ? pairedModelName(row.agent.name, row.agent.baseModelName)
+      : (row?.name ?? model.name);
+  }
   const agent = autoAgentFor(prompt, catalog);
   return agent === null ? model.name : autoColumnName(agent.name);
 };

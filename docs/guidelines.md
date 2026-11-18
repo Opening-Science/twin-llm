@@ -186,7 +186,9 @@ say”, REFUSE when the question applies it to a person). Live hook:
 ## Claim sources (#612)
 
 `answerClaims` (`infrastructure/claim-sources.ts`) cuts an answer's Answer
-section into sentences and reads the bracketed ids each one writes. An id
+section into sentences and reads the bracketed ids each one writes. It reads
+what the answer shows: each table body cell on its own, and nothing inside code
+or inline code, so an id written as code is never counted. An id
 resolves only against hits the turn's searches returned: a guideline by its
 `id`, an article by its PMC id or document id, an OpenTwin note by its `id`.
 Each claim is then:
@@ -199,7 +201,10 @@ Each claim is then:
 | `uncited`     | none of these                                        |
 
 A bracketed token of another shape, such as a wearable key, is left as text.
-Sentences under three words are not claims. Pure: it reads what an answer
+Sentences under three words are not claims. A sentence ends at its stop even
+inside bold, quotes or brackets (`**… therapy.**`), "No." ends one unless a
+number follows, and a line that is no new bullet joins the one before, so a
+wrapped sentence is one claim (#847). Pure: it reads what an answer
 says about its sources, never whether a claim is true.
 
 In a finished answer, each cited id the turn's searches returned is a link to
