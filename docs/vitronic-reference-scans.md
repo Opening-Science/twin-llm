@@ -40,17 +40,19 @@ scan, kept as `reference-scans.csv` in the vitronic data folder
 the folder git already ignores. It holds identifiers only, never measure values.
 `bun run vitronic:reference-list` writes it from what TwinLLM has stored for the
 local user (`--user <id>` for another local actor): every subject except Self,
-in scan-number order, so a later scan is added at the end and the earlier
-references keep their numbers. The file is owner-only; the command prints counts
-and the path, never a row, and writes one audit row (`vitronic.reference.list`,
-counts only). With `--check` it also looks for every listed mesh in the user's
-folder and exits 1, naming the references only, when one is missing. Run it
-again after each session; the `note` column comes out empty, so keep notes in a
-copy.
+in scan-number order. A newer scan is added at the end, but auto-sync stores the
+newest scans first, so an older scan stored later takes an earlier number and
+moves the ones after it. The reference (`R01`, `R02`, …) is only a row number for
+that writing of the list; `viatar_id` is what stays. The file is owner-only; the
+command prints counts and the path, never a row, and writes one audit row
+(`vitronic.reference.list`, counts only). With `--check` it also looks for every
+listed mesh in the user's folder and exits 1, naming the references only, when
+one is missing. Run it again after each session; the `note` column comes out
+empty, so keep notes in a copy, against `viatar_id`.
 
 | Column                | From                                                       |
 | --------------------- | ---------------------------------------------------------- |
-| `reference`           | A running number across the list, `R01`, `R02`, …          |
+| `reference`           | A row number for this writing, `R01`, `R02`, …             |
 | `subject_label`       | `VitronicSubject.label` (not a name)                       |
 | `consent_recorded_at` | `VitronicSubject.consentRecordedAt`                        |
 | `consent_by`          | `VitronicSubject.consentBy`                                |
