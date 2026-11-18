@@ -67,6 +67,9 @@ export const ADVANCE_CURSOR_SQL = `UPDATE "schema_move_cursors"
    SET "last_id" = $3, "copied" = "copied" + $4, "updated_at" = CURRENT_TIMESTAMP
  WHERE "move" = $1 AND "table_name" = $2`;
 
+/** Forgets where each table's backfill got to; $1 is the move. */
+export const RESET_CURSORS_SQL = `DELETE FROM "schema_move_cursors" WHERE "move" = $1`;
+
 /** A constraint the finish step adds, NOT VALID first and then validated. */
 export type FinishConstraint = Readonly<{
   table: string;

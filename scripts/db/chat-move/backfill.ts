@@ -1,5 +1,5 @@
 /**
- * bun run db:chat-backfill [--batch-size=1000]
+ * bun run db:chat-backfill [--batch-size=1000] [--restart]
  *
  * Copies every row of threads, turns and model_responses into
  * conversations, exchanges and answers (DATA-MODEL.md C.2), then adds the
@@ -10,7 +10,9 @@
  * Safe to stop and to run again: each batch is one transaction, the
  * position per table is kept in schema_move_cursors, and a run after a
  * finished one inserts nothing. Needs no keys: sealed values are copied as
- * stored. Prints table names and counts only.
+ * stored. `--restart` forgets the cursors and reads every old row again,
+ * to repair copies the parity check (db:chat-parity) found missing; it still
+ * never overwrites a copy. Prints table names and counts only.
  *
  * The database is DATABASE_URL, as for the app.
  */
@@ -25,6 +27,7 @@ import {
   MARK_BACKFILLED_SQL,
   MOVE,
   batchSql,
+  RESET_CURSORS_SQL,
   validateConstraintSql,
 } from "./backfill-sql";
 import { CHAT_MOVES, type TableMove } from "./tables";
@@ -36,6 +39,8 @@ export type BackfillOptions = Readonly<{
   /** Called after each committed batch; tests write here, as the app would. */
   afterBatch?: (table: string) => Promise<void>;
   log: (line: string) => void;
+  /** Forget the cursors first and read every old row again. */
+  restart?: boolean;
 }>;
 
 export type TableResult = Readonly<{ table: string; read: number; inserted: number }>;
@@ -48,7 +53,7 @@ export type BackfillResult = Readonly<{
 
 type BatchRow = { last_id: string | null; seen: number; inserted: number };
 
-/** One batch in its own transaction; null when the table has nothing left. */
+/** One batch in its own transaction; `seen` is 0 when the table has nothing left. */
 const copyBatch = async (
   db: PrismaClient,
   move: TableMove,
@@ -84,6 +89,10 @@ export const runBackfill = async (
 ): Promise<BackfillResult> => {
   const tables: TableResult[] = [];
   let batches = 0;
+  if (options.restart === true) {
+    await db.$executeRawUnsafe(RESET_CURSORS_SQL, MOVE);
+    options.log(`${MOVE}: cursors cleared, reading every row again`);
+  }
   for (const move of CHAT_MOVES) {
     let read = 0;
     let inserted = 0;
@@ -139,7 +148,7 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const batchSize = batchSizeOf(process.argv.slice(2));
   if (batchSize === null) {
-    console.error("usage: bun run db:chat-backfill [--batch-size=1..10000]");
+    console.error("usage: bun run db:chat-backfill [--batch-size=1..10000] [--restart]");
     process.exit(1);
   }
   const { database } = await import("../../../infrastructure/database");
@@ -153,7 +162,8 @@ if (isMain) {
     }
     let step = "copy";
     try {
-      await runBackfill(db, { batchSize, log });
+      const restart = process.argv.includes("--restart");
+      await runBackfill(db, { batchSize, log, restart });
       step = "finish";
       await finishBackfill(db, log);
     } catch {
