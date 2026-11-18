@@ -54,8 +54,20 @@ describe("dashboard sections", () => {
       "No conversations yet. Ask a question and it shows here and in the sidebar.",
     );
     expect(RECENT_CHATS.label).toBe("Recent conversations");
-    expect(recentChatMeta("2026-11-17T09:00:00.000Z", 1)).toBe("17 Nov 2026 · 1 model");
-    expect(recentChatMeta("2026-11-16T12:00:00.000Z", 3)).toBe("16 Nov 2026 · 3 models");
-    expect(recentChatMeta("2026-11-15T12:00:00.000Z", 0)).toBe("15 Nov 2026");
+    expect(recentChatMeta("2026-11-17T09:00:00.000Z", 1, "UTC")).toBe(
+      "17 Nov 2026 · 1 model",
+    );
+    expect(recentChatMeta("2026-11-16T12:00:00.000Z", 3, "UTC")).toBe(
+      "16 Nov 2026 · 3 models",
+    );
+    expect(recentChatMeta("2026-11-15T12:00:00.000Z", 0, "UTC")).toBe("15 Nov 2026");
+  });
+
+  test("a chat's day is the reader's calendar day, not the server's", () => {
+    // 00:30 in Berlin on 17 Nov is still 16 Nov in UTC.
+    const lateChat = "2026-11-16T23:30:00.000Z";
+    expect(recentChatMeta(lateChat, 1, "Europe/Berlin")).toBe("17 Nov 2026 · 1 model");
+    expect(recentChatMeta(lateChat, 1, "UTC")).toBe("16 Nov 2026 · 1 model");
+    expect(recentChatMeta(lateChat, 1, "America/New_York")).toBe("16 Nov 2026 · 1 model");
   });
 });
