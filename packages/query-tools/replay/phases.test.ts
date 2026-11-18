@@ -114,6 +114,19 @@ describe("every phase exposes its rule and evidence", () => {
     ...REFERENCE.readings.map((one) => one.id),
     ...REFERENCE.events.map((one) => one.id),
   ]);
+  // Ids from other days are the baseline's nights, written day/id: each must
+  // name a reading on that day of the person's own history.
+  const historyIds = new Set(
+    demoReplayDays(REFERENCE.subject_ref).flatMap((one) =>
+      one.readings.map((reading) => `${one.day}/${reading.id}`),
+    ),
+  );
+
+  test("a day/id that is not in the person's history is not evidence", () => {
+    expect(historyIds.has("2026-10-20/night-resting-hr")).toBe(true);
+    expect(historyIds.has("2026-09-01/night-resting-hr")).toBe(false);
+    expect(historyIds.has("2026-10-20/no-such-reading")).toBe(false);
+  });
 
   test("derived, with a rule, a status rule and evidence that exists", () => {
     for (const phase of PHASES) {
@@ -123,8 +136,7 @@ describe("every phase exposes its rule and evidence", () => {
       expect(phase.status.words).toBe(STATUS_WORDS[phase.status.status]);
       expect(phase.evidence.length).toBeGreaterThan(0);
       for (const id of [...phase.evidence, ...phase.status.evidence]) {
-        // Ids from other days are the baseline's nights, written day/id.
-        expect(ids.has(id) || /^\d{4}-\d{2}-\d{2}\//.test(id)).toBe(true);
+        expect(ids.has(id) || historyIds.has(id)).toBe(true);
       }
     }
   });
