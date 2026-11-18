@@ -37,6 +37,17 @@ const OLLAMA_ELSEWHERE: Readonly<Record<string, string>> = {
   OLLAMA_BASE_URL: "http://gpu.example.org:11434/v1",
 };
 
+/**
+ * The consented Exoscale pilot: personal data and a model on a GPU elsewhere,
+ * while OLLAMA_BASE_URL still points at this machine.
+ */
+const EXOSCALE_PILOT: Readonly<Record<string, string>> = {
+  LOCAL_ONLY: "false",
+  LLM_PROVIDER: "exoscale",
+  EXOSCALE_BASE_URLS: "https://gpu.example.org/v1",
+  EXOSCALE_PERSONAL_DATA: "consented-pilot",
+};
+
 const replaceEnv = (values: Readonly<Record<string, string | undefined>>) => {
   for (const key of Object.keys(process.env)) delete process.env[key];
   Object.assign(process.env, values);
@@ -62,6 +73,12 @@ describe("chatOnLoopback and chatModelIsLocal", () => {
     expect(chatOnLoopback()).toBe(false);
     expect(chatModelIsLocal()).toBe(false);
   });
+
+  test("the Exoscale pilot is not local, even with Ollama's address on this machine", () => {
+    useEnv({ DATA_MODE: "personal", ...EXOSCALE_PILOT });
+    expect(chatOnLoopback()).toBe(true);
+    expect(chatModelIsLocal()).toBe(false);
+  });
 });
 
 describe("importedDataChatPermit", () => {
@@ -74,6 +91,11 @@ describe("importedDataChatPermit", () => {
     useEnv({ DATA_MODE: "synthetic" });
     expect(importedDataChatPermit()).toEqual(refusal("data-mode-not-personal"));
     useEnv({ DATA_MODE: "personal", ...OLLAMA_ELSEWHERE });
+    expect(importedDataChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("refuses the Exoscale pilot with Ollama's address on this machine", () => {
+    useEnv({ DATA_MODE: "personal", ...EXOSCALE_PILOT });
     expect(importedDataChatPermit()).toEqual(refusal("chat-model-not-local"));
   });
 });
@@ -108,6 +130,13 @@ describe("genomeChatPermit and genomeRunPermit", () => {
   test("with Ollama elsewhere the run is fine but the chat is refused", () => {
     useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", ...OLLAMA_ELSEWHERE });
     expect(genomeRunPermit()).toEqual({ ok: true });
+    expect(genomeChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("with the Exoscale pilot the run is fine but every chat is refused", () => {
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", ...EXOSCALE_PILOT });
+    expect(genomeRunPermit()).toEqual({ ok: true });
+    expect(vcfVariantsChatPermit()).toEqual(refusal("chat-model-not-local"));
     expect(genomeChatPermit()).toEqual(refusal("chat-model-not-local"));
   });
 });
