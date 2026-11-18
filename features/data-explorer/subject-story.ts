@@ -27,7 +27,7 @@ export const subjectStory = (
   const top = [...new Set(series.map((s) => s.display))].slice(0, 3);
   return (
     `This synthetic subject has ${plural(overview.observations, "numeric observation", "numeric observations")} ` +
-    `of ${plural(overview.codes, "LOINC code", "LOINC codes")}, from ${formatDate(overview.firstDay)} ` +
+    `of ${plural(overview.codes, "code", "codes")}, from ${formatDate(overview.firstDay)} ` +
     `to ${formatDate(overview.lastDay)}${nonNumeric > 0 ? text : ""}. ` +
     `Most readings: ${listOf(top)}.`
   );
