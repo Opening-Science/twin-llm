@@ -104,6 +104,24 @@ request gets its own folder under the setup's `work/` for its audio, removed whe
 request ends. The log has the call, the language and the timings, never the text or the
 audio.
 
+## Timings
+
+`bun run voice:time` times the sidecar on this machine for the kiosk trial (#615). For two
+fixed sentences per language it asks the sidecar to speak the sentence, turns Piper's WAV
+into the 16 kHz input shape and asks the sidecar to write it down again, so it needs no
+microphone and keeps no recording. It prints one line per sentence and appends the same
+to `timings.jsonl` in the setup's folder (`--out` to change it):
+
+```text
+de  speak 410 ms  heard 1650 ms of audio in 720 ms  total 1190 ms  "Zeig mir mein Herz."
+```
+
+`speak` and `heard … in` are the sidecar's own times, `total` the whole round trip, and
+the quoted text is what speech to text heard of the spoken sentence, a quick check of both
+engines and the voice. It talks only to a sidecar on loopback (`--url`, default
+`http://127.0.0.1:8095`). The numbers above are an example of the format, not a
+measurement.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
