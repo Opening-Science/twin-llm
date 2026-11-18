@@ -7,6 +7,7 @@ import {
   EFFORT_AUDIT_TOOL,
   thinkingProviderOptions,
 } from "@/infrastructure/chat-effort";
+import { referenceSources } from "@/infrastructure/claim-sources";
 import type { DataMode } from "@/infrastructure/data-mode-policy";
 import type { GoogleHealthSummary } from "@/infrastructure/google-health-types";
 import type { OuraSummary } from "@/infrastructure/oura-types";
@@ -195,6 +196,14 @@ const toolResultsOf = (steps: readonly TurnStep[]): readonly TwinTurnToolResult[
     })),
   );
 
+/** The reply read against the source ids the turn's searches returned (#850). */
+const parseTurn = (
+  text: string,
+  wearables: TwinTurnWearables,
+  toolResults: readonly TwinTurnToolResult[],
+): ParsedTwinAnswer =>
+  parseTwinAnswer(text, wearables, new Set(referenceSources(toolResults).keys()));
+
 export const runTwinTurn = (
   deps: TwinTurnDeps,
   { turnId, messages, wearables, abortSignal }: TwinTurnInput,
@@ -245,8 +254,8 @@ export const runTwinTurn = (
   const stoppedWith = async (steps: readonly TurnStep[]) => {
     if (writing.ended) return;
     writing.ended = true;
-    const parsed = parseTwinAnswer(writing.text, wearables);
     const toolResults = toolResultsOf(steps);
+    const parsed = parseTurn(writing.text, wearables, toolResults);
     await hooks.onAbort({
       text: writing.text,
       parsed,
@@ -282,8 +291,8 @@ export const runTwinTurn = (
     onFinish: async ({ text, totalUsage, steps }) => {
       // A provider may end its stream quietly on abort; that is not an answer.
       if (abortSignal?.aborted) return stoppedWith(steps);
-      const parsed = parseTwinAnswer(text, wearables);
       const toolResults = toolResultsOf(steps);
+      const parsed = parseTurn(text, wearables, toolResults);
       await hooks.onFinish({
         text,
         usage: {

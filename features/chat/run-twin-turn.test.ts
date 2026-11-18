@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
+import { tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
+import { z } from "zod";
 
 import {
   drainKnowledgeTurn,
@@ -472,5 +474,83 @@ describe("runTwinTurn at an effort (#366)", () => {
       ],
     );
     expect((await finish.buildDocument()).data_basis.tool_calls).toEqual([lookup]);
+  });
+});
+
+describe("source ids under Evidence Used (#850)", () => {
+  const HIT = {
+    kind: "literature",
+    id: "lit-sleep-PMC1234567.1",
+    title: "A synthetic sleep study",
+    year: 2024,
+    pmcid: "PMC1234567",
+    url: "https://example.org/PMC1234567",
+  };
+  const REPLY = [
+    "## Evidence Used",
+    "- [PMC1234567]",
+    "- [made-up-guideline-2023]",
+    "",
+    "## Answer",
+    "Sleep shortens with age [PMC1234567].",
+  ].join("\n");
+
+  test("only an id this turn's search returned is no key", async () => {
+    // Searches first, then answers.
+    let calls = 0;
+    const model = new MockLanguageModelV4({
+      doStream: async () =>
+        streamOf(
+          (calls += 1) > 1
+            ? [
+                { type: "text-start", id: "t" },
+                { type: "text-delta", id: "t", delta: REPLY },
+                { type: "text-end", id: "t" },
+                { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
+              ]
+            : [
+                {
+                  type: "tool-call",
+                  toolCallId: "lit-1",
+                  toolName: "literature_search",
+                  input: JSON.stringify({ query: "sleep and age" }),
+                },
+                {
+                  type: "finish",
+                  finishReason: { unified: "tool-calls", raw: "tool_calls" },
+                  usage,
+                },
+              ],
+        ),
+    });
+    const parsed = await new Promise<TwinTurnFinish["parsed"]>((resolve, reject) => {
+      const result = runTwinTurn(
+        {
+          model,
+          tools: {
+            literature_search: tool({
+              description: "synthetic literature search",
+              inputSchema: z.object({ query: z.string() }),
+              execute: async () => [HIT],
+            }),
+          },
+          mode: "synthetic",
+          loadAudit: async () => [],
+        },
+        {
+          turnId: "turn-850",
+          messages: [{ role: "user", content: "Does sleep change with age?" }],
+          wearables: NO_WEARABLES,
+        },
+        {
+          onFirstToken: () => undefined,
+          onFinish: async (finish) => resolve(finish.parsed),
+          onError: async (error) => reject(error),
+          onAbort: () => reject(new Error("aborted")),
+        },
+      );
+      void result.consumeStream();
+    });
+    expect(parsed.hallucinatedKeys).toEqual(["made-up-guideline-2023"]);
   });
 });
