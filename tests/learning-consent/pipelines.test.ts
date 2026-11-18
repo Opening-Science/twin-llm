@@ -201,6 +201,8 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
     "writes the source-attribution study's synthetic items to files from a seed (P6, #508); no database, no person's rows",
   "attribution:study":
     "runs local models or fakes on the study's synthetic items and writes answers and scores to files (P6, #508); no database, no person's rows",
+  "attribution:partb":
+    "analyses simulated participants, or a responses file it is given, for the user study and writes the result to a file (P6, #508); no database, no person's rows",
   "genome:synth": GENERATOR,
   "genome:ingest": "loads synthetic genotypes (genome-synth) into a training database",
   "genome:ingest:db": "loads synthetic genotypes (genome-synth) into a training database",
