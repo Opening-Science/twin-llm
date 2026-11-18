@@ -103,3 +103,7 @@ adding nothing. A tag the person entered becomes an entered event, and a meal on
 it plainly names one ("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no
 new logging is needed.
 `moving` does not become an activity, since it does not say walk or run.
+
+Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
+synthetic people only, so none of their days is labelled `recorded`; that origin waits
+for real recordings.
