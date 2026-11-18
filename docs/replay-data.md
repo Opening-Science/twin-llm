@@ -17,7 +17,7 @@ integration.
 | ---------------------------------- | ------------------------------------------------------------------------- |
 | `subject_ref`, `day`, `time_zone`  | The person, the local calendar day (`YYYY-MM-DD`) and its IANA time zone. |
 | `origin`                           | `recorded` or `synthetic_demo`. A day is one or the other, never both.    |
-| `notice`                           | Always set on a synthetic day: a made-up person and day, not advice.      |
+| `notice`                           | `DEMO_NOTICE` on a synthetic day, word for word; null on a recording.     |
 | `readings`, `events`, `narrations` | The items below. Each one repeats the person, day, zone and origin.       |
 
 The parser refuses an item of another person, day, zone or origin, so a screen that
@@ -27,14 +27,16 @@ selections with `replayKeyOf` or `belongsTo`, never by `subject_ref` alone.
 The day is local, not UTC: it runs from local midnight to the next one, so a
 daylight-saving day has 23 or 25 hours (`localDayBounds` in `local-time.ts`). Instants
 are stored in UTC. Show a time with `localClock`, which gives the local `HH:MM` and the
-offset: on the autumn change, 02:30 happens twice.
+offset: on the autumn change, 02:30 happens twice. An event or narration belongs to the
+day when it overlaps it: one that ends exactly at the day's first midnight belongs to the
+day before.
 
 ## Items
 
 | Item      | Holds                                                                                                                                                                                      |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Reading   | `heart_rate` in /min, `glucose` in mg/dL with its specimen (blood or sensor), `steps`, or a device's nightly `resting_heart_rate` (/min) and `hrv_rmssd` (ms); an instant; `interval_min`. |
-| Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered.                                                                     |
+| Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered, and only entered.                                                   |
 | Narration | What usually happens in a body, about heart rate, glucose, insulin or the body, with a focus on the twin.                                                                                  |
 
 A reading is `available` with a value, or `missing` with `value: null` and a reason (a
@@ -97,9 +99,15 @@ gaps between them (missing, or no readings), so a chart never joins across a gap
 ## The days `show_my_day` already reads
 
 `replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
-adding nothing. A tag the person entered becomes an entered event, and a meal only when
-it plainly names one ("Large dinner", not "Walk after lunch"); no new logging is needed.
-`moving` does not become an activity, since it does not say walk or run.
+adding nothing. A tag becomes an event, and a meal only when it plainly names one
+("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no new logging is
+needed. The only tags that arrive today are the mock day's story lines (the warehouse
+sets none), so their source reads "Written for the illustrative day's story, not entered
+by anyone". `moving` does not become an activity, since it does not say walk or run.
+
+Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
+synthetic people only, so none of their days is labelled `recorded`; that origin waits
+for real recordings.
 
 ## Enough data first
 

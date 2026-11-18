@@ -98,9 +98,19 @@ describe("a replay day", () => {
     ).toEqual(["recorded is recorded, the day is synthetic_demo"]);
   });
 
-  test("a synthetic day carries its notice", () => {
+  test("a synthetic day carries its notice, word for word; a recording carries none", () => {
     expect(messages({ ...DAY, notice: null })).toEqual([
       "a synthetic demonstration day carries its notice",
+    ]);
+    expect(messages({ ...DAY, notice: "Any words at all." })).toEqual([
+      "a synthetic demonstration day carries its notice",
+    ]);
+    const recorded = JSON.parse(
+      JSON.stringify(DAY).replaceAll('"origin":"synthetic_demo"', '"origin":"recorded"'),
+    ) as Record<string, unknown>;
+    expect(messages({ ...recorded, notice: null })).toEqual([]);
+    expect(messages(recorded)).toEqual([
+      "a recorded day carries no demonstration notice",
     ]);
   });
 
@@ -135,6 +145,43 @@ describe("a replay day", () => {
         ],
       }),
     ).toEqual(["old-sleep does not touch 2026-10-25 in Europe/Berlin"]);
+  });
+
+  test("an event that ends at the day's first midnight belongs to the day before; one at it, to this day", () => {
+    expect(
+      messages({
+        ...DAY,
+        events: [
+          {
+            ...DAY.events[0],
+            id: "late-tag",
+            kind: "tag",
+            label: "Reading",
+            from: "2026-10-24T21:30:00Z",
+            to: "2026-10-24T22:00:00Z",
+            provenance: "entered",
+            source: { kind: "person", name: "Entered by the demo person" },
+          },
+        ],
+      }),
+    ).toEqual(["late-tag does not touch 2026-10-25 in Europe/Berlin"]);
+    expect(
+      messages({
+        ...DAY,
+        events: [
+          {
+            ...DAY.events[0],
+            id: "midnight-tag",
+            kind: "tag",
+            label: "Reading",
+            from: "2026-10-24T22:00:00Z",
+            to: "2026-10-24T22:00:00Z",
+            provenance: "entered",
+            source: { kind: "person", name: "Entered by the demo person" },
+          },
+        ],
+      }),
+    ).toEqual([]);
   });
 });
 
