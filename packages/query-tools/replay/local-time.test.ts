@@ -1,13 +1,43 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  dayAfter,
+  dayBefore,
   inLocalDay,
   isCalendarDay,
   isTimeZone,
   localClock,
   localDayBounds,
+  localInstant,
   offsetMinutes,
 } from "./local-time";
+
+describe("localInstant", () => {
+  test("an ordinary time is the clock time less the offset", () => {
+    expect(localInstant("2026-10-27", "07:30", "Europe/Berlin").toISOString()).toBe(
+      "2026-10-27T06:30:00.000Z",
+    );
+    expect(localInstant("2026-10-20", "07:30", "Europe/Berlin").toISOString()).toBe(
+      "2026-10-20T05:30:00.000Z",
+    );
+  });
+
+  test("02:30 on the autumn change is the first of the two", () => {
+    expect(localInstant("2026-10-25", "02:30", "Europe/Berlin").toISOString()).toBe(
+      "2026-10-25T00:30:00.000Z",
+    );
+  });
+
+  test("02:30 on the spring change does not exist; the clock reads 03:30 then", () => {
+    const at = localInstant("2026-03-29", "02:30", "Europe/Berlin");
+    expect(localClock(at, "Europe/Berlin").time).toBe("03:30");
+  });
+
+  test("the day before and after cross months", () => {
+    expect(dayBefore("2026-11-01")).toBe("2026-10-31");
+    expect(dayAfter("2026-10-31")).toBe("2026-11-01");
+  });
+});
 
 describe("isCalendarDay and isTimeZone", () => {
   test("a real date passes; a made-up one or another format does not", () => {
