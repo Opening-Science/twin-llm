@@ -1,3 +1,5 @@
+import { type KioskHint } from "./kiosk-hint";
+
 /**
  * Words on the kiosk. The kiosk stands in a public room in front of people
  * who never signed in, so it shows a synthetic body only and says so.
@@ -53,3 +55,17 @@ export const KIOSK_ATTRACT_NOTE =
 
 /** The one control's name before a day starts. */
 export const KIOSK_START = "Start the day";
+
+/** Above a playing beat: what a press does, or how soon the kiosk goes back. */
+export const kioskHintText = (hint: KioskHint): string => {
+  switch (hint.kind) {
+    case "next":
+      return "Press anywhere for the next moment.";
+    case "last":
+      return "That was the last moment. Press to finish.";
+    case "leaving":
+      return `Going back to the start in ${hint.seconds} ${
+        hint.seconds === 1 ? "second" : "seconds"
+      }. Press to stay.`;
+  }
+};
