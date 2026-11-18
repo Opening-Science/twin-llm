@@ -4,8 +4,9 @@ import type { SpeechLanguage } from "./contract";
  * Numbers and units as a voice should say them (#616). A speech engine reads
  * "58 bpm" letter by letter and "118/76" as a fraction, so after a number a
  * unit becomes words, a range becomes "to" ("bis"), a blood pressure becomes
- * "over" ("zu"), and German gets a decimal comma. Only a unit right after a
- * number is touched, so words in the text stay as they are. Pure.
+ * "over" ("zu"), and German gets a decimal comma (not in a date or clock
+ * time). Only a unit right after a number is touched, so words in the text
+ * stay as they are. Pure.
  */
 
 type Unit = Readonly<{ pattern: string; en: string; de: string }>;
@@ -47,6 +48,27 @@ const withUnits = (text: string, language: SpeechLanguage): string =>
     text,
   );
 
+/** A number with dots in it: "5.4", "7.30", "18.11.2026". */
+const DOTTED = /(?<![\d.,])\d+(?:\.\d+)+(?!\d)/g;
+/** A clock time: "um 7.30", "7.30 Uhr", "7.30 bis 8.15 Uhr". */
+const CLOCK = /^\d{1,2}\.[0-5]\d$/;
+const CLOCK_BEFORE = /\b(?:um|gegen|ab)\s$/i;
+const CLOCK_AFTER = /^(?:\s?(?:bis|[–-])\s?\d{1,2}\.[0-5]\d)?\s?Uhr\b/;
+
+/**
+ * German reads a decimal point as "Punkt"; the comma is what it expects. A
+ * date (18.11.2026) and a clock time keep their dots.
+ */
+const decimalCommas = (text: string): string =>
+  text.replace(DOTTED, (number: string, at: number) => {
+    if (number.split(".").length > 2) return number;
+    const clock =
+      CLOCK.test(number) &&
+      (CLOCK_BEFORE.test(text.slice(0, at)) ||
+        CLOCK_AFTER.test(text.slice(at + number.length)));
+    return clock ? number : number.replace(".", ",");
+  });
+
 export const spokenUnits = (text: string, language: SpeechLanguage): string => {
   const over = language === "de" ? "zu" : "over";
   const to = language === "de" ? "bis" : "to";
@@ -59,6 +81,5 @@ export const spokenUnits = (text: string, language: SpeechLanguage): string => {
       `$1 ${to} $2`,
     );
   const units = withUnits(shaped, language);
-  // German reads a decimal point as "Punkt"; the comma is what it expects.
-  return language === "de" ? units.replace(/(\d)\.(\d)/g, "$1,$2") : units;
+  return language === "de" ? decimalCommas(units) : units;
 };

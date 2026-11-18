@@ -43,4 +43,13 @@ describe("spokenUnits", () => {
       "On 2026-11-18 it was 60 to 62 beats per minute",
     );
   });
+
+  test("a German date or clock time keeps its dots; only a decimal gets the comma", () => {
+    expect(
+      spokenUnits("Am 18.11.2026 um 7.30 Uhr lag der Blutzucker bei 5.4 mmol/L.", "de"),
+    ).toBe("Am 18.11.2026 um 7.30 Uhr lag der Blutzucker bei 5,4 Millimol pro Liter.");
+    expect(spokenUnits("Von 7.30–8.15 Uhr, ab 22.45 ruhig.", "de")).toBe(
+      "Von 7.30 bis 8.15 Uhr, ab 22.45 ruhig.",
+    );
+  });
 });
