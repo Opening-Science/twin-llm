@@ -45,12 +45,13 @@ export const cohortDeps: CohortDeps = {
         select: { isSynthetic: true, cohortId: true },
       }),
     ),
-  findValues: async (ref, loincs) => {
+  findValues: async (ref, loincs, span) => {
     const rows = await database().observation.findMany({
       where: {
         subjectRef: ref,
         loinc: { in: [...loincs] },
         subject: DEMO_SUBJECT_WHERE,
+        ...(span ? { effectiveAt: { gte: span.from, lte: span.to } } : {}),
       },
       select: { id: true, loinc: true, value: true, unitUcum: true, effectiveAt: true },
     });
