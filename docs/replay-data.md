@@ -128,6 +128,9 @@ was read at.
 rate and glucose the evidence supports. A phase needs its evidence (a recorded sleep,
 walk or run, a tag the person entered) and readings of its own stream inside it; between
 phases nothing is said, and a day without that evidence has fewer phases.
+`phaseGaps(day)` says why, per stream: no heart rate, no glucose (sensor or blood), no
+steps, no sleep or no walk or run recorded, each with the phases it rules out, so a card
+shows that state instead of guessing.
 
 | Heart rate                    | Evidence                                                                                           |
 | ----------------------------- | -------------------------------------------------------------------------------------------------- |
