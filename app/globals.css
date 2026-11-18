@@ -1442,13 +1442,40 @@
   }
 
   .twin-beat {
-    @apply relative grid grid-cols-[3.25rem_minmax(0,1fr)] gap-2 py-2 pl-3;
+    @apply relative py-0.5 pl-2;
+  }
+
+  .twin-beat-button {
+    @apply hover:bg-muted/60 focus-visible:ring-ring grid w-full cursor-pointer grid-cols-[3.25rem_minmax(0,1fr)] gap-2 rounded-md border border-transparent px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none;
+  }
+
+  /* A pressed beat gets a border as well as a fill, and a line naming what the twin shows. */
+  .twin-beat-button[aria-pressed="true"] {
+    @apply border-foreground/40 bg-muted;
   }
 
   /* A dot on the line marks each beat; the time beside it says when. */
   .twin-beat::before {
     content: "";
-    @apply bg-muted-foreground absolute top-3.5 -left-[3px] size-1.5 rounded-full;
+    @apply bg-muted-foreground absolute top-4 -left-[3px] size-1.5 rounded-full;
+  }
+
+  /* A window's beat: a hollow diamond on the line and a dashed outline, beside the
+     eye icon and the words, so it reads in greyscale too. */
+  .twin-beat[data-worth="true"]::before {
+    @apply border-foreground bg-background top-3.5 -left-[5px] size-2.5 rotate-45 rounded-none border;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button {
+    @apply border-foreground/50 border-dashed;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button[aria-pressed="true"] {
+    @apply border-solid;
+  }
+
+  .twin-worth {
+    @apply border-border flex flex-col gap-1 rounded-md border p-2.5;
   }
 
   .twin-beat-time {
