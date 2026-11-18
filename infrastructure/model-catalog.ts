@@ -97,6 +97,14 @@ const measuredThenListed = (left: CatalogModel, right: CatalogModel): number => 
   return leftUnknown ? 0 : widestFirst(left, right);
 };
 
+/**
+ * A copy of rows from several lists in the models page's order: measured
+ * windows widest first, then the rows that report none, as listed.
+ */
+export const widestMeasuredFirst = (
+  rows: readonly CatalogModel[],
+): readonly CatalogModel[] => [...rows].sort(measuredThenListed);
+
 // --- parsing --------------------------------------------------------------------
 
 /**

@@ -87,6 +87,23 @@ describe("setting up (#142)", () => {
     });
   });
 
+  test("two setups at once make one key file; the second is refused", async () => {
+    const h = harness();
+    const [first, second] = await Promise.all([
+      setUpVault(h.deps, ACTOR, PASSPHRASE),
+      setUpVault(h.deps, ACTOR, "synthetic passphrase two"),
+    ]);
+    expect(first.kind).toBe("opened");
+    expect(second).toMatchObject({ kind: "refused", status: 429 });
+    expect(h.rows).toEqual([`${ACTOR} setup 0`]);
+    if (first.kind !== "opened") return;
+    expect(unlocked(h, first.token)).toBe(true);
+    const stored = h.stored();
+    expect(stored).not.toBeNull();
+    if (stored === null) return;
+    expect(await openRecord(ACTOR, stored, PASSPHRASE, "passphrase")).not.toBeNull();
+  });
+
   test("a setup that cannot be recorded stores nothing and opens nothing", async () => {
     const h = harness({ auditFails: "setup" });
     expect(await setUpVault(h.deps, ACTOR, PASSPHRASE)).toEqual({
@@ -150,6 +167,21 @@ describe("unlocking (#142)", () => {
     ]);
     // Success cleared the count.
     expect(h.sessions.retryAfterMs(ACTOR)).toBe(0);
+  });
+
+  test("wrong passphrases sent at once are checked one at a time, so the wait holds", async () => {
+    const h = harness();
+    await setUpVault(h.deps, ACTOR, PASSPHRASE);
+    h.sessions.lock(ACTOR);
+    const results = await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        unlockVault(h.deps, ACTOR, `synthetic wrong passphrase ${index}`),
+      ),
+    );
+    expect(results.map((result) => result.kind === "refused" && result.status)).toEqual([
+      401, 429, 429, 429, 429,
+    ]);
+    expect(h.rows).toEqual([`${ACTOR} setup 0`, `${ACTOR} unlockRefused 1`]);
   });
 
   test("an unlock that cannot be recorded is undone", async () => {
