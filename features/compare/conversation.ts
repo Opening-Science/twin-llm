@@ -7,6 +7,7 @@ import type { ReferenceSource } from "@/infrastructure/claim-sources";
 import type { NumberSource } from "@/infrastructure/number-sources";
 import type { EvidenceAttribution } from "@/infrastructure/oura-types";
 import type { ResponseDocumentV1 } from "@/infrastructure/response-document/document-v1";
+import type { SpeechLanguage } from "@/infrastructure/speech/contract";
 import type { UiContext } from "@/infrastructure/ui-context";
 
 /**
@@ -113,6 +114,8 @@ export type PromptSend = Readonly<{
   effort: EffortLevel;
   /** The bubble's text when it differs from the prompt (a chip's short text). */
   label: string | null;
+  /** The language it was spoken in, when it was; kept in the browser only. */
+  spoken?: SpeechLanguage;
 }>;
 
 /** Facts the `@` sources list may offer (server read, plain values only). */

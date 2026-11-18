@@ -161,17 +161,42 @@ const sentencesOf = (line: string): string[] => {
 
 const BULLET = /^(?:[-*+]|\d+[.)])\s+/;
 
-/** The answer's sentences, outside headings, code and empty lines. */
+/** Inline code: the answer shows it as code, never as a citation. */
+const INLINE_CODE = /`[^`]+`/g;
+
+/** Cells of a table row, split as `rich-text.tsx` splits them. */
+const cellsOf = (line: string): string[] =>
+  line
+    .replace(/^\|/, "")
+    .replace(/(?<!\\)\|$/, "")
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim());
+
+const isSeparatorRow = (line: string | undefined): boolean =>
+  line !== undefined &&
+  line.startsWith("|") &&
+  cellsOf(line).every((cell) => /^:?-+:?$/.test(cell));
+
+/**
+ * The answer's sentences as the answer renders them: outside headings, code
+ * and empty lines, with inline code left out and each table body cell read
+ * on its own (the header row and the separator are no claims).
+ */
 const answerSentences = (answer: string): string[] => {
   const sentences: string[] = [];
   let inCode = false;
-  for (const raw of answer.split("\n")) {
-    const line = raw.trim();
+  const lines = answer.split("\n").map((raw) => raw.trim().replace(INLINE_CODE, ""));
+  for (const [index, line] of lines.entries()) {
     if (line.startsWith("```")) {
       inCode = !inCode;
       continue;
     }
-    if (inCode || line === "" || line.startsWith("#") || line.startsWith("|")) continue;
+    if (inCode || line === "" || line.startsWith("#")) continue;
+    if (line.startsWith("|")) {
+      if (isSeparatorRow(line) || isSeparatorRow(lines[index + 1])) continue;
+      sentences.push(...cellsOf(line).flatMap(sentencesOf));
+      continue;
+    }
     sentences.push(...sentencesOf(line.replace(BULLET, "")));
   }
   return sentences;

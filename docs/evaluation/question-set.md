@@ -161,6 +161,15 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
+Each key records the open-twin pin it was built at (`open_twin_sha`), and the
+live checks compare it. A pin bump (`scripts/sync-open-twin.sh`) therefore
+fails them until the keys are rebuilt, even when no entry changes. Rebuild in
+the same PR as the bump, and check that the diff touches only
+`open_twin_sha` and `generated_on`; anything else is a real change to review.
+The v1 and v1h keys were rebuilt at `2fd26911` on 2026-11-17 with every entry
+unchanged. The S7, S7b, S7h and hb keys still name `a9e126c9` and need the
+same rebuild once their cohorts are built (`bun run synthea:s7`).
+
 S4 runs by one of two routes (#273). Pick one before an S4 run; with neither,
 the run prints, before any model call, the scenario, the number of items and
 the exact unset names, for example
