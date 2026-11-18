@@ -17,6 +17,8 @@ import { outputEntriesOf, OutputsPanel, useOutputsMode } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
 import { lastTurnEffort, lastTurnModelIds } from "./screen-rules";
 import { TwinCard } from "./twin-card";
+import type { SpokenTurn } from "./spoken-turn";
+import { SpokenTurnReader } from "./spoken-turn-reader";
 import { useConversation } from "./use-conversation";
 import { VoiceProvider } from "./voice-context";
 
@@ -87,9 +89,12 @@ export const CompareScreen = ({
     entries.some((entry) => entry.view.id === enlargedId);
   const empty = turns.length === 0 && twinAt === null;
   const pickOrgan = (picked: TwinFocusId) => setOrgan(picked);
+  // The turn asked aloud, so its answer is read back; a typed turn clears it.
+  const [spoken, setSpoken] = useState<SpokenTurn | null>(null);
 
   return (
     <VoiceProvider>
+      <SpokenTurnReader turns={turns} spoken={spoken} />
       <div className="flex min-h-full flex-col">
         <div
           className={cn(
@@ -174,7 +179,14 @@ export const CompareScreen = ({
               showSuggestions={turns.length === 0}
               sending={conversation.sending}
               streaming={conversation.streaming}
-              onSend={(send) => void conversation.send(send)}
+              onSend={(send) => {
+                setSpoken(
+                  send.spoken === undefined
+                    ? null
+                    : { index: turns.length, language: send.spoken },
+                );
+                void conversation.send(send);
+              }}
               onStop={conversation.stop}
               onTwin={conversation.openTwin}
               onCompact={compact.open}
