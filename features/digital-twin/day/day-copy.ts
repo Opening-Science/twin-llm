@@ -110,3 +110,20 @@ export const stepStatus = (
   selected === null || time === null
     ? `${count} ${count === 1 ? "beat" : "beats"}. Next beat starts at the first.`
     : `Beat ${selected + 1} of ${count}, ${time}.`;
+
+/** A folded run of steady readings: one line per signal, values as the beat lines round them. */
+export const runLine = (
+  line: Readonly<{
+    name: string;
+    from: string;
+    to: string;
+    low: number;
+    high: number;
+    unit: string;
+  }>,
+): string =>
+  `${line.from === line.to ? line.from : `${line.from}–${line.to}`} · ${line.name}, ${
+    line.low === line.high ? line.low : `${line.low}–${line.high}`
+  } ${line.unit}`;
+export const runOpen = (count: number): string => `Show these ${count} steady readings`;
+export const runFold = (count: number): string => `Fold these ${count} steady readings`;

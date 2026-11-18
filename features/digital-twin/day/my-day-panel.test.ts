@@ -158,6 +158,33 @@ describe("MyDayPanel", () => {
     expect(last).toMatch(/disabled=""[^>]*>Next beat/);
   });
 
+  test("folds a run of steady readings and opens it when a step lands inside", () => {
+    const base = DAY.beats.find((beat) => beat.source === "measured")!;
+    const reading = (time: string, value: number) => ({
+      ...base,
+      time,
+      event: "Reading",
+      measure: "heart_rate" as const,
+      direction: "steady" as const,
+      value,
+      unit: "/min" as const,
+      line: `Heart rate steady · about ${value} /min · measured`,
+      worth_a_look: false,
+    });
+    const beats = [reading("06:00", 77), reading("07:00", 74), reading("08:00", 76)];
+    const quiet = { ...STATE, day: { ...DAY, beats, worth_a_look: [] } };
+    const folded = html(quiet);
+    expect(folded).toContain("06:00–08:00 · Heart rate, 74–77 /min");
+    expect(folded).toContain("Show these 3 steady readings");
+    expect(folded).not.toContain("Heart rate steady · about 74 /min");
+    // Stepping to the second beat opens the run, so every beat stays reachable.
+    const open = html({ ...quiet, selected: 1 });
+    expect(open).toContain("Fold these 3 steady readings");
+    expect(open).toContain("Heart rate steady · about 74 /min");
+    expect(open.match(/aria-pressed="true" class="twin-beat-button"/g)).toHaveLength(1);
+    expect(open).toContain("Beat 2 of 3, 07:00.");
+  });
+
   test("shows the route's sentence instead of beats on a refusal", () => {
     const out = html({ ...STATE, day: undefined, error: DAY_REFUSED["no-readings"] });
     expect(out).toContain(DAY_REFUSED["no-readings"]);
