@@ -47,7 +47,15 @@ const fetchSpeech = async (
   return response.blob();
 };
 
-const play = (blob: Blob, signal: AbortSignal): Promise<void> =>
+/**
+ * Plays one piece and settles when it has ended or was stopped. `onPlaying`
+ * runs once, when sound actually starts, not when the audio arrived.
+ */
+export const playBlob = (
+  blob: Blob,
+  signal: AbortSignal,
+  onPlaying: () => void = () => undefined,
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -55,6 +63,7 @@ const play = (blob: Blob, signal: AbortSignal): Promise<void> =>
       audio.pause();
       URL.revokeObjectURL(url);
     };
+    audio.addEventListener("playing", onPlaying, { once: true });
     audio.addEventListener("ended", () => {
       done();
       resolve();
@@ -114,10 +123,11 @@ export const useSpeechPlayer = (): SpeechPlayer => {
         if (following !== undefined) {
           next = fetchQuiet(following);
         }
-        if (index === 0) {
-          setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
-        }
-        await play(blob, controller.signal);
+        await playBlob(blob, controller.signal, () => {
+          if (index === 0 && !controller.signal.aborted) {
+            setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
+          }
+        });
       }
     };
     void run()
