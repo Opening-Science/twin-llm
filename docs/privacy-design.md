@@ -276,7 +276,9 @@ Argon2id against the RFC 9106 vector and scrypt against the RFC 7914 vector.
   becomes useless.
 - **Brute force.** Argon2id cost, plus a per-user in-memory wait that doubles after each
   wrong passphrase or code from 1 s up to 60 s (429 with `Retry-After`, no KDF run), and
-  is forgotten an hour after the last wrong try or at restart. Offline guessing against a
+  is forgotten an hour after the last wrong try or at restart. One setup, unlock or
+  recovery runs per user at a time; a request sent while one runs gets the same 429, so
+  tries sent at once cannot skip the wait. Offline guessing against a
   stolen disk is limited only by the KDF and the passphrase's strength; the docs say so.
 - **Passphrase change and recovery.** Recovery rewraps the DEK under the new passphrase and
   a new code; no data is rewritten. A form to change a known passphrase is not built yet;
