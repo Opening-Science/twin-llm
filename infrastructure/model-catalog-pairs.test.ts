@@ -15,7 +15,7 @@ import {
 } from "./model-catalog";
 
 /**
- * Manual mode (#366): a specialist paired with a model the person picked, as
+ * A specialist on a model the person picked in the Specialists mode (#366, #610), as
  * a row id the catalog does not list. Synthetic catalog rows only.
  */
 

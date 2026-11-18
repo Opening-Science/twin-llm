@@ -275,9 +275,9 @@ Built-ins live in `features/commands/registry.ts`. A skill may not take a built-
 - `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
   it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
   turn, never calls `/api/chat`, and the card is not part of the history any model is
-  sent (`features/arena/prompt-route.ts`, `twin-card-state.ts`).
+  sent (`features/compare/prompt-bar.tsx`, `twin-card.tsx`).
 
-Which twin the card shows (`features/arena/twin-subject.ts`):
+Which twin the card shows (`features/compare/twin-card.tsx`):
 
 - With `DATA_MODE=synthetic`, the first synthetic subject the thread used: a
   `subject_ref` in one of its tool calls, or a subject_ref in a prompt, when that person
@@ -328,11 +328,11 @@ marked "Interrupted by a restart" and is not repeated. Pausing clears the next r
 resuming sets it from now.
 
 **Same rules as a typed turn.** A run writes its turn with the same code as a typed prompt
-(`features/arena/write-turn.ts`), marked `scheduled`, and calls the same `startAnswer` as
-`POST /api/chat` (`features/arena/answer-runtime.ts`) with the request the browser would
+(`features/compare/turn-writer.ts`), marked `scheduled`, and calls the same `startAnswer` as
+`POST /api/chat` (`features/compare/answer-runtime.ts`) with the request the browser would
 send for `/skill question`. The skill gate, the genome rule, the data-mode policy, the
 `skill.<name>` audit row, twin notes and the disclosure ledger all apply unchanged
-(`features/arena/scheduled-turn.test.ts` checks that the same ports are called in the same
+(`features/compare/server-handlers.test.ts` checks that the same ports are called in the same
 order). A run sends only its own question, not the thread's earlier turns. Tasks always
 name a saved thread, so an incognito chat cannot be scheduled. In the thread the turn
 shows a Scheduled chip next to its skill.

@@ -3,9 +3,8 @@ import { type BuildInfo } from "@/infrastructure/env";
 import { type CheckState, type LabCheck, type LabLink, shortHash } from "./lab-check";
 
 /**
- * Which code this server runs: the app version, git commit, clean-tree flag
- * and open-twin pin and checkout written in at build time, against the
- * checkout on disk now. A built server runs what it was built from, so the
+ * Which code this server runs: the app version, git commit and clean-tree
+ * flag written in at build time, against the checkout on disk now. A built server runs what it was built from, so the
  * build's values decide, and a checkout that has moved since means a rebuild
  * is needed. `next dev` serves edits as they are saved, so there nothing
  * recorded at startup describes the running code.
@@ -17,8 +16,6 @@ const SHA = /^[0-9a-f]{40}$/;
 /** Read from disk when the page loads; null when it could not be read. */
 export type DiskProvenance = Readonly<{
   commit: string | null;
-  openTwinPinned: string | null;
-  openTwinFound: string | null;
 }>;
 
 export type ProvenanceInput = Readonly<{ build: BuildInfo; disk: DiskProvenance }>;
@@ -39,11 +36,7 @@ export const provenanceLinks = (
   ];
 };
 
-const HOW_TO = [
-  "git rev-parse HEAD && git status --short",
-  "cat .open-twin/OPEN_TWIN_SHA",
-  "grep -A2 'Synced (not vendored)' PROVENANCE.md",
-].join("\n");
+const HOW_TO = "git rev-parse HEAD && git status --short";
 
 /** What the list and the check's page show even when the check cannot run. */
 export const provenanceBase = {
@@ -58,31 +51,12 @@ export const changedSinceBuild = (build: BuildInfo, disk: DiskProvenance): strin
     disk.commit !== null && disk.commit !== build.commit
       ? `the checkout is at ${shortHash(disk.commit)}`
       : "",
-    disk.openTwinPinned !== null && disk.openTwinPinned !== build.openTwinPinned
-      ? "PROVENANCE.md pins another open-twin commit"
-      : "",
-    disk.openTwinFound !== null && disk.openTwinFound !== build.openTwinFound
-      ? ".open-twin/ holds another commit"
-      : "",
   ].filter((part) => part !== "");
 
 const statusAndSummary = ({
   build,
   disk,
 }: ProvenanceInput): CheckState & Pick<LabCheck, "summary"> => {
-  // Under `next dev` the open-twin packages compile from disk as they are now.
-  const running = build.mode === "dev" ? disk : build;
-  if (
-    running.openTwinPinned !== null &&
-    running.openTwinFound !== null &&
-    running.openTwinPinned !== running.openTwinFound
-  ) {
-    return {
-      status: "not-ok",
-      summary:
-        "The open-twin checkout this server runs is not the commit PROVENANCE.md pins. Run `bun run sync:open-twin` and rebuild.",
-    };
-  }
   if (build.mode === "dev") {
     return {
       status: "unknown",
@@ -115,13 +89,6 @@ const statusAndSummary = ({
         "This build was made from a working tree with changes that are not in its commit.",
     };
   }
-  if (build.openTwinPinned === null || build.openTwinFound === null) {
-    return {
-      status: "unknown",
-      reason: "The open-twin pin could not be compared.",
-      summary: "The build commit is known, but the open-twin pin could not be compared.",
-    };
-  }
   const changes = changedSinceBuild(build, disk);
   if (changes.length > 0) {
     return {
@@ -132,8 +99,7 @@ const statusAndSummary = ({
   }
   return {
     status: "ok",
-    summary:
-      "Built from a clean commit that is still the checkout, and the open-twin checkout is the commit PROVENANCE.md pins.",
+    summary: "Built from a clean commit that is still the checkout.",
   };
 };
 
@@ -162,16 +128,6 @@ export const provenanceCheck = (input: ProvenanceInput): LabCheck => {
         mono: true,
       },
       { label: "Git commit (checkout now)", value: shortHash(disk.commit), mono: true },
-      {
-        label: dev ? "open-twin pin (PROVENANCE.md now)" : "open-twin pin (build)",
-        value: shortHash(dev ? disk.openTwinPinned : build.openTwinPinned),
-        mono: true,
-      },
-      {
-        label: dev ? "open-twin checkout (now)" : "open-twin checkout (build)",
-        value: shortHash(dev ? disk.openTwinFound : build.openTwinFound),
-        mono: true,
-      },
     ],
     links: provenanceLinks(dev ? null : build.commit, build.dirty),
   };

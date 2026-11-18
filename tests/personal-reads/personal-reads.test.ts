@@ -4,7 +4,7 @@ import { join, relative, sep } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { createThreadExportHandler } from "@/features/arena/thread-export-handler";
+import { createThreadExportHandler } from "@/features/compare/thread-export-handler";
 import { readConnectorSummaries } from "@/features/connectors/connector-summaries";
 import { getGenomeReportResponse } from "@/features/digital-twin/genome-run";
 import { createGoogleHealthCallbackHandler } from "@/features/google-health/oauth-handlers";
@@ -675,6 +675,26 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: "synthetic Demo cohort only (its handler still writes motion.days)",
   },
+  "GET /api/digital-twin/days/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.day.list)",
+  },
+  "GET /api/digital-twin/day/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.day)",
+  },
+  "GET /api/digital-twin/period/[subjectRef]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "synthetic Demo cohort only (its handler still writes digital-twin.period)",
+  },
+  "GET /api/digital-twin/day": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "the illustrative mock day from a fixture; no subject is read",
+  },
   "GET /api/tasks/notice": {
     kind: "exempt",
     why: "counts unseen scheduled runs (#54): skill names and thread ids, no question or answer",
@@ -697,6 +717,19 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: NOT_PERSONAL,
+  },
+  "GET /api/voice/status": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: "says whether the speech sidecar answers; no personal data",
+  },
+  "POST /api/voice/transcribe": {
+    kind: "exempt",
+    why: "passes a recording to the speech sidecar on this machine and returns its text; reads no stored data and keeps nothing",
+  },
+  "POST /api/voice/speak": {
+    kind: "exempt",
+    why: "passes text to the speech sidecar on this machine and returns the audio; reads no stored data and keeps nothing",
   },
   "POST /api/gbd/imports": {
     kind: "exempt",
@@ -1108,6 +1141,8 @@ describe("locked personal data (#142)", () => {
       "POST /api/vitronic/subjects/[subjectId]/files",
       "POST /api/vitronic/subjects/[subjectId]/sync",
       "POST /api/vitronic/sync",
+      "POST /api/voice/speak",
+      "POST /api/voice/transcribe",
       "POST /api/whoop/sync",
       "PUT /api/vitronic/subjects/[subjectId]/default",
     ]);
@@ -1199,13 +1234,14 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
   "app/synthea/layout.tsx": { open: "the public Synthea generator" },
   "app/synthea/page.tsx": { open: "the public Synthea generator" },
   "app/synthea/docs/page.tsx": { open: "the public Synthea generator" },
+  "app/kiosk/page.tsx": { open: "the synthetic demo body; reads no person's data" },
 };
 
 /** Server actions: each gated function refuses while locked (directly or through `via`). */
 const SERVER_ACTIONS: Readonly<
   Record<string, Readonly<{ gated: Readonly<Record<string, string>> } | { open: string }>>
 > = {
-  "features/arena/start-turn.ts": {
+  "features/compare/start-turn.ts": {
     gated: { startTurn: "vaultRefusalForAction()" },
   },
   "app/(focus)/start/actions.ts": {
@@ -1304,7 +1340,7 @@ describe("pages and server actions while locked (#142)", () => {
 
   test("the sidebar reads thread titles only when unlocked", () => {
     const source = readFileSync(join(ROOT, "app/(shell)/layout.tsx"), "utf8");
-    expect(source).toContain("vault.unlocked\n    ? await threadsForViewer(");
+    expect(source).toContain("vault.unlocked ? await threadsForViewer(");
   });
 
   test("every server action file is listed, and each gated action asks the gate", () => {

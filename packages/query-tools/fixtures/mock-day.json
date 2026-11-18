@@ -1,0 +1,120 @@
+{
+  "label": "illustrative mock",
+  "note": "A made-up day for one synthetic person, not a recording of anyone. Values are illustrative mock.",
+  "sensor_note": "Sensor glucose is an illustrative continuous monitor reading at the same moments, made to trail the blood values by about ten minutes: lower on a rise, higher on a fall.",
+  "day": "2026-11-16",
+  "readings": [
+    {
+      "time": "03:00",
+      "event": "Deep sleep",
+      "heart_rate_per_min": 52,
+      "glucose_mg_dl": 85,
+      "sensor_glucose_mg_dl": 86,
+      "moving": false
+    },
+    {
+      "time": "06:30",
+      "event": "Wake",
+      "heart_rate_per_min": 70,
+      "glucose_mg_dl": 95,
+      "sensor_glucose_mg_dl": 93,
+      "moving": false
+    },
+    {
+      "time": "07:30",
+      "event": "Breakfast",
+      "heart_rate_per_min": 64,
+      "glucose_mg_dl": 95,
+      "sensor_glucose_mg_dl": 95,
+      "moving": false
+    },
+    {
+      "time": "08:15",
+      "event": "Walk, glucose peak",
+      "heart_rate_per_min": 95,
+      "glucose_mg_dl": 135,
+      "sensor_glucose_mg_dl": 117,
+      "moving": true
+    },
+    {
+      "time": "10:00",
+      "event": "Desk",
+      "heart_rate_per_min": 66,
+      "glucose_mg_dl": 92,
+      "sensor_glucose_mg_dl": 97,
+      "moving": false
+    },
+    {
+      "time": "10:30",
+      "event": "Stressful meeting",
+      "heart_rate_per_min": 88,
+      "glucose_mg_dl": 98,
+      "sensor_glucose_mg_dl": 96,
+      "moving": false
+    },
+    {
+      "time": "12:30",
+      "event": "Lunch",
+      "heart_rate_per_min": 68,
+      "glucose_mg_dl": 100,
+      "sensor_glucose_mg_dl": 99,
+      "moving": false
+    },
+    {
+      "time": "13:00",
+      "event": "Walk after lunch",
+      "heart_rate_per_min": 100,
+      "glucose_mg_dl": 120,
+      "sensor_glucose_mg_dl": 108,
+      "moving": true
+    },
+    {
+      "time": "15:30",
+      "event": "Snack",
+      "heart_rate_per_min": 68,
+      "glucose_mg_dl": 105,
+      "sensor_glucose_mg_dl": 107,
+      "moving": false
+    },
+    {
+      "time": "18:00",
+      "event": "Run",
+      "heart_rate_per_min": 160,
+      "glucose_mg_dl": 85,
+      "sensor_glucose_mg_dl": 92,
+      "moving": true
+    },
+    {
+      "time": "18:45",
+      "event": "Recovery",
+      "heart_rate_per_min": 85,
+      "glucose_mg_dl": 90,
+      "sensor_glucose_mg_dl": 88,
+      "moving": true
+    },
+    {
+      "time": "19:30",
+      "event": "Large dinner",
+      "heart_rate_per_min": 72,
+      "glucose_mg_dl": 100,
+      "sensor_glucose_mg_dl": 98,
+      "moving": false
+    },
+    {
+      "time": "20:30",
+      "event": "After dinner",
+      "heart_rate_per_min": 70,
+      "glucose_mg_dl": 175,
+      "sensor_glucose_mg_dl": 152,
+      "moving": false
+    },
+    {
+      "time": "22:30",
+      "event": "Asleep",
+      "heart_rate_per_min": 56,
+      "glucose_mg_dl": 105,
+      "sensor_glucose_mg_dl": 112,
+      "moving": false
+    }
+  ]
+}

@@ -16,7 +16,7 @@ export type Command = Readonly<{
   kind?: "built-in" | "skill";
 }>;
 
-/** Shows the thread's twin as a card in the chat; asks no model (features/arena/prompt-route.ts). */
+/** Shows the thread's twin as a card in the chat; asks no model (features/compare/prompt-bar.tsx). */
 export const TWIN_COMMAND = "twin";
 
 /** Drafts a twin note of the thread for the person to confirm (#43, docs/twin-notes.md). */

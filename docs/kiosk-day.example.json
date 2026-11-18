@@ -1,0 +1,386 @@
+{
+  "schema_version": "twin-llm.kiosk-day.v1",
+  "notice": "An illustration on a synthetic person. Not a recording of anyone, and not advice.",
+  "subject_ref": "synthetic-mock-day",
+  "day": "2026-11-16",
+  "profile": "without_diabetes",
+  "beats": [
+    {
+      "time": "03:00",
+      "event": "Deep sleep",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "steady",
+      "value": 52,
+      "unit": "/min",
+      "line": "Heart rate steady · about 52 /min · measured",
+      "body": {
+        "text": "The heart keeps a steady pace.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "06:30",
+      "event": "Wake",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "up",
+      "value": 70,
+      "unit": "/min",
+      "line": "Heart rate up · about 70 /min · measured",
+      "body": {
+        "text": "The heart beats faster to move more blood to working muscles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "07:30",
+      "event": "Breakfast",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "down",
+      "value": 64,
+      "unit": "/min",
+      "line": "Heart rate down · about 64 /min · measured",
+      "body": {
+        "text": "The heart slows as the body settles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "08:15",
+      "event": "Walk, glucose peak",
+      "source": "measured",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "up",
+      "value": 135,
+      "unit": "mg/dL",
+      "line": "Blood glucose up · about 135 mg/dL · measured",
+      "body": {
+        "text": "Sugar from food passes into the blood.",
+        "organ": "bloodvasculature"
+      },
+      "view": {
+        "focus": "bloodvasculature",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "08:15",
+      "event": "Walk, glucose peak",
+      "source": "narrated",
+      "measure": "insulin",
+      "specimen": null,
+      "direction": "up",
+      "value": null,
+      "unit": null,
+      "line": "Insulin up · narrated, not measured",
+      "body": {
+        "text": "The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens.",
+        "organ": "pancreas"
+      },
+      "view": {
+        "focus": "pancreas",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "10:00",
+      "event": "Desk",
+      "source": "measured",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "down",
+      "value": 92,
+      "unit": "mg/dL",
+      "line": "Blood glucose down · about 92 mg/dL · measured",
+      "body": {
+        "text": "Muscle and liver take sugar out of the blood.",
+        "organ": "liver"
+      },
+      "view": {
+        "focus": "liver",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "10:30",
+      "event": "Stressful meeting",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "up",
+      "value": 88,
+      "unit": "/min",
+      "line": "Heart rate up · about 88 /min · measured",
+      "body": {
+        "text": "The heart beats faster to move more blood to working muscles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "12:30",
+      "event": "Lunch",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "down",
+      "value": 68,
+      "unit": "/min",
+      "line": "Heart rate down · about 68 /min · measured",
+      "body": {
+        "text": "The heart slows as the body settles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "13:00",
+      "event": "Walk after lunch",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "up",
+      "value": 100,
+      "unit": "/min",
+      "line": "Heart rate up · about 100 /min · measured",
+      "body": {
+        "text": "The heart beats faster to move more blood to working muscles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "13:00",
+      "event": "Walk after lunch",
+      "source": "narrated",
+      "measure": "insulin",
+      "specimen": null,
+      "direction": "up",
+      "value": null,
+      "unit": null,
+      "line": "Insulin up · narrated, not measured",
+      "body": {
+        "text": "The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens.",
+        "organ": "pancreas"
+      },
+      "view": {
+        "focus": "pancreas",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "15:30",
+      "event": "Snack",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "down",
+      "value": 68,
+      "unit": "/min",
+      "line": "Heart rate down · about 68 /min · measured",
+      "body": {
+        "text": "The heart slows as the body settles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "18:00",
+      "event": "Run",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "up",
+      "value": 160,
+      "unit": "/min",
+      "line": "Heart rate up · about 160 /min · measured",
+      "body": {
+        "text": "The heart beats faster to move more blood to working muscles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "18:45",
+      "event": "Recovery",
+      "source": "measured",
+      "measure": "heart_rate",
+      "specimen": null,
+      "direction": "down",
+      "value": 85,
+      "unit": "/min",
+      "line": "Heart rate down · about 85 /min · measured",
+      "body": {
+        "text": "The heart slows as the body settles.",
+        "organ": "heart"
+      },
+      "view": {
+        "focus": "heart",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "19:30",
+      "event": "Large dinner",
+      "source": "measured",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "up",
+      "value": 100,
+      "unit": "mg/dL",
+      "line": "Blood glucose up · about 100 mg/dL · measured",
+      "body": {
+        "text": "Sugar from food passes into the blood.",
+        "organ": "bloodvasculature"
+      },
+      "view": {
+        "focus": "bloodvasculature",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "20:30",
+      "event": "After dinner",
+      "source": "measured",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "up",
+      "value": 175,
+      "unit": "mg/dL",
+      "line": "Blood glucose up · about 175 mg/dL · measured",
+      "body": {
+        "text": "Sugar from food passes into the blood.",
+        "organ": "bloodvasculature"
+      },
+      "view": {
+        "focus": "bloodvasculature",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "20:30",
+      "event": "After dinner",
+      "source": "narrated",
+      "measure": "insulin",
+      "specimen": null,
+      "direction": "up",
+      "value": null,
+      "unit": null,
+      "line": "Insulin up · narrated, not measured",
+      "body": {
+        "text": "The pancreas releases insulin, which helps cells take up sugar. Insulin is not measured here; this beat describes what usually happens.",
+        "organ": "pancreas"
+      },
+      "view": {
+        "focus": "pancreas",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    },
+    {
+      "time": "20:30",
+      "event": "Worth a look",
+      "source": "derived",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "up",
+      "value": 175,
+      "unit": "mg/dL",
+      "line": "Blood glucose up · about 175 mg/dL · derived",
+      "body": {
+        "text": "Blood sugar stays past the threshold for a while. Blood glucose above 140 mg/dL (placeholder, without diabetes).",
+        "organ": "bloodvasculature"
+      },
+      "view": {
+        "focus": "bloodvasculature",
+        "depth": "organs"
+      },
+      "worth_a_look": true
+    },
+    {
+      "time": "22:30",
+      "event": "Asleep",
+      "source": "measured",
+      "measure": "glucose",
+      "specimen": "blood",
+      "direction": "down",
+      "value": 105,
+      "unit": "mg/dL",
+      "line": "Blood glucose down · about 105 mg/dL · measured",
+      "body": {
+        "text": "Muscle and liver take sugar out of the blood.",
+        "organ": "liver"
+      },
+      "view": {
+        "focus": "liver",
+        "depth": "organs"
+      },
+      "worth_a_look": false
+    }
+  ],
+  "worth_a_look": [
+    {
+      "from": "20:30",
+      "to": "20:30",
+      "measure": "glucose",
+      "specimen": "blood",
+      "extreme": 175,
+      "unit": "mg/dL",
+      "rule": "Blood glucose above 140 mg/dL (placeholder, without diabetes)"
+    }
+  ],
+  "thresholds": {
+    "status": "placeholder",
+    "reviewer": "Robin"
+  },
+  "activity": "recorded",
+  "timezone": "UTC"
+}

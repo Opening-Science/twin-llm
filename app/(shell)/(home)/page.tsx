@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
-import { NewChatScreen } from "@/features/arena/new-chat-screen";
-import { arenaSettings } from "@/features/arena/arena-settings";
-import { loadPromptSourceFacts } from "@/features/arena/prompt-source-facts";
+import { NewChatScreen } from "@/features/compare/new-chat-screen";
+import { chatSettings } from "@/features/compare/chat-settings";
+import { loadPromptSourceFacts } from "@/features/compare/prompt-source-facts";
 import { skillCommand } from "@/features/commands/registry";
 import { skillsFor } from "@/features/skills/user-skill-store";
 import { runnableSkills } from "@/features/skills/load-skills";
@@ -53,7 +53,7 @@ export default async function HomePage({
         subjectDraft((await searchParams).subject)
       }
       subjectRef={subjectRefParam((await searchParams).subject)}
-      {...arenaSettings()}
+      {...chatSettings()}
     />
   );
 }

@@ -1375,6 +1375,71 @@
       }
     },
     {
+      "name": "show_my_day",
+      "description": "One synthetic subject's UTC day of heart rate (8867-4), blood glucose (2339-0, 2345-7) and sensor glucose (99504-3) from a continuous monitor as time-ordered beats. Sensor glucose is its own measure, named sensor in beats and red_windows and never compared with blood glucose; sensor_lag says it trails the blood by several minutes (null with no sensor reading). Each beat has a time, an event, a signal (direction and approximate value), a body note with an organ, a twin view, and a source: measured (a stored reading), derived (computed from readings) or narrated (described, never measured, with no value). Insulin is always narrated. red_windows mark readings past placeholder thresholds still to be confirmed: heart rate above 100 /min while still, glucose above 140 mg/dL without diabetes, or outside 70–180 mg/dL with diabetes. The warehouse records no events or activity, so events read 'Reading' and the still rule is not applied. More than 5000 rows is refused; heart rate not in /min or either glucose not in mg/dL is refused. For a week or a month use show_my_period, and trend with HbA1c (4548-4).",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "description": "The UTC day, YYYY-MM-DD"
+          },
+          "profile": {
+            "type": "string",
+            "enum": ["without_diabetes", "with_diabetes"],
+            "description": "Which glucose thresholds flag a window"
+          }
+        },
+        "required": ["subject_ref", "day", "profile"],
+        "additionalProperties": false,
+        "description": "One synthetic subject's day of heart rate and glucose, as beats"
+      }
+    },
+    {
+      "name": "show_my_period",
+      "description": "One synthetic subject's week (7 UTC days) or month (30 UTC days) ending on end. glucose is blood glucose (2339-0, 2345-7): average in mg/dL and the share of readings below, within and above a placeholder range still to be confirmed (above 140 mg/dL without diabetes; 70–180 mg/dL with diabetes), per day and pooled; the share is of readings, not of time, and below is null without diabetes. sensor_glucose: the same summary over sensor glucose (99504-3) from a continuous monitor alone, never pooled or compared with blood; sensor_glucose alone is refused over 5000 sensor readings or when not in mg/dL. sensor_lag says the sensor trails the blood by several minutes (null with no sensor reading). resting_hr and hrv: the same trend resting_hr_trend and hrv_trend return over the period, or their refusal. recovery after workouts is 'not recorded': the warehouse stores no workout times. More than 5000 rows is refused; glucose not in mg/dL is refused.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "subject_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Opaque subject_ref"
+          },
+          "period": {
+            "type": "string",
+            "enum": ["week", "month"],
+            "description": "week: the 7 UTC days ending on end; month: the 30 UTC days ending on end"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "description": "The last UTC day, YYYY-MM-DD"
+          },
+          "profile": {
+            "type": "string",
+            "enum": ["without_diabetes", "with_diabetes"],
+            "description": "Which glucose range time in range uses"
+          }
+        },
+        "required": ["subject_ref", "period", "end", "profile"],
+        "additionalProperties": false,
+        "description": "One synthetic subject's week or month of glucose, resting heart rate and HRV"
+      }
+    },
+    {
       "name": "imported_datasets",
       "description": "The person's own imported datasets: id, kind, name, rows, date range, and each series (LOINC or name, unit, n). No values. Call it first; cite a value with its dataset and date as stored.",
       "inputSchema": {

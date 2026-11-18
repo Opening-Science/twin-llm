@@ -4,7 +4,11 @@ import {
   type ChatRequest,
   currentPrompt,
 } from "@/features/chat/chat-request";
-import { startAnswer } from "@/features/arena/answer-runtime";
+import { startAnswer } from "@/features/compare/answer-runtime";
+import {
+  ANSWER_FINISHED_SENTENCE,
+  answerMayStart,
+} from "@/features/compare/answer-start";
 import { guardChatRequest } from "@/features/chat/chat-protection";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
 import { runningAnswers } from "@/features/chat/running-answers";
@@ -26,9 +30,11 @@ import { withUnlocked } from "@/infrastructure/vault-runtime";
  * independently. Before any model is called the request must: come from a
  * known person, pass abuse protection (auth on only), be well formed, name a
  * model the active provider offers (or an agent over one, `agent:<id>`), and
- * target a turn this person owns. Auto (`agent:auto`) runs as the agent its
- * column names, which the turn stored when it started. Every
- * refusal is a plain sentence; internal errors stay in the server log.
+ * target a turn this person owns whose answer has not already finished.
+ * Auto (`agent:auto`) runs as the agent its column names, which the turn
+ * stored when it started. Every refusal is a plain sentence; internal errors
+ * stay in the server log. A start that fails before the model is called
+ * leaves the answer FAILED (`features/compare/answer-start.ts`).
  *
  * The answer is listed as running from here on, so `POST /api/chat/stop` can
  * end it (#373). Closing this request does not: the browser going away leaves
@@ -75,6 +81,8 @@ export const POST = withUnlocked(async (request: Request): Promise<Response> => 
   }
   if (ownership.kind === "someone-else")
     return refuse(403, "That turn isn't yours to answer.");
+  // A finished answer stays as stored; a failed, refused or stopped one may be asked again.
+  if (!answerMayStart(ownership.status)) return refuse(409, ANSWER_FINISHED_SENTENCE);
 
   const agent = turnAgentOf(
     call.modelId,

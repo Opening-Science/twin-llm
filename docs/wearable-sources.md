@@ -30,6 +30,16 @@ are Oura's sleep score and WHOOP's sleep performance. Oura's naps and rests are 
 only the main sleep stands for the night. The measure names are open-twin's
 (`@open-twin/aggregate`, `Measure`).
 
+open-twin's measurement catalogue (`createMeasurementCatalogue`, pin of 16 Nov 2026)
+does not yet list any of these four as shared. Google Health alone declares
+`resting-heart-rate`, `oxygen-saturation` and `step-count`; Oura and WHOOP declare their
+readings under their own keys (`oura:sleep.average-hrv`, `daily-step-count`,
+`whoop:recovery.hrv-rmssd`, `whoop:recovery.resting-heart-rate`,
+`whoop:recovery.spo2-percentage`), and WHOOP's resting heart rate is described as
+measured asleep, so not the daily resting heart rate. The rules here compare them
+regardless; whether they should follow the catalogue is open (#647).
+`infrastructure/open-twin-adapters/catalogue.test.ts` fails when a sync changes this.
+
 Where there are two bounds, the larger applies: 200 steps up to 4,000 steps, then 5%
 (600 at 12,000); 5 ms up to 50 ms of HRV, then 10% (8 ms at 80 ms). The line shown to
 people says which bound applied ("within 600 steps, the larger of 200 steps and 5% of the
@@ -98,6 +108,30 @@ every source).
   not drive them; their series still come from one source each. The `cross_source_compare`
   query tool reads the snapshots as stored. Synthetic mode reads no wearable snapshot,
   so the rules only run in personal mode.
+
+## Glucose by specimen
+
+Google Health sends every glucose reading as LOINC 2339-0, glucose in blood, and says in
+a `specimen` component (system `http://opentwin.ch/fhir/CodeSystem/google-health`) where
+it was read. A continuous glucose monitor's reading says `INTERSTITIAL_FLUID`. When the
+warehouse stores a bundle (`packages/warehouse/map-observation.ts`), a 2339-0 reading
+with that specimen is stored as sensor glucose, LOINC 99504-3 "Glucose [Mass/volume] in
+Interstitial fluid", so `show_my_day` reads it as its own measure, labelled sensor, with
+the lag note, and never next to blood glucose ([query-layer.md](query-layer.md)). Any
+other specimen (`CAPILLARY_BLOOD`, ...), or none, stays blood glucose; only 2339-0 moves.
+The specimen is read when a reading is stored, not when it is read. Ingesting the same
+bundle again writes nothing (it is already ingested), so rows stored before this came in
+keep 2339-0 until that bundle's rows are removed and it is stored afresh. The personal
+FHIR import (`packages/personal-data/parse-fhir.ts`) keeps each file's own code, so an
+uploaded file's monitor readings stay 2339-0 there. Test from a synthetic
+bundle built by open-twin's Google Health mapper:
+`packages/warehouse/fixtures/google-health-glucose.json`, which its test builds again.
+
+Upstream open-twin still sends 2339-0 "in Blood" whatever the specimen, and declares one
+`blood-glucose` measurement for both (TODO in `provider-google-health`
+`src/fhir/measurements.ts`: whether interstitial readings get their own code and key waits
+on clinical sign-off). This works either way: if upstream starts sending 99504-3 itself,
+the reading is stored under it as it comes.
 
 ## The audit row
 

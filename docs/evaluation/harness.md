@@ -81,11 +81,12 @@ different agent per question, so one run would mix agents. The harness writes
 no `skill.<name>` audit row; the response document still names the skill.
 
 `--models agent:rhythm@qwen3:4b` runs the agent on a model other than its
-own, as Manual mode's pair does (#366): the row comes from `findCatalogRow`,
-so it runs only when the catalog offers both the agent and the model. The
-skill, role line and literature are the agent's; only the base model
-changes. Its `rules_sha256` is the agent's own, so a pair run and a run of
-the agent on its own model can be checked for the same rules (#425).
+own, as a specialist moved to another model in the Specialists mode does
+(#366, #610): the row comes from `findCatalogRow`, so it runs only when the
+catalog offers both the agent and the model. The skill, role line and
+literature are the agent's; only the base model changes. Its `rules_sha256`
+is the agent's own, so a pair run and a run of the agent on its own model
+can be checked for the same rules (#425).
 
 Results lines keep `agent:<id>` (or the pair id) as `model_id`, as the answer row does.
 `meta.json` adds `agent` to that model's entry: `id`, `name`,
@@ -517,6 +518,45 @@ Retrieval recall is the needed rows fetched over the rows needed; precision
 is the needed rows fetched over the wearable rows fetched. Both are pooled
 across lines. Every label and both retrieval rates are shares with the
 Wilson 95 % interval. An extra metric: the eight criteria do not change.
+
+#### Cells and citation verdicts
+
+The labels above read the vendor an answer writes. The P6 study also asks
+whether a citation (the key under Evidence Used, which the chip turns into
+"From WHOOP, 2 Jan 2026") names the reading the stated number came from.
+`infrastructure/wearable-cell.ts` holds that model. A **cell** is one stored
+reading: source, measure, day and key, with its value. `traceStated` finds the
+cells of a measure whose value a stated number is (by `statedMatchesReading`,
+the rule of the cited-value check), and `citationVerdict` compares the cited
+cell with the one found:
+
+| Verdict                | When                                                      |
+| ---------------------- | --------------------------------------------------------- |
+| `correct`              | the number is the cited cell's value                      |
+| `wrong_source`         | it is another source's value for the same measure and day |
+| `wrong_day`            | it is the cited source's value on another day             |
+| `wrong_source_and_day` | it is another source's value on another day               |
+| `wrong_measure`        | it is a value of another measure                          |
+| `untraced`             | it is no cell's value                                     |
+| `ambiguous`            | it is the value of two or more cells                      |
+
+`confusableCells` lists pairs of cells of one measure that the app would show
+as the same number; a study item with any such pair is not identifiable and is
+generated again. The study's items and harness: [attribution-study.md](attribution-study.md).
+
+### Claim sources (#612)
+
+`score/claim-sources.ts` runs the matcher the answer view uses
+(`infrastructure/claim-sources.ts`, [guidelines.md](../guidelines.md#claim-sources-612))
+on each line whose turn returned a guideline passage or an article: every
+sentence of the Answer section is cited, marked unsupported, invented id or
+uncited. `eval:report` adds a "Claim sources" section only when some line
+returned literature, with each status's share of the claims and the share of
+answers with at least one claim and every claim cited or marked unsupported, the bar #612 sets.
+Wilson 95 % intervals. An extra metric: the eight criteria do not change.
+The Lab's Evaluation runs page (`/lab/evaluations`) shows that table under
+the run's scores, with a CSV of one row per share; a run whose report has no
+such section shows nothing for it.
 
 The harness runs the chat turn without wearable context, so a run today
 writes no `wearable.sources.*` row and its wearable tools return synthetic

@@ -377,10 +377,44 @@
 /* --- Shared text and surface classes --------------------------------------- */
 
 @layer components {
-  /* The shell (shell-frame.tsx). Wide screens: the sidebar is a pinned column
-     or tucked away behind a floating button that shows it on hover. Narrow
-     screens: always tucked; the button opens the menu dialog. No header bar:
-     each page's own heading leads. */
+  /* The shell (features/app-shell/app-frame.tsx). It fills the viewport and
+     only the main region scrolls. Wide screens: the sidebar is a pinned
+     column or tucked away behind a floating button that shows it on hover.
+     Narrow screens: always tucked; the button opens the menu dialog. No
+     header bar: each page's own heading leads. The research footer is the
+     last row, under the main column. */
+  .shell-frame {
+    @apply grid h-dvh grid-cols-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden;
+  }
+  .shell-frame[data-sidebar="pinned"] {
+    @apply lg:grid-cols-[16rem_minmax(0,1fr)];
+  }
+  .shell-pinned {
+    @apply border-border bg-muted/30 row-span-2 hidden min-h-0 border-r lg:flex;
+  }
+  .shell-main {
+    @apply relative flex min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto outline-none;
+  }
+  [data-sidebar="pinned"] > .shell-main,
+  [data-sidebar="pinned"] > .research-footer {
+    @apply lg:col-start-2;
+  }
+  /* The phone menu: the sidebar as a modal down the left edge. */
+  .shell-menu {
+    @apply bg-background border-border text-foreground fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-72 max-w-[85vw] overscroll-contain border-r p-0 backdrop:bg-black/40;
+  }
+  /* Off-screen until focused, then above everything at the top left. */
+  .skip-link {
+    @apply bg-background border-border sr-only rounded-md border px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60];
+  }
+  /* A sidebar row: a section, the Search row or a thread. The highlight is
+     drawn from aria-current, so what is heard and what is seen agree. */
+  .nav-link {
+    @apply text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm;
+  }
+  .nav-link[aria-current="page"] {
+    @apply bg-muted text-foreground;
+  }
   .shell-toggle {
     @apply text-muted-foreground hover:text-foreground hover:bg-muted bg-background/80 fixed top-3 left-3 z-40 inline-flex size-9 items-center justify-center rounded-lg backdrop-blur;
   }
@@ -422,7 +456,8 @@
   [data-sidebar="pinned"] .shell-main:not(:has(.thread-bar)) {
     @apply lg:pt-0;
   }
-  /* The search box (search-dialog.tsx): a centred modal like a chat app's. */
+  /* The search box (features/search/search-box.tsx): a centred modal like a
+     chat app's. */
   .search-dialog {
     @apply bg-background border-border text-foreground fixed inset-x-0 top-[12vh] mx-auto w-[min(40rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-2xl border p-0 shadow-2xl backdrop:bg-black/40;
   }
@@ -439,7 +474,7 @@
     @apply border-border rounded border px-1 py-px font-mono text-[11px];
   }
 
-  /* --- Export notice (#531, features/shell/export-notice-dialog.tsx) ---
+  /* --- Export notice (#531, features/app-shell/export-notice.tsx) ---
      The one line a thread export shows before its file is made, with
      Download and Cancel: a small centred modal like search's. */
   .export-notice {
@@ -461,6 +496,41 @@
   [data-sidebar="pinned"] .thread-bar {
     @apply lg:pl-6;
   }
+  /* A row of the thread bar's "…" menu. */
+  .thread-menu-item {
+    @apply hover:bg-muted w-full justify-start;
+  }
+
+  /* The research footer (features/app-shell/research-footer.tsx). From 640px
+     both sentences, each kept whole; the dot only where both fit on one line.
+     On a phone one line that opens in place. */
+  .research-footer {
+    @apply border-border text-muted-foreground border-t px-4 py-1.5 text-center text-xs leading-snug;
+  }
+  .research-footer-half {
+    @apply inline-block;
+  }
+  .research-footer-dot {
+    @apply hidden min-[100rem]:inline;
+  }
+  /* One 24px line, so the only control in the footer is big enough to tap. */
+  .research-footer-phone > summary {
+    @apply cursor-pointer list-none leading-6;
+  }
+  .research-footer-phone > summary::-webkit-details-marker {
+    display: none;
+  }
+  .research-footer-more,
+  .research-footer-less {
+    @apply underline underline-offset-2;
+  }
+  .research-footer-less,
+  .research-footer-phone[open] .research-footer-more {
+    @apply hidden;
+  }
+  .research-footer-phone[open] .research-footer-less {
+    @apply inline;
+  }
 
   /* Page titles: Selecta Regular, large and tight. */
   .text-display {
@@ -472,10 +542,10 @@
   }
 
   /* A GBD profile's fixed header and footer around the model's text (#417). */
-  .profile-frame-header {
+  .compare-profile-header {
     @apply border-border flex flex-col gap-1 border-b pb-2;
   }
-  .profile-frame-footer {
+  .compare-profile-footer {
     @apply border-border text-muted-foreground flex flex-col gap-1 border-t pt-2 text-xs leading-relaxed;
   }
 
@@ -663,11 +733,11 @@
 
   /* Incognito chat: a calm banner and a dashed prompt bar, in the neutral
      tokens only, so the mode is plain to see without reading as a warning. */
-  .incognito-banner {
+  .compare-incognito-banner {
     @apply border-input text-foreground bg-muted mx-auto flex w-full max-w-2xl items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-left text-sm leading-snug;
   }
 
-  .incognito-toggle[aria-pressed="true"] {
+  .compare-incognito-toggle[aria-pressed="true"] {
     @apply bg-muted text-foreground;
   }
 
@@ -686,25 +756,33 @@
     );
   }
 
+  /* The prompt field draws no ring of its own (a ring inside the box would sit
+     on the text), so the box around it carries the focus ring while it has
+     the keyboard. */
+  .surface:has(> textarea:focus-visible) {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
   .effort-ultra-text {
     color: var(--effort-ultra);
   }
 
   /* A tool call in an answer: one quiet row that folds out to its arguments. */
-  .tool-card {
+  .compare-tool-card {
     @apply border-border rounded-md border text-xs;
   }
 
-  .tool-card-header {
+  .compare-tool-card-header {
     @apply hover:bg-muted/60 flex w-full min-w-0 items-center gap-2 rounded-md px-2.5 py-1.5 text-left;
   }
 
-  .tool-card-body {
+  .compare-tool-card-body {
     @apply border-border border-t px-3 py-2;
   }
 
   /* A card a number in the answer was opened from. */
-  .tool-card[data-highlight] {
+  .compare-tool-card[data-highlight] {
     @apply border-primary/60;
   }
 
@@ -740,7 +818,7 @@
   }
 
   /* A step whose detail is a tool card lines its marker up with the card's header. */
-  .step-trace-step:has(.tool-card) > .step-trace-marker {
+  .step-trace-step:has(.compare-tool-card) > .step-trace-marker {
     @apply h-7;
   }
 
@@ -965,33 +1043,51 @@
 
   /* A number in the answer that a tool call holds: a quiet dotted underline,
      no colour of its own, so it reads as text first and a link second. */
-  .number-link {
+  .compare-number-link {
     @apply decoration-muted-foreground/70 hover:decoration-primary cursor-pointer rounded-sm underline decoration-dotted underline-offset-[3px];
     font: inherit;
     color: inherit;
   }
 
+  /* A source id in the answer that a literature search returned (#612): the
+     answer's own link colour, in the mono face of an id, never broken across
+     lines. An id no search returned gets a wavy destructive underline, never
+     a link. */
+  .compare-cite-link {
+    @apply text-primary font-mono text-[0.92em] whitespace-nowrap underline decoration-dotted underline-offset-[3px] hover:decoration-solid;
+  }
+
+  .compare-cite-missing {
+    @apply text-destructive font-mono text-[0.92em] whitespace-nowrap underline decoration-wavy underline-offset-[3px];
+  }
+
+  /* A claim the answer marks [unsupported]: muted, in the id's mono face, so
+     it reads as a flag on the claim rather than part of the sentence. */
+  .compare-cite-unsupported {
+    @apply text-muted-foreground font-mono text-[0.92em] whitespace-nowrap;
+  }
+
   /* The thread's Outputs panel: a block above the answers on narrow screens, a
      sticky column beside them from xl up. */
-  .outputs-panel {
+  .compare-outputs-panel {
     @apply bg-card border-border mx-auto mb-6 flex w-full max-w-(--page-wide) flex-col gap-2 rounded-xl border p-2 xl:sticky xl:top-4 xl:mb-0 xl:max-h-[calc(100dvh-8rem)];
   }
 
-  .outputs-reopen {
+  .compare-outputs-reopen {
     @apply mx-auto mb-4 flex w-full max-w-(--page-wide) justify-end xl:sticky xl:top-4 xl:mb-0;
   }
 
-  .output-entry {
+  .compare-output-entry {
     @apply border-border flex items-start gap-1 border-t py-1 first:border-t-0;
   }
 
-  .output-entry-main {
+  .compare-output-entry-main {
     @apply hover:bg-muted flex min-w-0 flex-1 flex-col gap-0.5 rounded-md px-1.5 py-1 text-left text-xs;
   }
 
   /* A chart scrolled to from the Outputs panel takes focus; show where. */
-  .view-figure:focus-visible,
-  .view-figure:focus {
+  .compare-view-figure:focus-visible,
+  .compare-view-figure:focus {
     @apply outline-primary outline-2 outline-offset-2;
   }
 
@@ -1014,8 +1110,9 @@
 
   /* Connector "Setup" disclosure: a quiet summary row that opens to env
      names, the redirect URI and commands. Names and commands only. */
+  /* The summary and the guide link are 24px high, big enough to tap. */
   .setup-disclosure > summary {
-    @apply text-foreground cursor-pointer text-xs font-medium select-none;
+    @apply text-foreground cursor-pointer py-1 text-xs font-medium select-none;
   }
 
   .setup-code {
@@ -1023,7 +1120,7 @@
   }
 
   .setup-link {
-    @apply text-foreground inline-block text-xs font-medium underline underline-offset-2;
+    @apply text-foreground inline-block py-1 text-xs font-medium underline underline-offset-2;
   }
 
   /* Shell lines a person can copy and run, such as a Lab check's command.
@@ -1341,6 +1438,74 @@
     @apply w-full;
   }
 
+  /* "Show me my day" under the twin: controls, notes, then the beats in time order. */
+  .twin-my-day {
+    @apply border-border mt-4 flex scroll-mt-16 flex-col gap-2 border-t pt-3;
+  }
+
+  .twin-my-day-controls {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  /* The beats scroll in their own box, so the step bar above stays in view.
+     The line runs down each beat's left edge; the padding keeps the dots unclipped. */
+  .twin-beats {
+    @apply flex max-h-[32rem] flex-col overflow-y-auto pl-1.5;
+  }
+
+  .twin-beat {
+    @apply border-border relative border-l py-0.5 pl-2;
+  }
+
+  .twin-beat-button {
+    @apply hover:bg-muted/60 focus-visible:ring-ring grid w-full cursor-pointer grid-cols-[3.25rem_minmax(0,1fr)] gap-2 rounded-md border border-transparent px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none;
+  }
+
+  /* A pressed beat gets a border as well as a fill, and a line naming what the twin shows. */
+  .twin-beat-button[aria-pressed="true"] {
+    @apply border-foreground/40 bg-muted;
+  }
+
+  /* A dot on the line marks each beat; the time beside it says when. */
+  .twin-beat::before {
+    content: "";
+    @apply bg-muted-foreground absolute top-4 -left-[3px] size-1.5 rounded-full;
+  }
+
+  /* A window's beat: a hollow diamond on the line and a dashed outline, beside the
+     eye icon and the words, so it reads in greyscale too. */
+  .twin-beat[data-worth="true"]::before {
+    @apply border-foreground bg-background top-3.5 -left-[5px] size-2.5 rotate-45 rounded-none border;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button {
+    @apply border-foreground/50 border-dashed;
+  }
+
+  .twin-beat[data-worth="true"] .twin-beat-button[aria-pressed="true"] {
+    @apply border-solid;
+  }
+
+  .twin-period {
+    @apply border-border flex flex-col gap-1.5 rounded-md border p-2.5;
+  }
+
+  .twin-period-lines {
+    @apply grid gap-x-4 gap-y-1.5 text-sm sm:grid-cols-[11rem_minmax(0,1fr)];
+  }
+
+  .twin-step {
+    @apply flex flex-wrap items-center gap-2 py-1;
+  }
+
+  .twin-worth {
+    @apply border-border flex flex-col gap-1 rounded-md border p-2.5;
+  }
+
+  .twin-beat-time {
+    @apply text-muted-foreground pt-px font-mono text-xs tabular-nums;
+  }
+
   .twin-environment .twin-live-lines {
     @apply bg-card/90 border-border absolute bottom-12 left-3 z-10 mt-0 max-w-80 rounded-md border;
   }
@@ -1459,6 +1624,11 @@
     background-color: color-mix(in oklab, var(--color-muted-foreground) 70%, transparent);
   }
 
+  /* The tag beside a model a new chat starts with (features/models-screen). */
+  .model-default-tag {
+    @apply border-input text-muted-foreground rounded-sm border px-1.5 py-px font-mono text-[10px] tracking-[0.12em] uppercase;
+  }
+
   /* Placeholder for content that is still loading. The instance sets size and
      shape; this class gives the fill and a slow opacity pulse, so the block
      reads as "arriving" rather than "broken". Reduced-motion users get no
@@ -1469,26 +1639,75 @@
     animation: placeholder-pulse 1.6s ease-in-out infinite;
   }
 
-  /* The `/twin` card in the chat (features/arena/twin-chat-card.tsx): the Body
+  /* The `/twin` card in the chat (features/compare/twin-card.tsx): the Body
      twin viewer in a compact, scrollable body. Collapsed, a one-line chip. */
-  .twin-chat-card {
+  .compare-twin-card {
     @apply overflow-hidden;
   }
 
-  .twin-chat-body {
+  .compare-twin-body {
     @apply h-[min(440px,75vh)] overflow-y-auto overscroll-contain px-4 pb-4;
   }
 
-  .twin-chat-chip {
+  .compare-twin-chip {
     @apply border-border bg-card inline-flex max-w-full items-center gap-1 rounded-full border py-0.5 pr-0.5 pl-1;
   }
 
-  .twin-chat-chip-open {
+  .compare-twin-chip-open {
     @apply hover:bg-muted focus-visible:ring-ring inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm outline-none focus-visible:ring-2;
   }
 
-  .twin-chat-status {
+  .compare-twin-status {
     @apply text-muted-foreground pt-4 text-sm;
+  }
+
+  /* Push to talk on the prompt bar (features/compare/push-to-talk.tsx): the
+     voice language as a small pill and the microphone as a round button.
+     While held, the button fills with the primary colour and a ring pulses;
+     under reduced motion the fill alone says it is listening. The status
+     line is for screen readers and for a problem in words. */
+  .voice-control {
+    @apply inline-flex items-center gap-1;
+  }
+
+  .voice-language {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-7 min-w-9 items-center justify-center rounded-full border px-2 font-mono text-[11px] font-medium tracking-wide outline-none focus-visible:ring-2 disabled:opacity-50;
+  }
+
+  .voice-talk {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring relative inline-flex size-8 shrink-0 touch-none items-center justify-center rounded-full border outline-none select-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .voice-talk[data-listening] {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  .voice-status:empty {
+    @apply sr-only;
+  }
+
+  /* "Read aloud" under a finished answer (features/compare/read-aloud.tsx). */
+  .read-aloud {
+    @apply border-input text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1.5 self-start rounded-full border px-2.5 py-1 text-xs font-medium outline-none focus-visible:ring-2;
+  }
+
+  .read-aloud[aria-pressed="true"] {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+
+  .voice-status {
+    @apply text-muted-foreground max-w-56 truncate text-xs;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .voice-talk[data-listening]::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      border: 2px solid var(--color-primary);
+      animation: voice-ring 1.2s ease-out infinite;
+    }
   }
 
   /* --- Bento grid (infrastructure/ui-kit/bento-grid.tsx) -------------------
@@ -1623,9 +1842,20 @@
 
 /* Unlayered, so it wins over the viewer's own height utility: inside the
    chat card the 3D view is shorter than on the Digital Twin page. */
-.twin-chat-body .wearables-hero {
+.compare-twin-body .wearables-hero {
   height: 270px;
   min-height: 0;
+}
+
+@keyframes voice-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25);
+  }
 }
 
 @keyframes placeholder-pulse {
@@ -1686,3 +1916,295 @@
   }
 }
 /* --- Chart kit motion (end) -------------------------------------------------- */
+
+/* --- Kiosk (/kiosk) ----------------------------------------------------------
+   One portrait screen (an 85-inch panel, 1080 × 1920 and up) seen from a few
+   metres away, so type is sized from the screen's height, not the root size.
+   The upper bounds sit where a 4K panel (2160 × 3840) still scales with its
+   height; they only stop a very tall window running away.
+   On a landscape screen the same column stands in the centre. */
+.kiosk {
+  display: grid;
+  position: relative;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 70% at 50% 0%,
+      color-mix(in oklab, var(--primary) 14%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--muted) 80%, var(--background)),
+      var(--background)
+    );
+  color: var(--foreground);
+  user-select: none;
+}
+
+.kiosk-head,
+.kiosk-foot {
+  width: min(100%, calc(100dvh * 0.75));
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 8rem);
+  text-align: center;
+}
+
+.kiosk-head {
+  padding-top: clamp(1rem, 3.5vh, 10rem);
+}
+
+.kiosk-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.4vh, 9rem);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.kiosk-subtitle {
+  margin-top: 0.4em;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 4rem);
+}
+
+.kiosk-stage {
+  position: relative;
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: 0;
+  margin-inline: auto;
+}
+
+.kiosk-twin {
+  position: absolute;
+  inset: 0;
+}
+
+/* The kiosk screen owns every press; the 3D view never turns under a finger. */
+.kiosk-twin canvas {
+  pointer-events: none;
+}
+
+.kiosk-twin-note {
+  position: absolute;
+  inset: auto 0 40%;
+  color: var(--muted-foreground);
+  font-size: clamp(1rem, 1.6vh, 4rem);
+  text-align: center;
+}
+
+.kiosk-foot {
+  padding-bottom: clamp(0.75rem, 2.5vh, 7rem);
+  color: var(--muted-foreground);
+  font-size: clamp(0.8rem, 1.15vh, 3rem);
+  line-height: 1.45;
+}
+
+/* The day's beat, under the twin. */
+.kiosk-panel {
+  width: min(100%, calc(100dvh * 0.75));
+  min-height: clamp(9rem, 22vh, 52rem);
+  padding-bottom: clamp(0.75rem, 2.5vh, 7rem);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 8rem);
+}
+
+.kiosk-beat {
+  display: grid;
+  gap: 0.45em;
+  font-size: clamp(0.9rem, 1.45vh, 3.8rem);
+  line-height: 1.4;
+}
+
+.kiosk-beat-count,
+.kiosk-beat-shows,
+.kiosk-day-notes {
+  color: var(--muted-foreground);
+}
+
+.kiosk-beat-count {
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.6em;
+  font-family: var(--font-display);
+  font-size: 1.6em;
+  line-height: 1.15;
+}
+
+.kiosk-beat-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-beat-line {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.kiosk-worth {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  width: fit-content;
+  padding: 0.25em 0.75em 0.25em 0.5em;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.kiosk-worth-mark {
+  width: 1.2em;
+  height: 1.2em;
+  flex: none;
+}
+
+.kiosk-day-notes {
+  display: grid;
+  gap: 0.2em;
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+/* The whole screen is the one control. It sits over everything and draws nothing. */
+.kiosk-press {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: transparent;
+  cursor: pointer;
+  /* A tap is a press at once: no double-tap zoom wait, no grey flash, no
+     long-press callout on a touch panel. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+.kiosk-press:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: -6px;
+}
+
+/* The day strip: midnight to midnight, a tick per beat time. Shapes carry the
+   meaning (tall solid tick = now, ring over a hatched band = worth a look). */
+.kiosk-strip {
+  margin-top: 0.4em;
+  font-size: 0.8em;
+}
+
+.kiosk-strip-track {
+  position: relative;
+  height: 1.6em;
+  border-bottom: 1px solid var(--border);
+}
+
+.kiosk-strip-band {
+  position: absolute;
+  top: 0.15em;
+  bottom: 0;
+  min-width: 4px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--foreground) 35%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+}
+
+.kiosk-strip-mark {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 0.6em;
+  background: var(--muted-foreground);
+  transform: translateX(-50%);
+}
+
+.kiosk-strip-mark[data-worth] {
+  bottom: 0.7em;
+  width: max(0.7em, 12px);
+  height: max(0.7em, 12px);
+  border: 2px solid var(--foreground);
+  border-radius: 999px;
+  background: transparent;
+}
+
+.kiosk-strip-mark[data-current] {
+  width: 4px;
+  height: 1.5em;
+  background: var(--foreground);
+}
+
+.kiosk-strip-mark[data-current][data-worth] {
+  bottom: 0;
+  width: 0.9em;
+  height: 0.9em;
+  background: var(--foreground);
+}
+
+.kiosk-strip-hours {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.25em;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The attract loop's call, under the turning twin. */
+.kiosk-attract {
+  display: grid;
+  gap: 0.5em;
+  justify-items: center;
+  font-size: clamp(0.95rem, 1.5vh, 4rem);
+  text-align: center;
+}
+
+.kiosk-attract-call {
+  font-family: var(--font-display);
+  font-size: 1.9em;
+  line-height: 1.15;
+}
+
+.kiosk-attract-note {
+  max-width: 32em;
+  color: var(--muted-foreground);
+}
+
+.kiosk-attract-shows {
+  margin-top: 0.6em;
+  color: var(--muted-foreground);
+  font-size: 0.85em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .kiosk-attract-call {
+    animation: kiosk-breathe 3.2s ease-in-out infinite;
+  }
+}
+
+@keyframes kiosk-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Above a playing beat: what a press does. Near the idle reset it gets a box,
+   and its words say why. */
+.kiosk-hint {
+  margin-bottom: 0.6em;
+  color: var(--muted-foreground);
+  font-size: clamp(0.85rem, 1.3vh, 3.5rem);
+}
+
+.kiosk-hint[data-kind="leaving"] {
+  width: fit-content;
+  padding: 0.3em 0.8em;
+  border: 2px solid currentColor;
+  border-radius: 0.5em;
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* --- Kiosk (end) ------------------------------------------------------------- */

@@ -161,6 +161,15 @@ bun run eval:answer-key          # uses --env-file=.env.eval
 bun run eval:answer-key:live     # RUN_LIVE=1 drift check, same env
 ```
 
+Each key records the open-twin pin it was built at (`open_twin_sha`), and the
+live checks compare it. A pin bump (`scripts/sync-open-twin.sh`) therefore
+fails them until the keys are rebuilt, even when no entry changes. Rebuild in
+the same PR as the bump, and check that the diff touches only
+`open_twin_sha` and `generated_on`; anything else is a real change to review.
+The v1 and v1h keys were rebuilt at `2fd26911` on 2026-11-17 with every entry
+unchanged. The S7, S7b, S7h and hb keys still name `a9e126c9` and need the
+same rebuild once their cohorts are built (`bun run synthea:s7`).
+
 S4 runs by one of two routes (#273). Pick one before an S4 run; with neither,
 the run prints, before any model call, the scenario, the number of items and
 the exact unset names, for example
@@ -182,6 +191,25 @@ harness checks this: before a run with any S4 item on the local route it looks
 for a Germany row or a 2015 row and, if either is stored, stops with
 `GBD_PROBE_ROWS` and one line naming the rows and the fix. The remote route is
 not checked.
+
+One Results Tool query ("Cause of death or injury", steps in
+[gbd.md](../gbd.md#exporting-from-the-gbd-results-tool)) covers the v1 and
+v1h S4 items:
+
+| Field    | Tick                                                              |
+| -------- | ----------------------------------------------------------------- |
+| Measure  | Deaths, DALYs, YLDs, YLLs, Prevalence, Incidence                  |
+| Metric   | Number, Rate                                                      |
+| Cause    | All causes, Cardiovascular diseases, Neoplasms, Diabetes mellitus |
+| Location | Global, Switzerland, United Kingdom, United States of America     |
+| Age      | All ages, Age-standardized                                        |
+| Sex      | Both, Male, Female                                                |
+| Year     | 2019, 2020, 2021                                                  |
+
+Not Germany and not 2015. `gbd_estimate` offers no age band, so Q-S4-08 (a
+60-year-old woman) can only be answered with an all-ages or age-standardised
+figure. The query is about 3,500 rows, one file; an export made in parts
+imports as one.
 
 ```sh
 bun --env-file=.env.eval --preload ./features/chat/response/preload-server-only.mjs \
@@ -1217,3 +1245,17 @@ For the attribution study, `bun run wearables:two-source` writes synthetic Oura,
 WHOOP and Google Health summaries with the source rules' decision planted for every
 measure and day: [synthetic-wearables.md](synthetic-wearables.md). Files only; no
 question here reads them yet.
+
+## Mock day: show_my_day items
+
+Six items (`D-01` to `D-06`) about the illustrative mock day
+(`packages/query-tools/fixtures/mock-day.json`), in `evaluation/mock-day.items.v1.json`
+(schema `twin-llm.eval.mock-day.v1`, `scripts/evaluation/mock-day-items.ts`). Each
+expected value is a dotted path into the day as `show_my_day` lays it out (`beats`,
+`red_windows`); `evaluation/mock-day.items.test.ts` recomputes every one from the
+fixture, so the set cannot drift from the code. They cover the one window worth a look,
+the diabetes profile with none, a run that is not a window, insulin with no amount, a
+question that asks for a judgement about the person, and a measured glucose peak.
+
+The C3 harness reads the warehouse and the mock day is not in it, so these items are
+scored once a run can load the mock day.

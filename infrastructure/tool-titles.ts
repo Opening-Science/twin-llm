@@ -18,7 +18,7 @@ import {
  * (#503). `done` titles a step the answer took ("Checked data coverage");
  * `does` says what the tool does before it runs ("checks data coverage"), as
  * the `/` palette, a skill's page and an agent's page list it (#480). A person
- * never reads a model-facing tool id. Shared here because the arena, commands,
+ * never reads a model-facing tool id. Shared here because the chat, commands,
  * customize and agents all need it.
  */
 export type ToolWords = { readonly done: string; readonly does: string };
@@ -84,6 +84,14 @@ const TITLES: Readonly<Record<string, ToolWords>> = {
   cohort_event_rates: {
     done: "Counted event rates in a synthetic cohort",
     does: "counts event rates in a synthetic cohort",
+  },
+  show_my_day: {
+    done: "Laid out a synthetic day as beats",
+    does: "lays out a synthetic day of heart rate and glucose as beats",
+  },
+  show_my_period: {
+    done: "Summarised a synthetic week or month",
+    does: "summarises a synthetic week or month of glucose, resting heart rate and HRV",
   },
   [GUIDELINE_MODEL_TOOL]: { done: "Searched guidelines", does: "searches guidelines" },
   [GBD_MODEL_TOOL]: {

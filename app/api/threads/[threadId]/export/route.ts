@@ -1,10 +1,10 @@
-import { exportStep } from "@/features/arena/export-notice";
-import { loadOwnedThread } from "@/features/arena/owned-thread";
+import { exportStep } from "@/features/compare/export-notice";
+import { loadOwnedThread } from "@/features/compare/owned-thread";
 import {
   createThreadExportHandler,
   exportFormat,
-} from "@/features/arena/thread-export-handler";
-import { threadReads } from "@/features/arena/thread-reads";
+} from "@/features/compare/thread-export-handler";
+import { threadReads } from "@/features/compare/thread-reads";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { utcDay } from "@/infrastructure/day-key";
 import { recordDisclosure } from "@/infrastructure/disclosure-ledger-runtime";
@@ -28,8 +28,9 @@ const exportThread = createThreadExportHandler({
 });
 
 /**
- * The signed-in person's own thread as Markdown, or `?format=fhir` as a
- * DocumentReference: `?check=1` answers the notice, `?confirm=1` makes the file (#531).
+ * The signed-in person's own thread as Markdown, `?format=fhir` as a
+ * DocumentReference, `?format=pdf` as a PDF file or `?format=print` as a print
+ * page: `?check=1` answers the notice, `?confirm=1` makes the file (#531).
  */
 export const GET = withUnlocked(async (request: Request, { params }: RouteContext) => {
   const search = new URL(request.url).searchParams;
