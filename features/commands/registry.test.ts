@@ -6,6 +6,7 @@ import {
   BUILT_IN_COMMANDS,
   type Command,
   matchCommands,
+  ownLine,
   paletteCommands,
   readsLine,
   skillCommand,
@@ -92,6 +93,20 @@ describe("skills in the palette", () => {
       "may use: checks data coverage, compares with a baseline",
     );
     expect(toolsLine([])).toBe("uses no tools");
+  });
+
+  test("a person's own skill says it is theirs and not evaluated; a shipped one says nothing", () => {
+    const own = skillCommand({
+      name: "my-sleep",
+      description: "My sleep.",
+      sources: ["wearable-context"],
+      tools: [],
+      own: true,
+    });
+    expect(own.own).toBe(true);
+    expect(ownLine(own)).toBe("Yours · not evaluated");
+    expect(SLEEP_COMMAND.own).toBeUndefined();
+    expect(ownLine(SLEEP_COMMAND)).toBeNull();
   });
 
   test("the may-use line says what tools do, never a step an answer took (#503)", () => {
