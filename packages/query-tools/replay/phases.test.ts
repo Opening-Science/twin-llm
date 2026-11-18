@@ -300,6 +300,29 @@ describe("no evidence, no phase", () => {
     );
   });
 
+  test("only the winding-down tag starts winding down, not any word holding wind", () => {
+    const windDown = REFERENCE.events.find((one) => one.id === "tag-wind-down");
+    if (windDown === undefined) throw new Error("no winding-down tag");
+    const surfed = replayDaySchema.parse({
+      ...REFERENCE,
+      events: [
+        ...REFERENCE.events.filter((one) => one.id !== "tag-wind-down"),
+        {
+          ...windDown,
+          id: "tag-windsurfing",
+          label: "Windsurfing",
+          from: localInstant(DEMO_REFERENCE_DAY, "10:00", DEMO_TIME_ZONE).toISOString(),
+          to: localInstant(DEMO_REFERENCE_DAY, "11:00", DEMO_TIME_ZONE).toISOString(),
+        },
+      ],
+    });
+    const winding = phasesOf(surfed).filter((one) => one.phase === "winding_down");
+    expect(
+      winding.map((one) => [clock(one.from), one.evidence.includes("tag-windsurfing")]),
+    ).toEqual([["22:45", false]]);
+    expect(clock(find("heart_rate", "winding_down").from)).toBe("22:00");
+  });
+
   test("on the 25-hour day, a nap at 11:30 is before local noon, not the evening's sleep", () => {
     const dst = day(DEMO_PERSON_A, DEMO_DST_DAY);
     const night = dst.events.find((one) => one.id === "sleep-night-before");
