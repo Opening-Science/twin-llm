@@ -207,7 +207,7 @@ export type TwoSourceOutput = Readonly<{
 type Sources = readonly WearableSourceId[];
 
 /** The sources that record a measure, in the app's source order, from the rules' stem table. */
-const sourcesFor = (measure: SourceMeasure): Sources =>
+export const sourcesFor = (measure: SourceMeasure): Sources =>
   WEARABLE_SOURCE_IDS.filter((source) =>
     Object.entries(COMPARABLE_STEMS).some(
       ([stem, stemMeasure]) =>
@@ -255,13 +255,16 @@ type Reading = Readonly<{ source: WearableSourceId; value: number; unit: string 
 
 type Metric = OuraMetric & WhoopMetric & GoogleHealthMetric;
 
-const usualUnit = (source: WearableSourceId, measure: SourceMeasure): string | null =>
+export const usualUnit = (
+  source: WearableSourceId,
+  measure: SourceMeasure,
+): string | null =>
   // Oura's daily activity carries steps without a unit.
   source === "oura" && measure === "step-count"
     ? null
     : (SOURCE_UNITS[measure][0] ?? null);
 
-const metricFor = (
+export const metricFor = (
   reading: Reading,
   measure: SourceMeasure,
   day: string | null,

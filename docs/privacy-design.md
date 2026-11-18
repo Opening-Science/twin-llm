@@ -616,7 +616,8 @@ recipient.
 - **Events and recipients.** _Changed from the first draft_, which recorded only
   personal requests to the Exoscale pilot, vendor syncs, exports and Ark releases: every
   send to a recipient off this machine is recorded, and a send that carried synthetic data
-  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient.
+  only is recorded too, labelled `synthetic`. Ollama on loopback is not a recipient, and
+  neither are the Carbon-X and speech sidecars, which startup keeps on loopback.
   Providers that the data-mode policy refuses never get an entry, because nothing is
   sent.
 
