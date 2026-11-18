@@ -134,15 +134,14 @@ every item under C0, C1 and C2 (`--conditions`), `--repeats` times, with
 `--counterfactual` for the reruns. A model is `fake:first_listed` (states
 the first listed reading for the day and cites it), `fake:cite_other`
 (states it, cites another source's reading), or `ollama:<tag>` on this
-machine, called as the chat calls it (no thinking pass, the app's context length, the model's default sampling; `--temperature 0` for the sensitivity pass, named in the model id). A failed call is tried three times, then recorded as an error and
-counted as a failure (on the agree stratum, as over-hedged). Each call
+machine, called as the chat calls it (no thinking pass, the app's context
+length, the model's default sampling; `--temperature 0` for the sensitivity
+pass, named in the model id). A failed call is tried three times, then
+recorded as an error and counted as a failure (on the agree stratum, as over-hedged). Each call
 sends a seed hashed from model, item, condition and repeat (`callSeed`), so
 a rerun of a cell asks Ollama for the same draw, and redirects are refused.
 Each answer is a line of `records.jsonl` with its full prompt, seed, answer
 and score; `report.md` gives every outcome per condition with
-
-counted as a failure. Each answer is a line of `records.jsonl` with its full
-prompt, answer and score; `report.md` gives every outcome per condition with
 the Wilson 95% interval, citation precision and recall, the verdict counts,
 and the counterfactual tests. Each pairs a C1 answer with its variant (same
 model, item and repeat): the rule swap over citation-correct answers (H3),
@@ -197,6 +196,27 @@ These need settling in the pre-registration before it is filed:
 For Part B, `detection` gives d′ and criterion c with the log-linear
 correction (0.5 added to hit and false-alarm counts, 1 to trial counts), and
 `welch` gives Welch's t-test with its two-sided p.
+
+## Second rater
+
+`bun run attribution:rater -- --records <records.jsonl> --items <items.json>`
+draws a stratified sample of base answers (150 by default, in proportion to
+the strata, at least one each, seeded) and writes `sheet.csv` and `rubric.md` (what `y` means per outcome) for the rater
+and `key.json` to keep apart. The procedure is the one in
+[second-rater.md](second-rater.md); only the sheet and the rubric differ.
+
+A row shows the question, every reading the model was given with its
+source and day, the selection rule, the keys the answer cited, the Answer
+section, and which outcomes to code. It shows no model, condition, item id,
+expected answer or automatic score; the rule is on every row, so C0 rows do
+not stand out. Each row has an opaque `sheet_id` (HMAC-SHA256 under a salt
+kept in the key). The rater writes `y` or `n` per outcome, or leaves it
+blank.
+
+`--agreement --sheet <filled.csv> --key <key.json> --records <records.jsonl>`
+writes `agreement.md`: per outcome, the rows coded, the scorer's share of
+`y` (prevalence), observed agreement and Cohen's kappa with its 95%
+interval (`cohenKappa`, as the harness's own agreement uses).
 
 ## Part B analysis
 

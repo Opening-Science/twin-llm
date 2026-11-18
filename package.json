@@ -83,6 +83,7 @@
     "wearables:two-source": "bun scripts/synthetic-wearables/two-source.ts",
     "attribution:w1": "bun scripts/synthetic-wearables/w1.ts",
     "attribution:partb": "bun scripts/evaluation/attribution-study/participants-run.ts",
+    "attribution:rater": "bun scripts/evaluation/attribution-study/rater-run.ts",
     "attribution:study": "bun scripts/evaluation/attribution-study/study.ts",
     "attribution:stimuli": "bun scripts/evaluation/attribution-study/stimuli-run.ts",
     "genome:synth": "bun scripts/genome-synth/generate.ts",
