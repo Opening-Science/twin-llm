@@ -150,17 +150,23 @@ describe("show_my_period over a week", () => {
   test("one capped read over the week and the 35 days before, one of sensor glucose over the week, one audit row", async () => {
     const { ports, audits, queries } = fakePorts();
     const result = asResult(await runShowMyPeriod(synthetic, WEEK, ports));
-    expect(queries).toHaveLength(2);
-    expect(queries[0]).toMatchObject({
-      loinc: ["2339-0", "2345-7", "40443-4", "hrv-rmssd"],
-      start: new Date("2026-10-13T00:00:00.000Z"),
-      end: new Date("2026-11-16T23:59:59.999Z"),
-    });
-    expect(queries[1]).toMatchObject({
-      loinc: ["99504-3"],
-      start: new Date("2026-11-10T00:00:00.000Z"),
-      end: new Date("2026-11-16T23:59:59.999Z"),
-    });
+    // toEqual, not toMatchObject: bun's toMatchObject takes any Date as equal to any other.
+    expect(queries).toEqual([
+      {
+        subjectRef: SUBJECT,
+        loinc: ["2339-0", "2345-7", "40443-4", "hrv-rmssd"],
+        start: new Date("2026-10-13T00:00:00.000Z"),
+        end: new Date("2026-11-16T23:59:59.999Z"),
+        take: 5001,
+      },
+      {
+        subjectRef: SUBJECT,
+        loinc: ["99504-3"],
+        start: new Date("2026-11-10T00:00:00.000Z"),
+        end: new Date("2026-11-16T23:59:59.999Z"),
+        take: 5001,
+      },
+    ]);
     // 35 days of two daily rows, the 16 glucose readings and the one before the week.
     expect(result.n).toBe(35 * 2 + 16 + 1);
     expect(audits).toHaveLength(1);
@@ -246,10 +252,17 @@ describe("show_my_period with sensor glucose", () => {
     }),
   );
 
+  /** A sensor reading the day before the week: never read, never counted. */
+  const SENSOR_BEFORE_WEEK = row("99504-3", 300, "mg/dL", dayBefore(7), "12:00");
+
   test("sensor glucose gets its own summary; blood glucose is unchanged", async () => {
     // Hand-checked: 192 readings, 16 at 160 and 176 at 100: average 105, 16/192 above.
     const result = asResult(
-      await runShowMyPeriod(synthetic, WEEK, fakePorts([...FIXTURE, ...SENSOR]).ports),
+      await runShowMyPeriod(
+        synthetic,
+        WEEK,
+        fakePorts([...FIXTURE, ...SENSOR, SENSOR_BEFORE_WEEK]).ports,
+      ),
     );
     expect(result.glucose).toMatchObject({
       specimen: "blood",
