@@ -94,7 +94,8 @@ When the sidecar answers, the chat's prompt bar shows a microphone button and th
 language beside it (EN or DE, remembered in this browser; a German browser starts on DE).
 Nothing about voice is drawn while it is off.
 
-Hold the button, or hold Space or Enter on it, and speak; let go to send. The browser
+Hold the button, or hold Space or Enter on it, and speak; let go to send. Pressing it stops
+any answer being read aloud, so the microphone does not record the app's own voice. The browser
 records with its own encoder, then decodes, mixes down to one channel and resamples to
 16 kHz before the upload (`infrastructure/speech/recorder.ts`), and lets go of the
 microphone. The text goes out as a typed prompt would, on the models and mode the bar
