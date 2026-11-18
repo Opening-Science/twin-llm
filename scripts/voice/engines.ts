@@ -12,8 +12,9 @@ import type { SpeechEngines } from "./speech-sidecar";
  * The two engines behind the speech sidecar, run as child processes on the
  * CPU: whisper.cpp's `whisper-cli` and Piper's `piper`. Where they are comes
  * from the `voice.json` that `scripts/voice/setup.sh` writes. Text goes to
- * Piper as an argument after `--`, never through a shell. A child gets only
- * PATH and HOME from the environment.
+ * Piper on stdin as one line, never in its arguments (any user on the machine
+ * can read those in /proc) and never through a shell. A child gets only PATH
+ * and HOME from the environment.
  */
 
 export const voiceSetupSchema = z.object({
@@ -32,14 +33,18 @@ export type VoiceSetup = z.infer<typeof voiceSetupSchema>;
 
 export type RunResult = Readonly<{ code: number; stderr: string }>;
 
-export type Run = (command: string, args: readonly string[]) => Promise<RunResult>;
+export type Run = (
+  command: string,
+  args: readonly string[],
+  input?: string,
+) => Promise<RunResult>;
 
 const STDERR_KEPT = 4000;
 
-export const runProcess: Run = (command, args) =>
+export const runProcess: Run = (command, args, input) =>
   new Promise((resolve, reject) => {
     const child = spawn(command, [...args], {
-      stdio: ["ignore", "ignore", "pipe"],
+      stdio: ["pipe", "ignore", "pipe"],
       env: {
         NODE_ENV: "production",
         PATH: process.env.PATH ?? "/usr/bin:/bin",
@@ -49,6 +54,9 @@ export const runProcess: Run = (command, args) =>
     const chunks: Buffer[] = [];
     child.stderr.on("data", (chunk: Buffer) => chunks.push(chunk));
     child.on("error", reject);
+    // A child that exits early closes the pipe; its exit code says why.
+    child.stdin.on("error", () => undefined);
+    child.stdin.end(input ?? "", "utf8");
     child.on("close", (code) =>
       resolve({
         code: code ?? 1,
@@ -57,14 +65,23 @@ export const runProcess: Run = (command, args) =>
     );
   });
 
-const checked = async (run: Run, command: string, args: readonly string[]) => {
-  const result = await run(command, args);
+const checked = async (
+  run: Run,
+  command: string,
+  args: readonly string[],
+  input?: string,
+) => {
+  const result = await run(command, args, input);
   if (result.code !== 0) {
     throw new Error(
       `${basename(command)} exited with ${result.code}: ${result.stderr.trim()}`,
     );
   }
 };
+
+/** Piper reads a line at a time, so the answer goes in as one line. */
+const oneLine = (text: string): string =>
+  `${text.replace(/\s*[\r\n]+\s*/g, " ").trim()}\n`;
 
 /** `de_DE-thorsten-medium.onnx` → `de_DE-thorsten-medium`. */
 const voiceName = (path: string): string => basename(path).replace(/\.onnx$/, "");
@@ -104,12 +121,10 @@ export const speechEngines = (
     return readFile(`${base}.txt`, "utf8");
   },
   speak: (text: string, language: SpeechLanguage, outPath: string) =>
-    checked(run, setup.piper.bin, [
-      "-m",
-      setup.piper.voices[language],
-      "-f",
-      outPath,
-      "--",
-      text,
-    ]),
+    checked(
+      run,
+      setup.piper.bin,
+      ["-m", setup.piper.voices[language], "-f", outPath],
+      oneLine(text),
+    ),
 });
