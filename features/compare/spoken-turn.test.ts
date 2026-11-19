@@ -25,6 +25,7 @@ describe("spokenAnswer", () => {
       id: "t1:m1",
       text: "Here is your heart on the twin.",
       prompt: "Show me my heart.",
+      shownFocus: null,
     });
   });
 

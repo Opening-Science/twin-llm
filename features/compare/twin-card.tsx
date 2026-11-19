@@ -4,7 +4,14 @@ import dynamic from "next/dynamic";
 import { useId, useMemo, useState, useSyncExternalStore } from "react";
 
 import { DEMO_SUBJECT_ID } from "@/features/digital-twin/demo-subject";
-import { focusOfPick, type TwinFocusId } from "@/packages/anatomy/twin-focus";
+import type { FocusRequest } from "@/features/digital-twin/bodyloop-avatar";
+import {
+  focusDepth,
+  focusHighlights,
+  focusOfPick,
+  twinFocus,
+  type TwinFocusId,
+} from "@/packages/anatomy/twin-focus";
 import { ChevronIcon, CrossIcon } from "@/infrastructure/ui-kit/icons";
 
 /**
@@ -12,8 +19,25 @@ import { ChevronIcon, CrossIcon } from "@/infrastructure/ui-kit/icons";
  * conversation. It never reaches a model. The viewer loads lazily; the
  * thread's subject is found from its prompts before the viewer starts on it.
  * A click on an organ tells the screen, so the next turn's on-screen context
- * names it.
+ * names it. `focus` turns it to an organ after it opened (a spoken answer).
  */
+
+/** An organ or system to turn to; a new `at` turns again to the same one. */
+export type TwinCardFocus = Readonly<{ id: TwinFocusId; at: number }>;
+
+/** The viewer's request for a card focus. */
+export const focusRequestOf = (focus: TwinCardFocus): FocusRequest => {
+  const named = twinFocus(focus.id);
+  return {
+    focus: {
+      id: named.id,
+      label: named.label,
+      highlights: focusHighlights(focus.id),
+      depth: focusDepth(focus.id),
+    },
+    at: focus.at,
+  };
+};
 
 export const TWIN_CARD_LABEL = "Digital twin";
 export const TWIN_LOADING = "Loading the digital twin…";
@@ -68,6 +92,7 @@ export const TwinCard = ({
   prompts,
   onClose,
   onOrganPick,
+  focus,
 }: Readonly<{
   threadId: string | null;
   dataMode: "synthetic" | "personal";
@@ -75,11 +100,16 @@ export const TwinCard = ({
   prompts: readonly string[];
   onClose: () => void;
   onOrganPick?: (organ: TwinFocusId) => void;
+  focus?: TwinCardFocus | null;
 }>) => {
   const bodyId = useId();
   const headingId = useId();
   const [open, setOpen] = useState(true);
   const promptKey = prompts.join("\n");
+  const focusRequest = useMemo(
+    () => (focus === undefined || focus === null ? undefined : focusRequestOf(focus)),
+    [focus],
+  );
   // The subject is found in the browser; the server's render says so.
   const inBrowser = useSyncExternalStore(
     noSubscription,
@@ -148,6 +178,7 @@ export const TwinCard = ({
             {...(subject.personRef === undefined
               ? {}
               : { initialPersonRef: subject.personRef })}
+            {...(focusRequest === undefined ? {} : { focusRequest })}
             onPickPart={(part) => {
               if (part === null || onOrganPick === undefined) return;
               const focus = focusOfPick(part.group, part.system);

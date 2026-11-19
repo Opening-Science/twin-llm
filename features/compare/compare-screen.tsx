@@ -16,8 +16,13 @@ import { EmptyState, IncognitoBanner } from "./empty-state";
 import { outputEntriesOf, OutputsPanel, useOutputsMode } from "./outputs-panel";
 import { PromptBar } from "./prompt-bar";
 import { lastTurnEffort, lastTurnModelIds } from "./screen-rules";
-import { TwinCard } from "./twin-card";
-import type { SpokenTurn } from "./spoken-turn";
+import { TwinCard, type TwinCardFocus } from "./twin-card";
+import {
+  closeTwinCard,
+  type SpokenAnswer,
+  type SpokenTurn,
+  twinTurnOf,
+} from "./spoken-turn";
 import { SpokenTurnReader } from "./spoken-turn-reader";
 import { useConversation } from "./use-conversation";
 import { VoiceProvider } from "./voice-context";
@@ -91,10 +96,20 @@ export const CompareScreen = ({
   const pickOrgan = (picked: TwinFocusId) => setOrgan(picked);
   // The turn asked aloud, so its answer is read back; a typed turn clears it.
   const [spoken, setSpoken] = useState<SpokenTurn | null>(null);
+  const [twinTurn, setTwinTurn] = useState<TwinCardFocus | null>(null);
+  // A spoken answer turns the open twin to its organ. A closed twin opens for it,
+  // unless the answer drew its own body twin.
+  const followSpoken = (answer: SpokenAnswer) => {
+    const focus = twinTurnOf(answer);
+    if (focus === null) return;
+    if (twinAt === null && answer.shownFocus !== null) return;
+    conversation.openTwin();
+    setTwinTurn({ id: focus, at: Date.now() });
+  };
 
   return (
     <VoiceProvider>
-      <SpokenTurnReader turns={turns} spoken={spoken} />
+      <SpokenTurnReader turns={turns} spoken={spoken} onAnswer={followSpoken} />
       <div className="flex min-h-full flex-col">
         <div
           className={cn(
@@ -132,8 +147,9 @@ export const CompareScreen = ({
                     dataMode={dataMode}
                     bodyLoopConfigured={bodyLoopConfigured}
                     prompts={turns.map((turn) => turn.prompt)}
-                    onClose={conversation.closeTwin}
+                    onClose={() => closeTwinCard(conversation.closeTwin, setTwinTurn)}
                     onOrganPick={pickOrgan}
+                    focus={twinTurn}
                   />
                 }
                 banner={incognito ? <IncognitoBanner /> : null}

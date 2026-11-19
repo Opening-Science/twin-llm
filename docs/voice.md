@@ -119,6 +119,18 @@ its words, and a heading or list item ends as a sentence. The text goes to
 plays while the next is made, and nothing is kept once it has played. A spoken turn is
 known only to the open page; a reloaded thread is not read back on its own.
 
+## The twin turns
+
+After a spoken answer the chat's twin (the `/twin` card) turns to the organ it is about,
+at the organs depth, lit as a click on it would be. The organ is the focus of a body twin
+the answer drew itself, else the organ its words name first, else the question's
+(`infrastructure/speech/organ-named.ts`, English and German, so "Herzfrequenz" is the
+heart and "Nierenwerte" the kidneys). Only the organs the twin can focus on count: heart,
+lungs, brain, liver, kidneys, pancreas (also for blood sugar and insulin) and blood
+vessels (also for blood pressure). A closed card opens for it, unless the answer drew its
+own body twin; an answer that names no organ leaves the twin as it is. After that the twin
+is the person's again until the next spoken answer.
+
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
