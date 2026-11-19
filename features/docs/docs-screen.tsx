@@ -3,7 +3,10 @@ import type { ReactElement } from "react";
 import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { htmlLang, type Locale } from "@/infrastructure/locale/locale";
+
 import { rehypeDocTables } from "./doc-tables";
+import { DOCS_COPY } from "./docs-copy";
 import { renderedByText } from "./docs-cache";
 import { type DocPage, rewriteDocUrl } from "./docs-pages";
 import { rehypeHeadingIds } from "./heading-ids";
@@ -46,13 +49,20 @@ const pageMarkdown = (
   );
 };
 
-export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) => (
+/** The index: its title and line follow the interface language; page titles stay English. */
+export const DocsIndex = ({
+  pages,
+  locale = "en",
+}: Readonly<{ pages: readonly DocPage[]; locale?: Locale }>) => (
   <div className={FRAME}>
-    <h1 className="text-display">Docs</h1>
-    <p className="text-muted-foreground max-w-prose leading-relaxed">
-      The reference pages from the repository&apos;s <code>docs/</code> folder, as checked
-      in.
-    </p>
+    <div lang={htmlLang(locale)} className="page-stack">
+      <h1 className="text-display">{DOCS_COPY[locale].title}</h1>
+      <p className="text-muted-foreground max-w-prose leading-relaxed">
+        {DOCS_COPY[locale].introBefore}
+        <code>docs/</code>
+        {DOCS_COPY[locale].introAfter}
+      </p>
+    </div>
     <ul className="surface divide-border divide-y">
       {pages.map(({ slug, path, title }) => (
         <li key={slug}>
@@ -79,15 +89,17 @@ export const DocsIndex = ({ pages }: Readonly<{ pages: readonly DocPage[] }>) =>
 export const DocScreen = ({
   page,
   standalone = false,
+  locale = "en",
 }: Readonly<{
   page: DocPage & Readonly<{ markdown: string }>;
   standalone?: boolean;
+  locale?: Locale;
 }>) => (
   <article className={`${FRAME} doc-prose`}>
     {!standalone && (
       <p className="text-muted-foreground font-mono text-xs">
-        <Link href="/docs" className="hover:text-foreground">
-          Docs
+        <Link href="/docs" lang={htmlLang(locale)} className="hover:text-foreground">
+          {DOCS_COPY[locale].crumb}
         </Link>{" "}
         / {page.path}
       </p>

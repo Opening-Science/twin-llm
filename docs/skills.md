@@ -124,8 +124,9 @@ call (in words, `infrastructure/tool-titles.ts`, never by id), so a person sees 
 before running one.
 
 Picking a skill writes `/sleep ` into the prompt; a prompt that starts with an offered
-skill is sent tagged with it, and the rest of the text is the question (the skill's
-description when there is none). On `POST /api/chat` the server, before any model call:
+skill, in any case (`/Sleep` is `/sleep`, as the palette matches it), is sent tagged
+with it, and the rest of the text is the question (the skill's description when there
+is none). On `POST /api/chat` the server, before any model call:
 
 1. refuses a skill it does not offer (`skill-not-offered`);
 2. refuses a provider the skill does not list (`provider-not-allowed-by-skill`), with a
@@ -273,9 +274,10 @@ Built-ins live in `features/commands/registry.ts`. A skill may not take a built-
   nothing is stored until Save note. Refused in incognito chats
   ([twin-notes.md](twin-notes.md)).
 - `/twin` shows the thread's digital twin as a card in the conversation (#168). Picking
-  it, or sending `/twin` on its own, clears the prompt and asks no model: it starts no
-  turn, never calls `/api/chat`, and the card is not part of the history any model is
-  sent (`features/compare/prompt-bar.tsx`, `twin-card.tsx`).
+  it, or sending `/twin` on its own with Enter or the send button, clears the prompt and
+  asks no model: it starts no turn, never calls `/api/chat`, and the card is not part of
+  the history any model is sent (`features/compare/prompt-bar.tsx`, `twin-card.tsx`).
+  `/compact` and `/connect` sent on their own run the same way.
 
 Which twin the card shows (`features/compare/twin-card.tsx`):
 

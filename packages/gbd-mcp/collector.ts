@@ -1,3 +1,5 @@
+import { collectorKey } from "@/packages/audit/answer-scope";
+
 import type { GbdInput } from "./input";
 import type { GbdRow } from "./normalize";
 
@@ -18,8 +20,9 @@ export const recordGbdTurn = (
   source: GbdSource,
   rows: readonly GbdRow[],
 ): void => {
-  const prev = turns.get(sessionId) ?? { sources: [], rows: [] };
-  turns.set(sessionId, {
+  const key = collectorKey(sessionId);
+  const prev = turns.get(key) ?? { sources: [], rows: [] };
+  turns.set(key, {
     sources: [...prev.sources, source],
     rows: [...prev.rows, ...rows],
   });
@@ -30,8 +33,9 @@ export const recordGbdTurn = (
  * panel. They have no closed `gbd_population` fields, so no source is added.
  */
 export const recordGbdRows = (sessionId: string, rows: readonly GbdRow[]): void => {
-  const prev = turns.get(sessionId) ?? { sources: [], rows: [] };
-  turns.set(sessionId, { sources: prev.sources, rows: [...prev.rows, ...rows] });
+  const key = collectorKey(sessionId);
+  const prev = turns.get(key) ?? { sources: [], rows: [] };
+  turns.set(key, { sources: prev.sources, rows: [...prev.rows, ...rows] });
 };
 
 export const drainGbdTurn = (sessionId: string): GbdTurn => {

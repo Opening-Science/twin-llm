@@ -19,7 +19,3 @@ const ID_SHAPES: readonly RegExp[] = [
 
 export const looksLikeId = (token: string): boolean =>
   ID_SHAPES.some((re) => re.test(token));
-
-/** A source id or the `[unsupported]` mark: a citation, never a wearable key. */
-export const isCitationToken = (token: string): boolean =>
-  token.toLowerCase() === UNSUPPORTED_MARK || looksLikeId(token);

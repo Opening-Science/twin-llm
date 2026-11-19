@@ -10,9 +10,12 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { htmlLang } from "@/infrastructure/locale/locale";
+import { useCopy } from "@/infrastructure/locale/locale-provider";
 import { CrossIcon } from "@/infrastructure/ui-kit/icons";
 import { SidebarIcon } from "@/infrastructure/ui-kit/nav-icons";
 
+import { SHELL_COPY } from "./shell-copy";
 import { type SidebarData, SidebarPanel } from "./sidebar-panel";
 import {
   PEEK_GRACE_MS,
@@ -32,6 +35,9 @@ import { ThreadBar } from "./thread-bar";
 
 const WIDE = "(min-width: 64rem)";
 
+/** The language of the pages' own words, so a screen reader in German mode reads them as English. */
+const PAGES_LANG = htmlLang("en");
+
 const subscribeWide = (onChange: () => void) => {
   const query = window.matchMedia(WIDE);
   query.addEventListener("change", onChange);
@@ -45,8 +51,6 @@ const useIsWide = (): boolean =>
     () => window.matchMedia(WIDE).matches,
     () => false,
   );
-
-const PIN_LABEL = { pinned: "Hide sidebar", tucked: "Keep sidebar open" } as const;
 
 export const AppFrame = ({
   initialPinned,
@@ -64,6 +68,8 @@ export const AppFrame = ({
     peeking: false,
   });
   const wide = useIsWide();
+  const copy = useCopy(SHELL_COPY);
+  const pinLabel = state.pinned ? copy.hideSidebar : copy.keepSidebarOpen;
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleButton = useRef<HTMLButtonElement>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,24 +136,20 @@ export const AppFrame = ({
     <button
       type="button"
       className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-9 items-center justify-center rounded-lg"
-      aria-label={state.pinned ? PIN_LABEL.pinned : PIN_LABEL.tucked}
-      title={`${state.pinned ? PIN_LABEL.pinned : PIN_LABEL.tucked} (Ctrl+.)`}
+      aria-label={pinLabel}
+      title={`${pinLabel} (Ctrl+.)`}
       onClick={toggle}
     >
       <SidebarIcon className="size-[18px]" />
     </button>
   );
 
-  const floatingLabel = wide
-    ? state.pinned
-      ? PIN_LABEL.pinned
-      : PIN_LABEL.tucked
-    : "Open navigation";
+  const floatingLabel = wide ? pinLabel : copy.openNavigation;
 
   return (
     <div className="shell-frame" data-sidebar={state.pinned ? "pinned" : "tucked"}>
       <a href="#main" className="skip-link">
-        Skip to content
+        {copy.skipToContent}
       </a>
 
       {state.pinned && (
@@ -189,7 +191,8 @@ export const AppFrame = ({
         </aside>
       )}
 
-      <main id="main" tabIndex={-1} className="shell-main">
+      {/* A page with German words of its own sets its own lang. */}
+      <main id="main" tabIndex={-1} lang={PAGES_LANG} className="shell-main">
         <ThreadBar />
         {children}
       </main>
@@ -220,6 +223,7 @@ const PhoneMenu = ({
 }: Readonly<{ data: SidebarData; onClose: () => void }>) => {
   const dialog = useRef<HTMLDialogElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const copy = useCopy(SHELL_COPY);
 
   useEffect(() => {
     const element = dialog.current;
@@ -237,7 +241,12 @@ const PhoneMenu = ({
   const close = () => dialog.current?.close();
 
   return (
-    <dialog ref={dialog} aria-label="Navigation" className="shell-menu" onClose={onClose}>
+    <dialog
+      ref={dialog}
+      aria-label={copy.navigation}
+      className="shell-menu"
+      onClose={onClose}
+    >
       <SidebarPanel
         data={data}
         onFollow={close}
@@ -245,7 +254,7 @@ const PhoneMenu = ({
           <button
             ref={closeButton}
             type="button"
-            aria-label="Close navigation"
+            aria-label={copy.closeNavigation}
             className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-9 items-center justify-center rounded-lg"
             onClick={close}
           >

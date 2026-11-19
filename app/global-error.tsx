@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+
+import { GLOBAL_ERROR_COPY } from "@/features/app-shell/global-error-copy";
+import {
+  htmlLang,
+  type Locale,
+  localeFromDocumentCookie,
+} from "@/infrastructure/locale/locale";
 
 /**
  * Fallback for a failure in the root layout or the shell layout, which no
@@ -12,6 +19,9 @@ import { useEffect } from "react";
  * At this depth only a full reload can help, so that is the one action. It
  * is a real reload: `reset()` only re-renders this boundary and never
  * fetches the failed server layout again.
+ *
+ * The words follow the language cookie. The first render is English, as the
+ * server's would be, and the browser's own read follows straight after.
  */
 
 const PAGE_CSS = `
@@ -55,24 +65,32 @@ type Props = Readonly<{
   reset: () => void;
 }>;
 
+const noSubscription = () => () => undefined;
+
+const useCookieLocale = (): Locale =>
+  useSyncExternalStore(
+    noSubscription,
+    () => localeFromDocumentCookie(document.cookie),
+    (): Locale => "en",
+  );
+
 const GlobalError = ({ error }: Props) => {
+  const locale = useCookieLocale();
+  const copy = GLOBAL_ERROR_COPY[locale];
   useEffect(() => {
     // The digest links this to the server log; the message is redacted anyway.
     console.error("[app] root layout failed", error.digest ?? error.name);
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang={htmlLang(locale)}>
       <body>
         <style>{PAGE_CSS}</style>
         <main>
-          <h1>TwinLLM couldn&rsquo;t load</h1>
-          <p>
-            The problem is on our side. Reload the page to try again. If it keeps
-            happening, whoever runs TwinLLM here can check what is missing.
-          </p>
+          <h1>{copy.title}</h1>
+          <p>{copy.line}</p>
           <button type="button" onClick={() => window.location.reload()}>
-            Reload
+            {copy.reload}
           </button>
         </main>
       </body>

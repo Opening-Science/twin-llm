@@ -1,20 +1,21 @@
 /**
  * The sidebar's section links, in order, and which one is current. Pure.
+ * Their names are in `shell-copy.ts`, one per language.
  */
 
 export type SectionKey =
   "home" | "twin" | "customize" | "models" | "lab" | "docs" | "start";
 
-export type Section = Readonly<{ key: SectionKey; label: string; href: string }>;
+export type Section = Readonly<{ key: SectionKey; href: string }>;
 
 export const SECTIONS: readonly Section[] = [
-  { key: "home", label: "TwinLLM", href: "/" },
-  { key: "twin", label: "Digital Twin", href: "/digital-twin" },
-  { key: "customize", label: "Customize", href: "/customize" },
-  { key: "models", label: "Models", href: "/models" },
-  { key: "lab", label: "Lab", href: "/lab" },
-  { key: "docs", label: "Docs", href: "/docs" },
-  { key: "start", label: "Get started", href: "/start" },
+  { key: "home", href: "/" },
+  { key: "twin", href: "/digital-twin" },
+  { key: "customize", href: "/customize" },
+  { key: "models", href: "/models" },
+  { key: "lab", href: "/lab" },
+  { key: "docs", href: "/docs" },
+  { key: "start", href: "/start" },
 ];
 
 /**
@@ -27,9 +28,3 @@ export const isCurrentSection = (href: string, path: string | null): boolean => 
   if (href === "/") return path === "/" || path.startsWith("/t/");
   return path === href || path.startsWith(`${href}/`);
 };
-
-/** "1 model", "3 models", "1,204 models". */
-export const modelCountText = (
-  count: number,
-  format: (value: number) => string,
-): string => `${format(count)} ${count === 1 ? "model" : "models"}`;
