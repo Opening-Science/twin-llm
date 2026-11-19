@@ -256,7 +256,7 @@ describe("qwen3-style goldens", () => {
     expect(parsed.uncertaintyText).toBeNull();
   });
 
-  test("a literature citation under Evidence Used is not a key (#612)", () => {
+  test("a literature citation a search returned under Evidence Used is not a key (#612)", () => {
     const text = [
       "## Evidence Used",
       "- [oura.sleep.score.2026-01-01]",
@@ -268,12 +268,36 @@ describe("qwen3-style goldens", () => {
       "## Answer",
       "Synthetic answer.",
     ].join("\n");
-    const parsed = parseTwinAnswer(text, syntheticOura);
+    const returned = new Set(["ean-als-2024", "pmc1234567", "lit-sleep-pmc1234567.1"]);
+    const parsed = parseTwinAnswer(text, syntheticOura, returned);
     expect(parsed.citedKeys).toEqual([
       "oura.sleep.score.2026-01-01",
       "sleep-2024.made.up",
     ]);
     expect(parsed.hallucinatedKeys).toEqual(["sleep-2024.made.up"]);
+  });
+
+  test("a source id no search returned under Evidence Used is invented (#850)", () => {
+    const text = [
+      "## Evidence Used",
+      "- [hrv-rmssd-2025]",
+      "- [made-up-guideline-2023]",
+      "- [PMC1234567]",
+      "- [unsupported]",
+      "",
+      "## Answer",
+      "Synthetic answer.",
+    ].join("\n");
+    const parsed = parseTwinAnswer(text, syntheticOura, new Set(["pmc1234567"]));
+    expect(parsed.citedKeys).toEqual(["hrv-rmssd-2025", "made-up-guideline-2023"]);
+    expect(parsed.evidenceKeys).toEqual([]);
+    expect(parsed.hallucinatedKeys).toEqual(["hrv-rmssd-2025", "made-up-guideline-2023"]);
+    // With no searches this turn, every source id is invented.
+    expect(parseTwinAnswer(text, syntheticOura).hallucinatedKeys).toEqual([
+      "hrv-rmssd-2025",
+      "made-up-guideline-2023",
+      "PMC1234567",
+    ]);
   });
 });
 
@@ -493,5 +517,80 @@ describe("cited value check (#545)", () => {
       syntheticOura,
     );
     expect(parsed.attribution[0]?.valueCheck).toEqual({ status: "unstated" });
+  });
+});
+
+describe("which reading a mismatched number is (#508)", () => {
+  const day = "2026-01-02";
+  const window = { startDate: "2026-01-01", endDate: day };
+  const summaries = {
+    oura: {
+      window,
+      narrative: "",
+      metrics: [
+        {
+          key: `sleep.hrv.long_sleep.${day}`,
+          label: `Average HRV during sleep (${day})`,
+          value: 45,
+          unit: "ms",
+          date: day,
+        },
+        {
+          key: "sleep.hrv.long_sleep.2026-01-01",
+          label: "Average HRV during sleep (2026-01-01)",
+          value: 39,
+          unit: "ms",
+          date: "2026-01-01",
+        },
+      ],
+    },
+    whoop: {
+      window,
+      narrative: "",
+      metrics: [
+        {
+          key: `whoop.recovery.hrv.${day}`,
+          label: `Whoop HRV RMSSD (${day})`,
+          value: 52.1,
+          unit: "ms",
+          date: day,
+        },
+      ],
+    },
+    googleHealth: null,
+    vitronic: null,
+  };
+  const reply = (answer: string) =>
+    [
+      "## Reasoning",
+      "Synthetic reasoning.",
+      "## Evidence Used",
+      `- [sleep.hrv.long_sleep.${day}]`,
+      "## Answer",
+      answer,
+    ].join("\n");
+  const cited = (answer: string) =>
+    parseTwinAnswer(reply(answer), summaries).attribution[0];
+
+  test("another source's reading that day", () => {
+    expect(cited("Your HRV was 52 ms.")?.statedFrom).toEqual({
+      source: "whoop",
+      day,
+      verdict: "wrong_source",
+    });
+  });
+
+  test("the cited source's reading on another day", () => {
+    expect(cited("Your HRV was 39 ms.")?.statedFrom).toEqual({
+      source: "oura",
+      day: "2026-01-01",
+      verdict: "wrong_day",
+    });
+  });
+
+  test("a match, or a number no offered reading holds, says nothing more", () => {
+    expect(cited("Your HRV was 45 ms.")?.statedFrom).toBeUndefined();
+    expect(cited("Your HRV was 61 ms.")?.statedFrom).toBeUndefined();
+    expect(cited("Your HRV was 61 ms.")?.valueCheck?.status).toBe("not_matched");
   });
 });

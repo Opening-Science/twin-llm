@@ -516,8 +516,8 @@ export const GalleryScreen = () => (
           Each row leads with a tile holding the vendor&apos;s own file, unchanged:
           WHOOP&apos;s outline circle at 30px, black on the light tile and white on the
           dark one, with &ldquo;Data by WHOOP&rdquo; in its detail line; Google
-          Health&apos;s colour heart on both. Oura&apos;s tile stays empty until its
-          wordmark is in. Switch the theme to see the other WHOOP file.
+          Health&apos;s colour heart on both. Oura has no tile, only a blank slot, until
+          its wordmark is in. Switch the theme to see the other WHOOP file.
         </p>
       </header>
       <div className="grid gap-4 lg:grid-cols-2">

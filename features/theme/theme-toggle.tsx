@@ -3,6 +3,8 @@
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
+import type { Translated } from "@/infrastructure/locale/locale";
+import { useCopy } from "@/infrastructure/locale/locale-provider";
 import { cn } from "@/infrastructure/ui";
 
 /**
@@ -25,6 +27,13 @@ const ICON = {
   dark: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />,
 } as const;
 
+/** What the button says it does, by the theme it offers. */
+export const THEME_TOGGLE_LABEL: Translated<Readonly<Record<"light" | "dark", string>>> =
+  {
+    en: { light: "Switch to light theme", dark: "Switch to dark theme" },
+    de: { light: "Zum hellen Design wechseln", dark: "Zum dunklen Design wechseln" },
+  };
+
 const ICON_SVG_PROPS = {
   "aria-hidden": true,
   viewBox: "0 0 24 24",
@@ -46,6 +55,7 @@ const useHydrated = (): boolean =>
 export const ThemeToggle = ({ className }: Readonly<{ className?: string }>) => {
   const theme = useTheme();
   const hydrated = useHydrated();
+  const labels = useCopy(THEME_TOGGLE_LABEL);
   const shell = cn(
     "inline-flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-input hover:text-foreground",
     className,
@@ -56,12 +66,7 @@ export const ThemeToggle = ({ className }: Readonly<{ className?: string }>) => 
   const target = theme.resolvedTheme === "dark" ? "light" : "dark";
   const flip = () => theme.setTheme(target);
   return (
-    <button
-      type="button"
-      className={shell}
-      aria-label={`Switch to ${target} theme`}
-      onClick={flip}
-    >
+    <button type="button" className={shell} aria-label={labels[target]} onClick={flip}>
       <svg {...ICON_SVG_PROPS} className="h-4 w-4">
         {ICON[target]}
       </svg>

@@ -68,6 +68,21 @@ describe("referenceRows", () => {
     expect(again.at(-1)).toMatchObject({ reference: "R04", viatarId: 12, repeat: 3 });
   });
 
+  test("an older scan stored later moves the R-numbers; the scan number stays", () => {
+    // Auto-sync stores the newest scans first.
+    const newest = [scan("sub-a", 10), scan("sub-a", 11), scan("sub-b", 12)];
+    const first = referenceRows(SUBJECTS, newest);
+    const again = referenceRows(SUBJECTS, [
+      ...newest,
+      scan("sub-a", 8),
+      scan("sub-b", 9),
+    ]);
+    const referenceOf = (rows: typeof first, viatarId: number) =>
+      rows.find((row) => row.viatarId === viatarId)?.reference;
+    expect([referenceOf(first, 10), referenceOf(again, 10)]).toEqual(["R01", "R03"]);
+    expect(again.map((row) => row.viatarId)).toEqual([8, 9, 10, 11, 12]);
+  });
+
   test("a scan of a subject not asked for is left out", () => {
     expect(referenceRows(SUBJECTS, [scan("someone-else", 1)])).toEqual([]);
   });

@@ -87,11 +87,19 @@ export type VaultSessions = Readonly<{
   /** Counts a wrong passphrase or code; returns the new count. */
   noteFailure: (actorId: string) => number;
   clearFailures: (actorId: string) => void;
+  /**
+   * Claims the actor's one passphrase or code check; false while another is
+   * running, so requests sent at once cannot all pass the wait before the
+   * first wrong one is counted. `endAttempt` frees it.
+   */
+  beginAttempt: (actorId: string) => boolean;
+  endAttempt: (actorId: string) => void;
 }>;
 
 export const createVaultSessions = (now: () => number): VaultSessions => {
   const sessions = new Map<string, Session>();
   const failures = new Map<string, Failures>();
+  const attempts = new Set<string>();
 
   const idle = (session: Session, idleMs: number): boolean =>
     now() - session.lastUsedAt >= idleMs;
@@ -173,6 +181,14 @@ export const createVaultSessions = (now: () => number): VaultSessions => {
     },
     clearFailures: (actorId) => {
       failures.delete(actorId);
+    },
+    beginAttempt: (actorId) => {
+      if (attempts.has(actorId)) return false;
+      attempts.add(actorId);
+      return true;
+    },
+    endAttempt: (actorId) => {
+      attempts.delete(actorId);
     },
   };
 };

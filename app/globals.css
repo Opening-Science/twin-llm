@@ -2145,12 +2145,29 @@
   background: var(--foreground);
 }
 
+/* Each hour stands centred on its own time, as the ticks do; the two
+   midnights keep to the track's ends so neither spills past it. */
 .kiosk-strip-hours {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 1lh;
   margin-top: 0.25em;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
+}
+
+.kiosk-strip-hours > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.kiosk-strip-hours > span:first-child {
+  transform: none;
+}
+
+.kiosk-strip-hours > span:last-child {
+  transform: translateX(-100%);
 }
 
 /* The attract loop's call, under the turning twin. */
