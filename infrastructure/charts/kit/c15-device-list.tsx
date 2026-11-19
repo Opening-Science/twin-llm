@@ -64,16 +64,33 @@ export const detailLine = (row: DeviceRow): string | null => {
   return parts.length === 0 ? null : parts.join(" · ");
 };
 
-/** One row's content: tile, name and detail, status word, actions, chevron. */
-const RowBody = ({ row }: Readonly<{ row: DeviceRow }>) => {
+/**
+ * The row's lead: the vendor's logo on a tile, or a blank slot of the same
+ * width when the list has logos and this row has none (Oura today), so the
+ * names line up without an empty grey square. A list with no logos has no
+ * lead column.
+ */
+const Lead = ({ logo, slot }: Readonly<{ logo?: VendorLogo; slot: boolean }>) => {
+  if (logo) {
+    return (
+      <span className={TILE}>
+        <Logo logo={logo} />
+      </span>
+    );
+  }
+  return slot ? <span aria-hidden="true" className="size-11 shrink-0" /> : null;
+};
+
+/** One row's content: lead, name and detail, status word, actions, chevron. */
+const RowBody = ({ row, slot }: Readonly<{ row: DeviceRow; slot: boolean }>) => {
   const detail = detailLine(row);
   // With actions the row is not one link (a link cannot hold buttons), so
   // the name carries the link instead.
   const nameLinks = Boolean(row.href && row.actions);
   return (
     <>
-      {/* Every row has a tile, so names line up; empty without a logo, never a drawn glyph. */}
-      <span className={TILE}>{row.logo ? <Logo logo={row.logo} /> : null}</span>
+      {/* Never a drawn glyph: the vendor's file or nothing. */}
+      <Lead logo={row.logo} slot={slot} />
       <span className="min-w-0 flex-1">
         {nameLinks ? (
           <Link
@@ -113,8 +130,9 @@ const ROW_BASE = "flex min-h-16 items-center gap-3 py-2.5";
 
 /**
  * C15: a group of rows, one per device or source, with hairlines
- * between them. Each row leads with a 44px tile holding the vendor's own
- * logo, unmodified, at its size; the kit never draws a device glyph. A row
+ * between them. A row with a logo leads with a 44px tile holding the
+ * vendor's own file, unmodified, at its size; the kit never draws a device
+ * glyph, and a row without one keeps a blank slot of that width. A row
  * with `href` is a link with a chevron. The detail line wraps on a phone.
  * Loading shows row shapes; empty shows the outline of a row with what is
  * needed. A row can end in `actions` (Refresh, View, Unlink); without
@@ -131,6 +149,7 @@ export const DeviceList = ({
 }: DeviceListProps) => {
   // Framed rows keep the card's inset; frameless rows line up with their parent's content.
   const ROW = cn(ROW_BASE, framed ? "px-5" : "px-0");
+  const slot = rows.some((row) => row.logo);
   const body: ReactNode =
     state === "loading" ? (
       <ul aria-hidden="true">
@@ -162,11 +181,11 @@ export const DeviceList = ({
                   "hover:bg-muted focus-visible:outline-ring outline-offset-[-2px] focus-visible:outline-2",
                 )}
               >
-                <RowBody row={row} />
+                <RowBody row={row} slot={slot} />
               </Link>
             ) : (
               <div className={ROW}>
-                <RowBody row={row} />
+                <RowBody row={row} slot={slot} />
               </div>
             )}
           </li>

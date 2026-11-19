@@ -1,6 +1,7 @@
 import { RHYTHM_BENCH_DIR } from "@/infrastructure/local-artefacts";
 
 import { benchmarkRunLine, benchmarkTables } from "./benchmark-result";
+import { CommandBlock } from "./check-detail";
 import { DownloadButton } from "./download-button";
 import { JobLines } from "./job-lines";
 import { type LabJob } from "./lab-jobs";
@@ -34,12 +35,6 @@ const BENCH_COMMAND = [
   `bun run rhythm-bench -- --out ${RHYTHM_BENCH_DIR}/<run> --seeds 3 --afdb <afdb-dir>`,
   "# --ltafdb <dir> reads the Long-Term AF Database instead; with neither it runs on simulated recordings only",
 ].join("\n");
-
-const Command = ({ label, text }: Readonly<{ label: string; text: string }>) => (
-  <pre className="command-block" aria-label={label}>
-    <code>{text}</code>
-  </pre>
-);
 
 const RunScores = ({ run }: Readonly<{ run: EvalRun }>) => {
   if (run.scores === null) {
@@ -112,7 +107,7 @@ export const EvalRunsBody = ({ data }: Readonly<{ data: ResultsData }>) => (
             ? `The runs folder (${data.runsDir}) could not be read just now. Reload the page to try again.`
             : `No evaluation runs on this machine. bun run eval writes them to ${data.runsDir}/ (gitignored), and bun run eval:report adds the report this page reads.`}
         </p>
-        <Command label="Commands that make an evaluation run" text={EVAL_COMMANDS} />
+        <CommandBlock label="Commands that make an evaluation run" text={EVAL_COMMANDS} />
       </>
     ) : (
       <>
@@ -182,7 +177,10 @@ export const BenchmarkBody = ({ data }: Readonly<{ data: BenchmarkData }>) => {
               </>
             )}
           </p>
-          <Command label="Command that runs the rhythm benchmark" text={BENCH_COMMAND} />
+          <CommandBlock
+            label="Command that runs the rhythm benchmark"
+            text={BENCH_COMMAND}
+          />
         </>
       )}
     </div>

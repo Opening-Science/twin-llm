@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# bun run voice:setup — install the speech sidecar's engines on this machine
-# (docs/voice.md). Run it yourself: it downloads about 400 MB after you say yes.
+# bun run voice:setup — install the speech sidecar's listening engine on this
+# machine (docs/voice.md). Run it yourself: it downloads about 200 MB after you
+# say yes.
 #
 #   whisper.cpp v1.9.5 (MIT), built from source for the CPU, and one
 #   multilingual model (small, 5-bit, 190 MB; --model base for 60 MB)
-#   Piper 1.8.0 (piper-tts, GPL-3.0) in its own Python environment, run as a
-#   separate program, and two voices: en_GB-alba-medium (CC BY 4.0) and
-#   de_DE-thorsten-medium (CC0)
 #
-# Everything is pinned: the whisper.cpp commit, the model and voice files by
-# SHA-256 at a fixed Hugging Face revision, and the Piper version. A file that
-# does not match is deleted and the script stops. Nothing runs on a GPU.
+# Nothing for speaking is fetched: answers are read aloud with the browser's
+# own voices. Piper and Kokoro carry GPL-3.0 code and are never downloaded
+# here; a person may install one themselves (docs/voice.md).
+#
+# Both are pinned: the whisper.cpp commit, and the model by SHA-256 at a fixed
+# Hugging Face revision. A file that does not match is deleted and the script
+# stops. Nothing runs on a GPU.
 #
 # Usage: scripts/voice/setup.sh [--home DIR] [--model small|base] [--yes]
-# Needs: git, cmake, a C++ compiler, curl, sha256sum, uv.
+# Needs: git, cmake, a C++ compiler, curl, sha256sum.
 set -euo pipefail
 
 HOME_DIR="${VOICE_HOME:-$HOME/.local/share/twinllm-voice}"
@@ -44,13 +46,7 @@ case "$MODEL" in
   *) echo "voice:setup: --model is small or base" >&2; exit 2 ;;
 esac
 
-PIPER_VERSION="1.8.0"
-VOICES="https://huggingface.co/rhasspy/piper-voices/resolve/0ca208afc2a2ee102b1e961e72e0a7e4907be3d0"
-# path|sha256 of the .onnx|sha256 of the .onnx.json
-VOICE_EN="en/en_GB/alba/medium/en_GB-alba-medium|1f9da809b6da1ef4190bb5dd6cce4f4af803274539e9cf9e0693085150bac3d7|ed4b1f015a8aae5eb26d4bdeed7b712c660f5698a0dd954aa6df9c8be60b900b"
-VOICE_DE="de/de_DE/thorsten/medium/de_DE-thorsten-medium|fd270eb3d1ebf91d763f8a0f949b1b1bebdfefaea18c3aaf8577dd34536e064f|e5bb7410dcbbcc0be6f4544f6bc66612b315ab5cb3099ec44bb46d860bc7cca9"
-
-for tool in git cmake curl sha256sum uv; do
+for tool in git cmake curl sha256sum; do
   command -v "$tool" > /dev/null || { echo "voice:setup: $tool is missing" >&2; exit 1; }
 done
 
@@ -58,16 +54,15 @@ cat <<PLAN
 Voice setup into $HOME_DIR
   whisper.cpp $WHISPER_TAG, built here for the CPU
   speech-to-text model $MODEL_FILE (about $MODEL_MB MB)
-  Piper $PIPER_VERSION in its own Python environment (about 80 MB with onnxruntime)
-  voices en_GB-alba-medium and de_DE-thorsten-medium (about 63 MB each)
-Sources: github.com, huggingface.co, pypi.org. Nothing is sent but the requests.
+Nothing for speaking: answers are read aloud with the browser's own voices.
+Sources: github.com, huggingface.co. Nothing is sent but the requests.
 PLAN
 if [[ "$ASSUME_YES" != "yes" ]]; then
   read -r -p "Download and build? [y/N] " answer
   [[ "$answer" == "y" || "$answer" == "Y" ]] || { echo "Nothing done."; exit 0; }
 fi
 
-mkdir -p "$HOME_DIR/models" "$HOME_DIR/voices"
+mkdir -p "$HOME_DIR/models"
 chmod 700 "$HOME_DIR"
 
 # fetch URL DEST SHA256: download to a .part file, check, then move into place.
@@ -103,20 +98,6 @@ cmake --build "$SRC/build" --config Release --target whisper-cli -j "$(nproc)"
 
 fetch "$WHISPER_MODELS/$MODEL_FILE" "$HOME_DIR/models/$MODEL_FILE" "$MODEL_SHA256"
 
-# Piper in its own environment; the app never imports it.
-uv venv --quiet --python 3.12 "$HOME_DIR/piper"
-uv pip install --quiet --python "$HOME_DIR/piper/bin/python" "piper-tts==$PIPER_VERSION"
-
-voice() {
-  local spec="$1" path onnx_sha json_sha name
-  IFS='|' read -r path onnx_sha json_sha <<< "$spec"
-  name="$(basename "$path")"
-  fetch "$VOICES/$path.onnx" "$HOME_DIR/voices/$name.onnx" "$onnx_sha"
-  fetch "$VOICES/$path.onnx.json" "$HOME_DIR/voices/$name.onnx.json" "$json_sha"
-}
-voice "$VOICE_EN"
-voice "$VOICE_DE"
-
 THREADS="$(( $(nproc) > 8 ? 8 : $(nproc) ))"
 cat > "$HOME_DIR/voice.json" <<JSON
 {
@@ -124,13 +105,6 @@ cat > "$HOME_DIR/voice.json" <<JSON
     "bin": "$SRC/build/bin/whisper-cli",
     "model": "$HOME_DIR/models/$MODEL_FILE",
     "threads": $THREADS
-  },
-  "piper": {
-    "bin": "$HOME_DIR/piper/bin/piper",
-    "voices": {
-      "en": "$HOME_DIR/voices/en_GB-alba-medium.onnx",
-      "de": "$HOME_DIR/voices/de_DE-thorsten-medium.onnx"
-    }
   }
 }
 JSON

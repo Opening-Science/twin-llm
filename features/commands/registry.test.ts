@@ -4,8 +4,10 @@ import { TOOLS_IN_WORDS, toolDoes, toolTitle } from "@/infrastructure/tool-title
 
 import {
   BUILT_IN_COMMANDS,
+  builtInDraft,
   type Command,
   matchCommands,
+  ownLine,
   paletteCommands,
   readsLine,
   skillCommand,
@@ -94,6 +96,20 @@ describe("skills in the palette", () => {
     expect(toolsLine([])).toBe("uses no tools");
   });
 
+  test("a person's own skill says it is theirs and not evaluated; a shipped one says nothing", () => {
+    const own = skillCommand({
+      name: "my-sleep",
+      description: "My sleep.",
+      sources: ["wearable-context"],
+      tools: [],
+      own: true,
+    });
+    expect(own.own).toBe(true);
+    expect(ownLine(own)).toBe("Yours · not evaluated");
+    expect(SLEEP_COMMAND.own).toBeUndefined();
+    expect(ownLine(SLEEP_COMMAND)).toBeNull();
+  });
+
   test("the may-use line says what tools do, never a step an answer took (#503)", () => {
     const line = toolsLine(TOOLS_IN_WORDS);
     expect(line).toBe(`may use: ${TOOLS_IN_WORDS.map(toolDoes).join(", ")}`);
@@ -138,10 +154,33 @@ describe("skillDraft", () => {
     });
   });
 
+  test("the skill's name in any case is that skill, as the palette matches it", () => {
+    expect(skillDraft("/Sleep last 30 nights", skills)).toEqual({
+      skill: SLEEP_COMMAND,
+      prompt: "last 30 nights",
+    });
+    expect(skillDraft("/SLEEP", skills)?.skill).toEqual(SLEEP_COMMAND);
+  });
+
   test("anything else is an ordinary prompt", () => {
     expect(skillDraft("/sleepy last nights", skills)).toBeNull();
     expect(skillDraft("/connect oura", skills)).toBeNull();
     expect(skillDraft("how did I sleep? /sleep", skills)).toBeNull();
     expect(skillDraft("/sleep last nights", [])).toBeNull();
+  });
+});
+
+describe("builtInDraft", () => {
+  test("a box holding only a built-in is that command, however it is sent", () => {
+    expect(builtInDraft("/twin")?.name).toBe("twin");
+    expect(builtInDraft("  /compact \n")?.name).toBe("compact");
+    expect(builtInDraft("/Connect")?.name).toBe("connect");
+  });
+
+  test("a built-in with text after it, a skill or an unknown word is not one", () => {
+    expect(builtInDraft("/twin show my heart")).toBeNull();
+    expect(builtInDraft("/sleep")).toBeNull();
+    expect(builtInDraft("/twins")).toBeNull();
+    expect(builtInDraft("what is /twin")).toBeNull();
   });
 });

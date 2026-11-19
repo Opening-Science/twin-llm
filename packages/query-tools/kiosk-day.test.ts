@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { DAY_THRESHOLDS, type DayReading, dayBeats, redWindows } from "./day-beats";
 import { MOCK_DAY_DATE, mockDayReadings } from "./mock-day";
+import { mockKioskDay } from "./mock-kiosk-day";
 import {
   KIOSK_DAY_NOTICE,
   KIOSK_DAY_SCHEMA_VERSION,
@@ -37,8 +38,10 @@ const EXAMPLE = example("kiosk-day.example.json");
 describe("toKioskDay on the mock day from a monitor wearer", () => {
   const kiosk = toKioskDay(sourceOf(mockDayReadings("sensor")));
 
-  test("is the committed sensor example, which parses against the contract", () => {
-    expect(kioskDaySchema.parse(example("kiosk-day.sensor.example.json"))).toEqual(kiosk);
+  test("the mock builds the committed sensor example, which parses against the contract", () => {
+    expect(kioskDaySchema.parse(example("kiosk-day.sensor.example.json"))).toEqual(
+      mockKioskDay("without_diabetes", "sensor"),
+    );
   });
 
   test("every glucose value says sensor, and so does its line", () => {
@@ -66,8 +69,8 @@ describe("toKioskDay on the mock day from a monitor wearer", () => {
 describe("toKioskDay on the mock day", () => {
   const kiosk = toKioskDay(SOURCE);
 
-  test("is the committed example, which parses against the contract", () => {
-    expect(kioskDaySchema.parse(EXAMPLE)).toEqual(kiosk);
+  test("the mock builds the committed example, which parses against the contract", () => {
+    expect(kioskDaySchema.parse(EXAMPLE)).toEqual(mockKioskDay("without_diabetes"));
   });
 
   test("carries the version, the notice, and one entry per beat", () => {
