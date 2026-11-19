@@ -8,6 +8,7 @@ import {
   minutesBetween,
 } from "./local-time";
 import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
+import { type PersonRecord } from "./zones";
 
 /**
  * Deterministic synthetic demonstration days for the replay (#862). Made up,
@@ -30,6 +31,9 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  *
  * Person B, in Europe/Berlin: four days, 26 to 29 October, and no history
  * before them, so no baseline can be formed.
+ *
+ * Each person has a record (`demoPerson`): A is 34, so the heart-rate zones
+ * can be estimated; B's record has no age, so they cannot.
  */
 
 export const DEMO_TIME_ZONE = "Europe/Berlin";
@@ -37,6 +41,16 @@ export const DEMO_PERSON_A = "synthetic-replay-a";
 export const DEMO_PERSON_B = "synthetic-replay-b";
 export const DEMO_REFERENCE_DAY = "2026-10-27";
 export const DEMO_DST_DAY = "2026-10-25";
+
+/** The synthetic people's records: made up, like their days. */
+const PEOPLE: readonly PersonRecord[] = [
+  { subject_ref: DEMO_PERSON_A, age_years: 34 },
+  { subject_ref: DEMO_PERSON_B, age_years: null },
+];
+
+/** A demo person's record, or null when the demo has no such person. */
+export const demoPerson = (subjectRef: string): PersonRecord | null =>
+  PEOPLE.find((one) => one.subject_ref === subjectRef) ?? null;
 
 const RING = { kind: "device", name: "Synthetic ring (demo)" } as const;
 const SENSOR = { kind: "device", name: "Synthetic glucose sensor (demo)" } as const;

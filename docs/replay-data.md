@@ -197,3 +197,31 @@ second in a row or later Worth a look, otherwise Usual. Without a baseline it is
 enough data. On the demo, 24 October is raised alone and 26–27 October in a row; person B
 has no baseline on any night. Every evidence id names its day (`2026-10-27/night-resting-hr`),
 the night's own reading as well as the baseline's, so ten nights never share one id.
+
+## Heart-rate zones
+
+`zoneMinutes(day, person)` in `zones.ts` gives the minutes a day spent in each of four
+zones, from heart rate as a share of an age-based maximum. The result is derived, with
+its rule and the readings it used.
+
+The maximum is an estimate, not measured: 208 − 0.7 × age (Tanaka, Monahan and Seals,
+_J Am Coll Cardiol_ 2001;37:153–156). A person's real maximum can differ from it by a
+wide margin. The bands are the ACSM position stand's shares of maximum heart rate
+(Garber et al., _Med Sci Sports Exerc_ 2011;43:1334–1359, table 4), kept in
+`HEART_RATE_ZONES`:
+
+| Zone         | Share of the estimated maximum | ACSM name    |
+| ------------ | ------------------------------ | ------------ |
+| Light        | 57–63%                         | Light        |
+| Moderate     | 64–76%                         | Moderate     |
+| Intense      | 77–95%                         | Vigorous     |
+| Very intense | 96% or more                    | Near-maximal |
+
+Below 57% is no zone. Each heart-rate reading counts for the time it stands for, cut
+short at the next reading and the day's end, so 15-minute and one-minute samples never
+count a minute twice. A missing reading, or none, counts as no zone at all, and
+`heart_rate_min` says how much of the day had a heart rate.
+
+Age comes from the person's record (`demoPerson`: person A is 34, person B has no age).
+Without an age the result is "unavailable: no age"; nothing is guessed. On the reference
+day person A's run is intense.
