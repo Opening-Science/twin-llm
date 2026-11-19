@@ -12,7 +12,7 @@ import { encodeWav, speechWavProblem, wavInfo } from "./wav";
 
 /**
  * A stand-in for the speech sidecar's contract on 127.0.0.1, for tests and
- * local screenshots, so nothing needs whisper.cpp, Piper or a model. It
+ * local screenshots, so nothing needs whisper.cpp, a local voice or a model. It
  * answers every question with a fixed sentence per language, speaks a short
  * quiet tone, and records what it received so a test can check exactly what
  * arrived. It checks its input the way the real sidecar does.
@@ -45,6 +45,8 @@ export type FakeSpeechOptions = Readonly<{
   delayMs?: number;
   /** Answer every call with a 307 to this address instead. */
   redirectTo?: string;
+  /** Only listen, as the real sidecar does without a local voice. */
+  listenOnly?: boolean;
   /** Replace the fixed sentences, such as "" to test nothing heard. */
   transcripts?: Readonly<Partial<Record<SpeechLanguage, string>>>;
   host?: string;
@@ -100,7 +102,13 @@ export const startFakeSpeechSidecar = async (
       return;
     }
     if (request.method === "GET" && url.pathname === "/health") {
-      sendJson(response, 200, FAKE_SPEECH_HEALTH);
+      sendJson(
+        response,
+        200,
+        options.listenOnly === true
+          ? { ...FAKE_SPEECH_HEALTH, tts: null }
+          : FAKE_SPEECH_HEALTH,
+      );
       return;
     }
     void readBody(request).then(async (body) => {
@@ -128,7 +136,11 @@ export const startFakeSpeechSidecar = async (
         });
         return;
       }
-      if (request.method === "POST" && url.pathname === "/v1/speak") {
+      if (
+        request.method === "POST" &&
+        url.pathname === "/v1/speak" &&
+        options.listenOnly !== true
+      ) {
         const parsed = speakRequestSchema.safeParse(jsonOrNull(body));
         if (!parsed.success) {
           sendError(response, 400, "invalid_request");

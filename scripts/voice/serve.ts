@@ -5,14 +5,16 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { speechEngines, voiceSetupSchema } from "./engines";
+import { localPiper, speechEngines, voiceSetupSchema } from "./engines";
 import { createSpeechSidecar } from "./speech-sidecar";
 
 /**
  * `bun run voice:serve`: the speech sidecar on 127.0.0.1 (docs/voice.md).
  * The host is fixed; only the port can change. It reads the `voice.json` that
  * `bun run voice:setup` wrote and stops with a plain message when the setup
- * or a file it names is missing. It downloads nothing.
+ * or a file it names is missing. It only listens unless a person named their
+ * own Piper in `VOICE_PIPER_BIN`, `VOICE_PIPER_EN` and `VOICE_PIPER_DE`. It
+ * downloads nothing.
  */
 
 const DEFAULT_HOME = join(homedir(), ".local/share/twinllm-voice");
@@ -31,12 +33,24 @@ if (!existsSync(configPath)) {
   process.exit(1);
 }
 const setup = voiceSetupSchema.parse(JSON.parse(readFileSync(configPath, "utf8")));
+const ownVoice = localPiper(process.env);
+if (!ownVoice.ok) {
+  console.error(
+    `A local Piper needs all three settings; missing: ${ownVoice.missing.join(", ")}`,
+  );
+  process.exit(1);
+}
+const piper = ownVoice.piper;
 const missing = [
   setup.whisper.bin,
   setup.whisper.model,
-  setup.piper.bin,
-  setup.piper.voices.en,
-  setup.piper.voices.de,
+  ...(piper === null
+    ? []
+    : [
+        ...(piper.bin.includes("/") ? [piper.bin] : []),
+        piper.voices.en,
+        piper.voices.de,
+      ]),
 ].filter((path) => !existsSync(path));
 if (missing.length > 0) {
   console.error(`The voice setup names files that are not there:\n${missing.join("\n")}`);
@@ -49,7 +63,7 @@ mkdirSync(workDir, { recursive: true, mode: 0o700 });
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 const handle = createSpeechSidecar({
-  engines: speechEngines(setup),
+  engines: speechEngines(setup, piper),
   workDir,
   log: (line) => console.log(`${new Date().toISOString()} ${line}`),
 });
@@ -106,5 +120,10 @@ const server = createServer((request, response) => {
 server.listen(Number(values.port), "127.0.0.1", () => {
   const { port } = server.address() as AddressInfo;
   console.log(`speech sidecar on http://127.0.0.1:${port}`);
+  console.log(
+    piper === null
+      ? "listening only; answers are read aloud in the browser"
+      : "listening, and speaking with the local Piper you set up",
+  );
   console.log(`set VOICE_SIDECAR_URL=http://127.0.0.1:${port} in .env.local`);
 });

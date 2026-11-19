@@ -12,8 +12,10 @@ import { speechWavProblem, wavInfo } from "@/infrastructure/speech/wav";
 
 /**
  * The speech sidecar (docs/voice.md): the contract in
- * `infrastructure/speech/contract.ts` over two engines that run as child
- * processes, whisper.cpp for speech to text and Piper for text to speech.
+ * `infrastructure/speech/contract.ts` over engines that run as child
+ * processes, whisper.cpp for speech to text and, only when a person set up
+ * their own, a local voice for text to speech. Without one it only listens
+ * and answers are read aloud in the browser.
  * Each request gets its own folder for the audio files, removed when it ends,
  * so nothing heard or said is kept. The log has the call, the language and
  * the timings, never the text or the audio. An engine's own error goes to the
@@ -24,8 +26,9 @@ export type SpeechEngines = Readonly<{
   health: SpeechHealth;
   /** The text whisper.cpp heard in a WAV file. */
   transcribe: (wavPath: string, language: SpeechLanguage) => Promise<string>;
-  /** Piper writes the spoken text to `outPath` as a WAV file. */
-  speak: (text: string, language: SpeechLanguage, outPath: string) => Promise<void>;
+  /** A local voice writes the spoken text to `outPath` as a WAV file; null when there is none. */
+  speak:
+    ((text: string, language: SpeechLanguage, outPath: string) => Promise<void>) | null;
 }>;
 
 export type SidecarDeps = Readonly<{
@@ -104,6 +107,14 @@ export const createSpeechSidecar = (deps: SidecarDeps) => {
   };
 
   const speak = async (request: Request): Promise<Response> => {
+    const engine = deps.engines.speak;
+    if (engine === null) {
+      return refuse(
+        404,
+        "This sidecar has no voice; answers are read aloud in the browser.",
+        "no_voice",
+      );
+    }
     const parsed = speakRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
       return refuse(
@@ -117,7 +128,7 @@ export const createSpeechSidecar = (deps: SidecarDeps) => {
     try {
       const wav = await inFolder(deps.workDir, async (folder) => {
         const path = join(folder, "answer.wav");
-        await deps.engines.speak(text, language, path);
+        await engine(text, language, path);
         return new Uint8Array(await readFile(path));
       });
       if (wavInfo(wav) === null) throw new Error("the engine wrote no WAV file");

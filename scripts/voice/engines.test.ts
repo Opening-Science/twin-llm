@@ -4,11 +4,18 @@ import { join } from "node:path";
 
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { type Run, speechEngines, type VoiceSetup } from "./engines";
+import {
+  type LocalPiper,
+  localPiper,
+  type Run,
+  speechEngines,
+  type VoiceSetup,
+} from "./engines";
 
 /**
  * The engines against stand-in programs: shell scripts that answer the way
- * whisper-cli and piper do, so no build or model is needed.
+ * whisper-cli and piper do, so no build or model is needed. Piper is never
+ * part of the setup; it is only used when a person names their own.
  */
 
 const dir = mkdtempSync(join(tmpdir(), "voice-engines-test-"));
@@ -44,18 +51,55 @@ const broken = script("broken", `echo "model file missing" >&2; exit 3`);
 
 const SETUP: VoiceSetup = {
   whisper: { bin: whisper, model: "/models/ggml-small-q5_1.bin", threads: 4 },
-  piper: {
-    bin: piper,
-    voices: {
-      en: "/voices/en_GB-alba-medium.onnx",
-      de: "/voices/de_DE-thorsten-medium.onnx",
-    },
+};
+
+const PIPER: LocalPiper = {
+  bin: piper,
+  voices: {
+    en: "/voices/en_GB-alba-medium.onnx",
+    de: "/voices/de_DE-thorsten-medium.onnx",
   },
 };
 
+describe("localPiper", () => {
+  test("off unless a person names their own Piper", () => {
+    expect(localPiper({})).toEqual({ ok: true, piper: null });
+    expect(localPiper({ VOICE_PIPER_BIN: " " })).toEqual({ ok: true, piper: null });
+  });
+
+  test("on with the program and both voices", () => {
+    expect(
+      localPiper({
+        VOICE_PIPER_BIN: "piper",
+        VOICE_PIPER_EN: "/v/en.onnx",
+        VOICE_PIPER_DE: "/v/de.onnx",
+      }),
+    ).toEqual({
+      ok: true,
+      piper: { bin: "piper", voices: { en: "/v/en.onnx", de: "/v/de.onnx" } },
+    });
+  });
+
+  test("half a Piper names what is missing", () => {
+    expect(
+      localPiper({ VOICE_PIPER_BIN: "piper", VOICE_PIPER_EN: "/v/en.onnx" }),
+    ).toEqual({ ok: false, missing: ["VOICE_PIPER_DE"] });
+  });
+});
+
 describe("speech engines", () => {
+  test("by default it only listens: no voice in its health and nothing to speak with", () => {
+    const engines = speechEngines(SETUP, null);
+    expect(engines.health).toEqual({
+      status: "ok",
+      stt: { engine: "whisper.cpp", model: "ggml-small-q5_1.bin" },
+      tts: null,
+    });
+    expect(engines.speak).toBeNull();
+  });
+
   test("health names the model and voices, not their folders", () => {
-    expect(speechEngines(SETUP).health).toEqual({
+    expect(speechEngines(SETUP, PIPER).health).toEqual({
       status: "ok",
       stt: { engine: "whisper.cpp", model: "ggml-small-q5_1.bin" },
       tts: {
@@ -66,9 +110,9 @@ describe("speech engines", () => {
   });
 
   test("runs whisper-cli with the language and reads its text file", async () => {
-    expect(await speechEngines(SETUP).transcribe(join(dir, "question.wav"), "de")).toBe(
-      " heard in de\n",
-    );
+    expect(
+      await speechEngines(SETUP, null).transcribe(join(dir, "question.wav"), "de"),
+    ).toBe(" heard in de\n");
   });
 
   test("passes whisper-cli the model, threads and plain-text output", async () => {
@@ -78,7 +122,7 @@ describe("speech engines", () => {
       writeFileSync(join(dir, "q.txt"), "x");
       return Promise.resolve({ code: 0, stderr: "" });
     };
-    await speechEngines(SETUP, run).transcribe(join(dir, "q.wav"), "en");
+    await speechEngines(SETUP, null, run).transcribe(join(dir, "q.wav"), "en");
     expect(calls).toEqual([
       [
         "--model",
@@ -101,13 +145,17 @@ describe("speech engines", () => {
   test("gives Piper the text on stdin, quotes and all, as one line", async () => {
     const out = join(dir, "answer.wav");
     const text = `Dein Herz: "ruhig";\n$(echo nein) & gut.`;
-    await speechEngines(SETUP).speak(text, "de", out);
+    await speechEngines(SETUP, PIPER).speak?.(text, "de", out);
     expect(readFileSync(out, "utf8")).toBe(`Dein Herz: "ruhig"; $(echo nein) & gut.\n`);
   });
 
   test("keeps the text out of Piper's arguments, where any user could read it", async () => {
     const out = join(dir, "private.wav");
-    await speechEngines(SETUP).speak("Your resting heart rate was 52.", "en", out);
+    await speechEngines(SETUP, PIPER).speak?.(
+      "Your resting heart rate was 52.",
+      "en",
+      out,
+    );
     const argv = readFileSync(`${out}.argv`, "utf8");
     expect(argv).toBe(`-m /voices/en_GB-alba-medium.onnx -f ${out}`);
     expect(argv).not.toContain("heart");
@@ -116,7 +164,7 @@ describe("speech engines", () => {
   test("a failed engine throws with its exit code and error text", async () => {
     const setup = { ...SETUP, whisper: { ...SETUP.whisper, bin: broken } };
     await expect(
-      speechEngines(setup).transcribe(join(dir, "q.wav"), "en"),
+      speechEngines(setup, null).transcribe(join(dir, "q.wav"), "en"),
     ).rejects.toThrow("broken exited with 3: model file missing");
   });
 
@@ -126,7 +174,7 @@ describe("speech engines", () => {
       calls.push([args, input]);
       return Promise.resolve({ code: 0, stderr: "" });
     };
-    await speechEngines(SETUP, run).speak("Hello.", "en", "/work/a.wav");
+    await speechEngines(SETUP, PIPER, run).speak?.("Hello.", "en", "/work/a.wav");
     expect(calls).toEqual([
       [["-m", "/voices/en_GB-alba-medium.onnx", "-f", "/work/a.wav"], "Hello.\n"],
     ]);
