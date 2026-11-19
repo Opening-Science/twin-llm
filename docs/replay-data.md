@@ -108,3 +108,97 @@ by anyone". `moving` does not become an activity, since it does not say walk or 
 Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
 synthetic people only, so none of their days is labelled `recorded`; that origin waits
 for real recordings.
+
+## Enough data first
+
+A personal baseline (`baseline.ts`) is the median of the device's nightly value over the
+28 days before the day, the day itself left out, from at least 7 nights (the floor the
+wearable trends use). With fewer, the result is `insufficient` with the count and what is
+needed, and there is no band. Only the same person's nights of the same origin count.
+
+Recovery after a run (`recovery.ts`) is only as precise as the readings. The one-minute
+drop needs a reading at the run's end and the next at most a minute later; from
+15-minute readings the result says the readings are too coarse. "Back within the band"
+(`recoveryWithinPerMin`, a placeholder) is an upper bound and carries the spacing it
+was read at.
+
+## Story phases
+
+`storyPhases(day, { restingBaseline })` in `phases.ts` gives the stretches of heart
+rate and glucose the evidence supports. A phase needs its evidence (a recorded sleep,
+walk or run, a tag the person entered) and readings of its own stream inside it; between
+phases nothing is said, and a day without that evidence has fewer phases.
+`phaseGaps(day)` says why, per stream: no heart rate, no glucose (sensor or blood), no
+steps, no sleep or no walk or run recorded, each with the phases it rules out, so a card
+shows that state instead of guessing.
+
+| Heart rate                    | Evidence                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Sleep                         | Recorded sleep before waking.                                                                      |
+| Waking                        | The half hour after it.                                                                            |
+| Resting                       | The hour after that, steps recorded and at most 300 per 15 minutes, no activity.                   |
+| Walking, Running              | A walk or run the device recorded.                                                                 |
+| Raised heart rate while still | Above the still threshold, under 50 steps per 15 minutes, no walk or run in it or the hour before. |
+| Recovery                      | From a run's end until back within the band, or an hour.                                           |
+| Winding down and sleep        | From a tag reading exactly "Winding down", or recorded sleep, to the day's end.                    |
+
+| Glucose                  | Evidence                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| Overnight fasting        | Sleep before waking with no meal, up to the night's lowest glucose.          |
+| Before waking (dawn)     | From that low to waking, a rise of 10 mg/dL or more with no meal.            |
+| Breakfast, Snack, Dinner | 90 minutes after the person's meal tag, or until the next meal.              |
+| Lunch and a walk         | A lunch tag with a recorded walk starting within the hour (otherwise Lunch). |
+| Running                  | A recorded run.                                                              |
+| Back to sleep            | From recorded evening sleep to the day's end.                                |
+
+Glucose phases read the sensor series when there is one, else blood. Each phase is
+derived and carries its rule, its evidence ids, a peak or low (derived, with the reading
+it came from, never the value at the cursor) and, where it helps, a narration. Insulin is
+narrated after a meal; the raised heart rate while still is narrated without a cause.
+
+## Usual, Notable, Worth a look
+
+Each phase carries a `status` with its words, its rule (`id`, `text`, `basis`), its
+evidence and a one-sentence reason (`status-rules.ts`).
+
+| Rule                               | Basis                 | Gives                                                                                                                         |
+| ---------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `heart_rate_still_above`           | placeholder threshold | Worth a look: above 100 /min while still.                                                                                     |
+| `heart_rate_activity_not_judged`   | demo only             | Usual: waking, walking, running and winding down are not judged by height.                                                    |
+| `heart_rate_near_resting_baseline` | demo only             | Usual within 10 /min of the resting baseline, else Notable; no baseline, Not enough data.                                     |
+| `heart_rate_recovery_within_hour`  | demo only             | Usual when back within the band within an hour, else Notable; Not enough data when heart rate was not read through that hour. |
+| `glucose_past_threshold`           | placeholder threshold | Worth a look past 140 mg/dL (without diabetes) or outside 70–180 (with).                                                      |
+| `glucose_meal_rise`                | demo only             | Notable for a rise of 30 mg/dL or more after a meal, else Usual.                                                              |
+
+No rule is approved for recorded data yet (`APPROVED_FOR_RECORDED` is empty), so on a
+recorded day every status is "Not classified", with that reason. Synthetic
+demonstrations show every rule. Without enough data a status is "Not enough data", never
+Usual, on any origin, since it judges nothing.
+
+## Heart-rate zones
+
+`zoneMinutes(day, person)` in `zones.ts` gives the minutes a day spent in each of four
+zones, from heart rate as a share of an age-based maximum. The result is derived, with
+its rule and the readings it used.
+
+The maximum is an estimate, not measured: 208 − 0.7 × age (Tanaka, Monahan and Seals,
+_J Am Coll Cardiol_ 2001;37:153–156). A person's real maximum can differ from it by a
+wide margin. The bands are the ACSM position stand's shares of maximum heart rate
+(Garber et al., _Med Sci Sports Exerc_ 2011;43:1334–1359, table 4), kept in
+`HEART_RATE_ZONES`:
+
+| Zone         | Share of the estimated maximum | ACSM name    |
+| ------------ | ------------------------------ | ------------ |
+| Light        | 57–63%                         | Light        |
+| Moderate     | 64–76%                         | Moderate     |
+| Intense      | 77–95%                         | Vigorous     |
+| Very intense | 96% or more                    | Near-maximal |
+
+Below 57% is no zone. Each heart-rate reading counts for the time it stands for, cut
+short at the next reading and the day's end, so 15-minute and one-minute samples never
+count a minute twice. A missing reading, or none, counts as no zone at all, and
+`heart_rate_min` says how much of the day had a heart rate.
+
+Age comes from the person's record (`demoPerson`: person A is 34, person B has no age).
+Without an age the result is "unavailable: no age"; nothing is guessed. On the reference
+day person A's run is intense.
