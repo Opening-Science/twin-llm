@@ -57,7 +57,7 @@ export const useSpeechPlayer = (): SpeechPlayer => {
     current.current?.abort();
     const controller = new AbortController();
     current.current = controller;
-    const chunks = spokenChunks(spokenText(text));
+    const chunks = spokenChunks(spokenText(text, language));
     if (chunks.length === 0) {
       setSpeakingId(null);
       return;

@@ -115,27 +115,19 @@ stops. One answer plays at a time.
 
 What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
 code, tables, images, web addresses and bracketed citation ids are left out, a link keeps
-its words, and a heading or list item ends as a sentence. It is read with the browser's
-own voices (the Web Speech API, `infrastructure/speech/browser-speech.ts`), in pieces of
-whole sentences of up to 400 characters, so nothing is downloaded and nothing goes to the
-sidecar. Only a voice on this machine is used, en-GB or de-DE first, then any English or
-German one: some browsers also offer voices that speak through their maker's servers, and
-those are never picked. A browser with no such voice says so beside the button and reads
-nothing. Which voices there are depends on the system; nothing is kept once it has played.
-A spoken turn is known only to the open page; a reloaded thread is not read back on its
-own.
-
-## The twin turns
-
-After a spoken answer the chat's twin (the `/twin` card) turns to the organ it is about,
-at the organs depth, lit as a click on it would be. The organ is the focus of a body twin
-the answer drew itself, else the organ its words name first, else the question's
-(`infrastructure/speech/organ-named.ts`, English and German, so "Herzfrequenz" is the
-heart and "Nierenwerte" the kidneys). Only the organs the twin can focus on count: heart,
-lungs, brain, liver, kidneys, pancreas (also for blood sugar and insulin) and blood
-vessels (also for blood pressure). A closed card opens for it, unless the answer drew its
-own body twin; an answer that names no organ leaves the twin as it is. After that the twin
-is the person's again until the next spoken answer.
+its words, and a heading or list item ends as a sentence. Numbers are said as a voice
+would say them (`infrastructure/speech/spoken-units.ts`): a unit after a number becomes
+words ("58 bpm" is "58 beats per minute", "Schläge pro Minute" in German), a range such
+as 58–64 becomes "58 to 64" ("bis"), a blood pressure such as 118/76 mmHg becomes "118
+over 76" ("zu"), and German gets a decimal comma. A unit not right after a number, and a
+date such as 2026-11-18, stay as they are. It is read with the browser's own voices (the
+Web Speech API, `infrastructure/speech/browser-speech.ts`), in pieces of whole sentences
+of up to 400 characters, so nothing is downloaded and nothing goes to the sidecar. Only a
+voice on this machine is used, en-GB or de-DE first, then any English or German one: some
+browsers also offer voices that speak through their maker's servers, and those are never
+picked. A browser with no such voice says so beside the button and reads nothing. Which
+voices there are depends on the system; nothing is kept once it has played. A spoken turn
+is known only to the open page; a reloaded thread is not read back on its own.
 
 ## The twin turns
 
