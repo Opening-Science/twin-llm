@@ -122,10 +122,14 @@ would say them (`infrastructure/speech/spoken-units.ts`): a unit after a number 
 words ("58 bpm" is "58 beats per minute", "Schläge pro Minute" in German), a range such
 as 58–64 becomes "58 to 64" ("bis"), a blood pressure such as 118/76 mmHg becomes "118
 over 76" ("zu"), and German gets a decimal comma. A unit not right after a number, and a
-date such as 2026-11-18, stay as they are. The text goes to
-`/api/voice/speak` in pieces of whole sentences of up to 400 characters, so the first
-plays while the next is made, and nothing is kept once it has played. A spoken turn is
-known only to the open page; a reloaded thread is not read back on its own.
+date such as 2026-11-18, stay as they are. It is read with the browser's own voices (the
+Web Speech API, `infrastructure/speech/browser-speech.ts`), in pieces of whole sentences
+of up to 400 characters, so nothing is downloaded and nothing goes to the sidecar. Only a
+voice on this machine is used, en-GB or de-DE first, then any English or German one: some
+browsers also offer voices that speak through their maker's servers, and those are never
+picked. A browser with no such voice says so beside the button and reads nothing. Which
+voices there are depends on the system; nothing is kept once it has played. A spoken turn
+is known only to the open page; a reloaded thread is not read back on its own.
 
 ## The twin turns
 

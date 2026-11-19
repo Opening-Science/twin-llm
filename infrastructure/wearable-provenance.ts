@@ -119,24 +119,47 @@ const isValueCheck = (
   (VALUE_CHECK_STATUSES as readonly unknown[]).includes(value.status);
 
 /**
+ * "which is the WHOOP reading, 2 Jan 2026" for a stored `statedFrom` (#508);
+ * null when there is none or it does not parse. Stored rows are JSON, so the
+ * source and day are checked, not trusted.
+ */
+const statedFromText = (statedFrom: unknown): string | null => {
+  if (typeof statedFrom !== "object" || statedFrom === null) return null;
+  const { source, day } = statedFrom as Readonly<{ source?: unknown; day?: unknown }>;
+  if (!isWearableSourceId(source)) return null;
+  const reading = `which is the ${WEARABLE_SOURCE_LABEL[source]} reading`;
+  const known = storedDay(day);
+  return known === null ? reading : `${reading}, ${formatDate(known)}`;
+};
+
+/**
  * The line under a cited value once the number the answer states for it has
  * been checked against the stored reading (#545). A match names the reading's
- * source and day ("Matches the Oura reading, 2 Jan 2026"); a number that does
- * not match gets no source, only what the answer said ("Doesn't match the cited
- * reading: the answer says 75"). A value the answer states no number for, or an
- * answer stored before the check, keeps its provenance line.
+ * source and day ("Matches the Oura reading, 2 Jan 2026"). A number that does
+ * not match says what the answer said and, when it is another offered
+ * reading, which one ("Doesn't match the cited reading: the answer says 52 ms,
+ * which is the WHOOP reading, 2 Jan 2026"). A value the answer states no
+ * number for, or an answer stored before the check, keeps its provenance line.
  */
 export const citedValueLine = (
-  attribution: Readonly<{ source?: unknown; day?: unknown; valueCheck?: unknown }>,
+  attribution: Readonly<{
+    source?: unknown;
+    day?: unknown;
+    valueCheck?: unknown;
+    statedFrom?: unknown;
+  }>,
 ): string | null => {
   const check = attribution.valueCheck;
   if (!isValueCheck(check) || check.status === "unstated") {
     return attributionProvenanceLine(attribution);
   }
   if (check.status === "not_matched") {
-    return typeof check.stated === "string" && check.stated !== ""
-      ? `Doesn't match the cited reading: the answer says ${check.stated}`
-      : "Doesn't match the cited reading";
+    if (typeof check.stated !== "string" || check.stated === "") {
+      return "Doesn't match the cited reading";
+    }
+    const said = `Doesn't match the cited reading: the answer says ${check.stated}`;
+    const from = statedFromText(attribution.statedFrom);
+    return from === null ? said : `${said}, ${from}`;
   }
   if (!isWearableSourceId(attribution.source)) return "Matches the cited reading";
   const reading = `Matches the ${WEARABLE_SOURCE_LABEL[attribution.source]} reading`;

@@ -90,16 +90,30 @@ export const pageWindow = (
  */
 export const escapeLike = (q: string): string => q.replace(/[\\%_]/g, "\\$&");
 
-/** The query string for a table link, leaving out defaults. */
-export const subjectQueryString = (
-  cohortId: string,
-  query: Partial<SubjectQuery>,
-): string => {
+const linkParams = (cohortId: string, query: Partial<SubjectQuery>): URLSearchParams => {
   const params = new URLSearchParams({ cohort: cohortId });
   if (query.q) params.set("q", query.q);
   if (query.sort && query.sort !== "observations") params.set("sort", query.sort);
   if (query.sort && query.dir && query.dir !== defaultDir(query.sort))
     params.set("dir", query.dir);
   if (query.page && query.page > 1) params.set("page", String(query.page));
-  return `?${params}`;
+  return params;
 };
+
+/** The query string for a table link, leaving out defaults. */
+export const subjectQueryString = (
+  cohortId: string,
+  query: Partial<SubjectQuery>,
+): string => `?${linkParams(cohortId, query)}`;
+
+/**
+ * The hidden fields of the search form: the cohort, and the sort and its
+ * direction as a table link carries them, so a search keeps the order on
+ * screen and starts again at page 1.
+ */
+export const searchFormFields = (
+  cohortId: string,
+  query: SubjectQuery,
+): readonly (readonly [string, string])[] => [
+  ...linkParams(cohortId, { sort: query.sort, dir: query.dir }).entries(),
+];

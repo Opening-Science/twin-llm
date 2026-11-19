@@ -2,15 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { browserVoices, localVoice, sayAll } from "./browser-speech";
 import type { SpeechLanguage } from "./contract";
 import { spokenChunks, spokenText } from "./spoken-text";
 
 /**
- * Reads an answer aloud through the app's `/api/voice/speak` (docs/voice.md).
- * The answer is cut into pieces of whole sentences; the first plays as soon
- * as it is made and the next is made while it plays. One answer at a time:
- * starting another, or `stop`, ends the one playing. Nothing is kept once it
- * has played.
+ * Reads an answer aloud with the browser's own voices (docs/voice.md), only
+ * ever a voice on this machine, so the answer goes nowhere. The answer is cut
+ * into pieces of whole sentences and queued. One answer at a time: starting
+ * another, or `stop`, cancels the one being read.
  */
 
 export type SpeechTimings = Readonly<{
@@ -32,55 +32,14 @@ export type SpeechPlayer = Readonly<{
 
 export const READ_ALOUD_FAILED = "The answer could not be read aloud. Try again.";
 
-const fetchSpeech = async (
-  text: string,
-  language: SpeechLanguage,
-  signal: AbortSignal,
-): Promise<Blob> => {
-  const response = await fetch("/api/voice/speak", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text, language }),
-    signal,
-  });
-  if (!response.ok) throw new Error(`speak ${response.status}`);
-  return response.blob();
+const LANGUAGE_WORDS: Readonly<Record<SpeechLanguage, string>> = {
+  en: "English",
+  de: "German",
 };
 
-/**
- * Plays one piece and settles when it has ended or was stopped. `onPlaying`
- * runs once, when sound actually starts, not when the audio arrived.
- */
-export const playBlob = (
-  blob: Blob,
-  signal: AbortSignal,
-  onPlaying: () => void = () => undefined,
-): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    const done = () => {
-      audio.pause();
-      URL.revokeObjectURL(url);
-    };
-    audio.addEventListener("playing", onPlaying, { once: true });
-    audio.addEventListener("ended", () => {
-      done();
-      resolve();
-    });
-    audio.addEventListener("error", () => {
-      done();
-      reject(new Error("audio"));
-    });
-    signal.addEventListener("abort", () => {
-      done();
-      resolve();
-    });
-    void audio.play().catch((error: unknown) => {
-      done();
-      reject(error instanceof Error ? error : new Error("audio"));
-    });
-  });
+/** When the browser has no voice of that language on this machine. */
+export const noLocalVoice = (language: SpeechLanguage): string =>
+  `This browser has no ${LANGUAGE_WORDS[language]} voice on this machine, so nothing is read aloud.`;
 
 export const useSpeechPlayer = (): SpeechPlayer => {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -105,34 +64,28 @@ export const useSpeechPlayer = (): SpeechPlayer => {
       setSpeakingId(null);
       return;
     }
+    if (!("speechSynthesis" in window)) {
+      setSpeakingId(null);
+      setProblem({ id, message: noLocalVoice(language) });
+      return;
+    }
+    const synth = window.speechSynthesis;
     setSpeakingId(id);
     setProblem(null);
     const started = performance.now();
-    const run = async () => {
-      const fetchQuiet = (text: string) => {
-        const pendingSpeech = fetchSpeech(text, language, controller.signal);
-        // Awaited below; this keeps a piece fetched ahead from failing unheard.
-        void pendingSpeech.catch(() => undefined);
-        return pendingSpeech;
-      };
-      let next = fetchQuiet(chunks[0] ?? "");
-      for (const [index] of chunks.entries()) {
-        const blob = await next;
-        if (controller.signal.aborted) return;
-        const following = chunks[index + 1];
-        if (following !== undefined) {
-          next = fetchQuiet(following);
-        }
-        await playBlob(blob, controller.signal, () => {
-          if (index === 0 && !controller.signal.aborted) {
-            setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
-          }
-        });
-      }
+    const run = async (): Promise<string | null> => {
+      const voice = localVoice(await browserVoices(synth), language);
+      if (controller.signal.aborted) return null;
+      if (voice === null) return noLocalVoice(language);
+      const saying = sayAll(synth, chunks, voice, language, controller.signal);
+      setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
+      await saying;
+      return null;
     };
     void run()
-      .catch(() => {
-        if (!controller.signal.aborted) setProblem({ id, message: READ_ALOUD_FAILED });
+      .catch(() => READ_ALOUD_FAILED)
+      .then((message) => {
+        if (message !== null && !controller.signal.aborted) setProblem({ id, message });
       })
       .finally(() => {
         if (current.current === controller) {

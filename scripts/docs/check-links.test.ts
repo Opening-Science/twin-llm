@@ -91,6 +91,24 @@ describe("brokenLinks", () => {
   test("does not check headings in files that are not Markdown", () => {
     expect(brokenLinks("README.md", "[a](LICENSE#L3)", files)).toEqual([]);
   });
+
+  test("checks reference-style definitions, not footnotes, and links with a title in any quotes", () => {
+    const markdown = [
+      "See [x][r] and [y][ok].",
+      "",
+      "[r]: docs/missing.md",
+      '  [ok]: <docs/providers.md#notes> "Notes"',
+      "[a](docs/gone.md 'title') [b](docs/also-gone.md (title)) [c](docs/providers.md 'ok')",
+      "[^1]: A footnote, which is no link.",
+    ].join("\n");
+    expect(
+      brokenLinks("README.md", markdown, files).map(({ line, target }) => [line, target]),
+    ).toEqual([
+      [3, "docs/missing.md"],
+      [5, "docs/gone.md"],
+      [5, "docs/also-gone.md"],
+    ]);
+  });
 });
 
 describe("extractAppDocLinks", () => {
@@ -111,6 +129,13 @@ describe("extractAppDocLinks", () => {
     const source =
       'href={`/docs/${page.slug}`} href="/docs" href="/lab/docs/x" `/docs/...`';
     expect(extractAppDocLinks(source)).toEqual([]);
+  });
+
+  test("skips a heading built from a value, and reads the page before a query", () => {
+    const source = '`/docs/runbook#${id}`\n"/docs/no-such-page?x=1"';
+    expect(extractAppDocLinks(source)).toEqual([
+      { line: 2, slug: "no-such-page", hash: undefined },
+    ]);
   });
 });
 

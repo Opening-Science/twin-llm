@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 
+import { noteAnswerAudit } from "./answer-scope";
 import { nextLink } from "./chain";
 import { hashEvent, sha256Hex, toCanonicalJson } from "./hash";
 
@@ -67,6 +68,7 @@ export const appendInTransaction = async (
     },
   });
 
+  noteAnswerAudit(input.sessionId, seq);
   return { seq, hash, argsSha256, resultSha256 };
 };
 

@@ -4,7 +4,7 @@ import { Fragment, useEffect } from "react";
 
 import { cn } from "@/infrastructure/ui";
 
-import { type Command, readsLine, toolsLine } from "./registry";
+import { type Command, ownLine, readsLine, toolsLine } from "./registry";
 
 /**
  * The list under the prompt while it starts with `/`. Focus stays in the
@@ -61,6 +61,7 @@ const CommandDetail = ({
   >
     <p>{readsLine(command.reads)}</p>
     {command.tools ? <p className="mt-1">{toolsLine(command.tools)}</p> : null}
+    {command.own ? <p className="mt-1">{ownLine(command)}</p> : null}
   </div>
 );
 

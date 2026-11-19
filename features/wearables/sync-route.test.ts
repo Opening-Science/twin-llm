@@ -208,6 +208,35 @@ describe("POST /api/{provider}/sync", () => {
     ]);
   });
 
+  test("a JSON body that is not an object syncs the default window", async () => {
+    for (const body of [null, [WINDOW], "2026-01-01", 7]) {
+      syncCalls = [];
+      const res = await createWearableSyncHandler(deps("oura"))(syncRequest(body));
+      expect(res.status).toBe(200);
+      expect(syncCalls).toEqual([
+        [USER_ID, { sandbox: undefined, startDate: undefined, endDate: undefined }],
+      ]);
+    }
+  });
+
+  test("only `sandbox: true` asks for the sandbox, so the ledger and the sync agree", async () => {
+    disclosures = [];
+    await createWearableSyncHandler(deps("oura"))(
+      syncRequest({ ...WINDOW, sandbox: "false" }),
+    );
+    expect(syncCalls).toEqual([[USER_ID, { sandbox: undefined, ...WINDOW }]]);
+    expect(disclosures.map((row) => row.synthetic)).toEqual([false]);
+  });
+
+  test("dates that are not text are left out, so the default applies", async () => {
+    await createWearableSyncHandler(deps("whoop"))(
+      syncRequest({ startDate: 20260101, endDate: { day: 4 } }),
+    );
+    expect(syncCalls).toEqual([
+      [USER_ID, { sandbox: undefined, startDate: undefined, endDate: undefined }],
+    ]);
+  });
+
   for (const { provider, unconfigured, signIn } of PROVIDERS) {
     test(`${provider} unconfigured returns 503 and never syncs`, async () => {
       const res = await createWearableSyncHandler({

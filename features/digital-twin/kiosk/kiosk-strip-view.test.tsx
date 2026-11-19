@@ -27,6 +27,15 @@ describe("KioskDayStrip", () => {
     expect(count(markup, 'class="kiosk-strip-band"')).toBe(1);
   });
 
+  test("each hour label sits at its own time on the track, as the ticks do", () => {
+    const markup = html(0);
+    expect(markup).toContain('<span style="left:0.000%">00:00</span>');
+    expect(markup).toContain('<span style="left:25.000%">06:00</span>');
+    expect(markup).toContain('<span style="left:50.000%">12:00</span>');
+    expect(markup).toContain('<span style="left:75.000%">18:00</span>');
+    expect(markup).toContain('<span style="left:100.000%">24:00</span>');
+  });
+
   test("is hidden from screen readers, since the card says the same in words", () => {
     expect(html(null)).toStartWith('<div class="kiosk-strip" aria-hidden="true">');
     expect(count(html(null), "data-current")).toBe(0);
