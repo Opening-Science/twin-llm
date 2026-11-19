@@ -18,7 +18,7 @@ import {
   type ConnectorId,
   type ConnectorSetupView,
 } from "@/features/connectors/connector-setup";
-import { loopbackHostHint } from "@/features/connectors/connector-status";
+import { loopbackHostHint, unlinkOutcome } from "@/features/connectors/connector-status";
 import { deviceRow } from "@/features/connectors/device-rows";
 import { GbdCard } from "@/features/connectors/gbd-card";
 import { GuidelinesCard } from "@/features/connectors/guidelines-card";
@@ -342,8 +342,15 @@ export const WearablesScreen = ({
     setBusy(id);
     setCardNotice(null);
     try {
-      await fetch(`/api/${id}/disconnect`, { method: "DELETE" });
-      setMessage(`${SOURCE_LABEL[id]} unlinked.`);
+      const ok = await fetch(`/api/${id}/disconnect`, { method: "DELETE" }).then(
+        (res) => res.ok,
+        () => false,
+      );
+      const outcome = unlinkOutcome(SOURCE_LABEL[id], ok);
+      setMessage(outcome.message);
+      if (outcome.failure) {
+        setCardNotice({ source: id, text: outcome.failure, failed: true, retry: false });
+      }
       await refreshStatus(id);
       router.refresh();
     } finally {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { resetServerEnvCacheForTests } from "./env";
+import { resetServerEnvCacheForTests, serverEnv } from "./env";
 import {
   chatModelIsLocal,
   chatOnLoopback,
@@ -138,5 +138,17 @@ describe("genomeChatPermit and genomeRunPermit", () => {
     expect(genomeRunPermit()).toEqual({ ok: true });
     expect(vcfVariantsChatPermit()).toEqual(refusal("chat-model-not-local"));
     expect(genomeChatPermit()).toEqual(refusal("chat-model-not-local"));
+  });
+
+  test("Carbon-X on another host: startup refuses it, and so does the chat gate", () => {
+    const elsewhere = "http://gpu.example.org:8090/v1";
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark", CARBON_X_URL: elsewhere });
+    expect(() => serverEnv()).toThrow("CARBON_X_URL must be on this machine");
+    // Past startup, the gate still reads the URL itself.
+    useEnv({ DATA_MODE: "personal", GENOME_SOURCE: "ark" });
+    expect(genomeChatPermit({ ...serverEnv(), CARBON_X_URL: elsewhere })).toEqual(
+      refusal("carbon-x-not-local"),
+    );
+    expect(genomeChatPermit(serverEnv())).toEqual({ ok: true });
   });
 });

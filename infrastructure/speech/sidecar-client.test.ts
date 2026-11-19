@@ -35,6 +35,14 @@ describe("speech sidecar client", () => {
     expect(await speechHealth(configFor(sidecar.baseUrl))).toEqual(FAKE_SPEECH_HEALTH);
   });
 
+  test("a sidecar that only listens is still on", async () => {
+    const sidecar = await start({ listenOnly: true });
+    expect(await speechHealth(configFor(sidecar.baseUrl))).toEqual({
+      ...FAKE_SPEECH_HEALTH,
+      tts: null,
+    });
+  });
+
   test("no health when voice is off, elsewhere or down", async () => {
     expect(await speechHealth(configFor(null))).toBeNull();
     expect(await speechHealth(configFor("https://speech.example.org"))).toBeNull();

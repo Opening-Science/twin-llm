@@ -149,11 +149,11 @@ export type Span = Readonly<{ text: string; style: PdfStyle }>;
 const MARK =
   /`([^`]+)`|\*\*([^*]+)\*\*|(^|[\s(])_([^_]+)_(?=$|[\s).,;:!?])|(^|[\s(])\*([^*]+)\*(?=$|[\s).,;:!?])/g;
 
-export const spansOf = (
-  line: string,
-  base: PdfStyle = "regular",
-  fold: Fold = WIN_ANSI,
-): Span[] => {
+/**
+ * Marks inside bold and italic are read too, as the print page nests
+ * `<code>` in `<strong>`: "**Take `x` daily**" is bold, then code, then bold.
+ */
+const marksOf = (line: string, base: PdfStyle): Span[] => {
   const spans: Span[] = [];
   let at = 0;
   const push = (text: string, style: PdfStyle) => {
@@ -164,13 +164,19 @@ export const spansOf = (
     const lead = emLead ?? starLead ?? "";
     push(line.slice(at, match.index + lead.length), base);
     if (code !== undefined) push(code, "mono");
-    else if (bold !== undefined) push(bold, "bold");
-    else push(em ?? star ?? "", base === "bold" ? "bold" : "italic");
+    else if (bold !== undefined) spans.push(...marksOf(bold, "bold"));
+    else spans.push(...marksOf(em ?? star ?? "", base === "bold" ? "bold" : "italic"));
     at = match.index + whole.length;
   }
   push(line.slice(at), base);
-  return spans.flatMap((span) => fold(span.text, span.style));
+  return spans;
 };
+
+export const spansOf = (
+  line: string,
+  base: PdfStyle = "regular",
+  fold: Fold = WIN_ANSI,
+): Span[] => marksOf(line, base).flatMap((span) => fold(span.text, span.style));
 
 // --- wrapping ---------------------------------------------------------------
 

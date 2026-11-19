@@ -32,26 +32,31 @@ const fakeEngines = (
   seen: Seen,
   heard = " Show me my heart. [BLANK_AUDIO]",
   fail = false,
+  listenOnly = false,
 ): SpeechEngines => ({
-  health: HEALTH,
+  health: listenOnly ? { ...HEALTH, tts: null } : HEALTH,
   transcribe: (path, language) => {
     seen.transcribe.push([path, language]);
     if (fail) return Promise.reject(new Error("whisper-cli exited with 1: no model"));
     return Promise.resolve(heard);
   },
-  speak: async (text, language, outPath) => {
-    seen.speak.push([text, language]);
-    if (fail) throw new Error("piper exited with 1: voice missing");
-    await writeFile(outPath, encodeWav(new Float32Array(1600)));
-  },
+  speak: listenOnly
+    ? null
+    : async (text, language, outPath) => {
+        seen.speak.push([text, language]);
+        if (fail) throw new Error("piper exited with 1: voice missing");
+        await writeFile(outPath, encodeWav(new Float32Array(1600)));
+      },
 });
 
-const setup = (options: Readonly<{ heard?: string; fail?: boolean }> = {}) => {
+const setup = (
+  options: Readonly<{ heard?: string; fail?: boolean; listenOnly?: boolean }> = {},
+) => {
   const seen: Seen = { transcribe: [], speak: [] };
   const logged: string[] = [];
   let clock = 0;
   const handle = createSpeechSidecar({
-    engines: fakeEngines(seen, options.heard, options.fail),
+    engines: fakeEngines(seen, options.heard, options.fail, options.listenOnly),
     workDir,
     now: () => {
       clock += 250;
@@ -160,6 +165,23 @@ describe("speech sidecar", () => {
     );
     expect(statuses).toEqual([400, 400, 400, 400]);
     expect(seen.speak).toEqual([]);
+  });
+
+  test("without a local voice it does not speak, and says the browser reads aloud", async () => {
+    const { handle, logged } = setup({ listenOnly: true });
+    const health = await handle(new Request("http://127.0.0.1:8095/health"));
+    expect(await health.json()).toEqual({ ...HEALTH, tts: null });
+    const response = await handle(
+      speakRequest({ text: "Your heart is fine.", language: "en" }),
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: {
+        message: "This sidecar has no voice; answers are read aloud in the browser.",
+        type: "no_voice",
+      },
+    });
+    expect(logged).toEqual([]);
   });
 
   test("anything else is not found", async () => {

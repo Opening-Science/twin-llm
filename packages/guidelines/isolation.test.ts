@@ -39,6 +39,6 @@ describe("guideline tool isolation", () => {
   // Which factory gets the turn's wearable snapshots is checked by spying on
   // the factories in features/chat/chat-tools-wearables.test.ts.
   test("the shared turn drains the guideline collector", () => {
-    expect(turnSource).toContain("drainGuidelineTurn(turnId)");
+    expect(turnSource).toContain("drainGuidelineTurn(key)");
   });
 });

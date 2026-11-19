@@ -92,7 +92,7 @@ describe("KioskBeatCard", () => {
       ...KIOSK_STRIP_HOURS,
       "03:00",
       "Deep sleep",
-      "Heart rate steady · about 52 /min · measured",
+      "Heart rate steady · about 52 /min · illustrative, not measured",
       "The heart keeps a steady pace.",
       "The twin shows: Heart.",
       ...NOTES,

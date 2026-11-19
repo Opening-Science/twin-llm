@@ -3,7 +3,8 @@ import { DAY_THRESHOLDS, type DayReading, type DayThresholds } from "./day-beats
 /**
  * How fast heart rate comes back after a workout. Pure, free of I/O.
  *
- * A workout is a run of consecutive readings while moving. Its baseline is the
+ * A workout is a run of consecutive readings while moving (a moving reading
+ * without heart rate does not end it). Its baseline is the
  * last still heart rate before it. It has recovered at the first still reading
  * after it, and before the next workout, whose heart rate is within
  * `recoveryWithinPerMin` of that baseline
@@ -16,7 +17,7 @@ import { DAY_THRESHOLDS, type DayReading, type DayThresholds } from "./day-beats
  */
 
 export type Recovery = Readonly<{
-  /** First and last moving reading, "HH:MM". */
+  /** First and last moving reading with a heart rate, "HH:MM". */
   from: string;
   to: string;
   event: string | null;
@@ -38,15 +39,30 @@ const minutesOf = (time: string): number => {
 
 type Run = Readonly<{ start: number; end: number }>;
 
-/** Index ranges of consecutive moving readings that carry a heart rate. */
+/**
+ * Index ranges of consecutive moving readings, from the first to the last
+ * that carries a heart rate. Only a reading that is not moving ends a run, so
+ * a moving reading with glucose alone does not split a workout; a run with no
+ * heart rate at all is none.
+ */
 const movingRuns = (readings: readonly DayReading[]): readonly Run[] =>
-  readings.reduce<Run[]>((runs, reading, index) => {
-    if (reading.moving !== true || reading.heartRatePerMin === null) return runs;
-    const last = runs[runs.length - 1];
-    return last !== undefined && last.end === index - 1
-      ? [...runs.slice(0, -1), { start: last.start, end: index }]
-      : [...runs, { start: index, end: index }];
-  }, []);
+  readings
+    .reduce<Run[]>((runs, reading, index) => {
+      if (reading.moving !== true) return runs;
+      const last = runs[runs.length - 1];
+      return last !== undefined && last.end === index - 1
+        ? [...runs.slice(0, -1), { start: last.start, end: index }]
+        : [...runs, { start: index, end: index }];
+    }, [])
+    .flatMap((run) => {
+      const withHeartRate = Array.from(
+        { length: run.end - run.start + 1 },
+        (_, offset) => run.start + offset,
+      ).filter((index) => readings[index]?.heartRatePerMin != null);
+      const start = withHeartRate[0];
+      const end = withHeartRate.at(-1);
+      return start === undefined || end === undefined ? [] : [{ start, end }];
+    });
 
 const stillHeartRate = (reading: DayReading | undefined): number | null =>
   reading?.moving === false ? reading.heartRatePerMin : null;

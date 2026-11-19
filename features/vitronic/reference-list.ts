@@ -64,9 +64,11 @@ export const REFERENCE_COLUMNS = [
 ] as const;
 
 /**
- * Rows in scan-number order across the whole list, so a later scan of any
- * subject is added at the end and every earlier `reference` (R01, R02, …)
- * keeps its number when the list is written again. `repeat` counts each
+ * Rows in scan-number order across the whole list, so a newer scan of any
+ * subject is added at the end. An older scan stored later (auto-sync stores
+ * the newest first) takes an earlier `reference` and moves the ones after it:
+ * R01, R02, … number one writing of the list, and `viatarId` is what stays
+ * the same. `repeat` counts each
  * subject's scans from 1. Scans of the same number (two subjects, never in
  * practice) follow the order the subjects were created. A scan is complete
  * with both a mesh and markers, as the Body twin's scan list says.

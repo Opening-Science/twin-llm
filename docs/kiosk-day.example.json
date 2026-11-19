@@ -14,7 +14,7 @@
       "direction": "steady",
       "value": 52,
       "unit": "/min",
-      "line": "Heart rate steady · about 52 /min · measured",
+      "line": "Heart rate steady · about 52 /min · illustrative, not measured",
       "body": {
         "text": "The heart keeps a steady pace.",
         "organ": "heart"
@@ -34,7 +34,7 @@
       "direction": "up",
       "value": 70,
       "unit": "/min",
-      "line": "Heart rate up · about 70 /min · measured",
+      "line": "Heart rate up · about 70 /min · illustrative, not measured",
       "body": {
         "text": "The heart beats faster to move more blood to working muscles.",
         "organ": "heart"
@@ -54,7 +54,7 @@
       "direction": "down",
       "value": 64,
       "unit": "/min",
-      "line": "Heart rate down · about 64 /min · measured",
+      "line": "Heart rate down · about 64 /min · illustrative, not measured",
       "body": {
         "text": "The heart slows as the body settles.",
         "organ": "heart"
@@ -74,7 +74,7 @@
       "direction": "up",
       "value": 135,
       "unit": "mg/dL",
-      "line": "Blood glucose up · about 135 mg/dL · measured",
+      "line": "Blood glucose up · about 135 mg/dL · illustrative, not measured",
       "body": {
         "text": "Sugar from food passes into the blood.",
         "organ": "bloodvasculature"
@@ -114,7 +114,7 @@
       "direction": "down",
       "value": 92,
       "unit": "mg/dL",
-      "line": "Blood glucose down · about 92 mg/dL · measured",
+      "line": "Blood glucose down · about 92 mg/dL · illustrative, not measured",
       "body": {
         "text": "Muscle and liver take sugar out of the blood.",
         "organ": "liver"
@@ -134,7 +134,7 @@
       "direction": "up",
       "value": 88,
       "unit": "/min",
-      "line": "Heart rate up · about 88 /min · measured",
+      "line": "Heart rate up · about 88 /min · illustrative, not measured",
       "body": {
         "text": "The heart beats faster to move more blood to working muscles.",
         "organ": "heart"
@@ -154,7 +154,7 @@
       "direction": "down",
       "value": 68,
       "unit": "/min",
-      "line": "Heart rate down · about 68 /min · measured",
+      "line": "Heart rate down · about 68 /min · illustrative, not measured",
       "body": {
         "text": "The heart slows as the body settles.",
         "organ": "heart"
@@ -174,7 +174,7 @@
       "direction": "up",
       "value": 100,
       "unit": "/min",
-      "line": "Heart rate up · about 100 /min · measured",
+      "line": "Heart rate up · about 100 /min · illustrative, not measured",
       "body": {
         "text": "The heart beats faster to move more blood to working muscles.",
         "organ": "heart"
@@ -214,7 +214,7 @@
       "direction": "down",
       "value": 68,
       "unit": "/min",
-      "line": "Heart rate down · about 68 /min · measured",
+      "line": "Heart rate down · about 68 /min · illustrative, not measured",
       "body": {
         "text": "The heart slows as the body settles.",
         "organ": "heart"
@@ -234,7 +234,7 @@
       "direction": "up",
       "value": 160,
       "unit": "/min",
-      "line": "Heart rate up · about 160 /min · measured",
+      "line": "Heart rate up · about 160 /min · illustrative, not measured",
       "body": {
         "text": "The heart beats faster to move more blood to working muscles.",
         "organ": "heart"
@@ -254,7 +254,7 @@
       "direction": "down",
       "value": 85,
       "unit": "/min",
-      "line": "Heart rate down · about 85 /min · measured",
+      "line": "Heart rate down · about 85 /min · illustrative, not measured",
       "body": {
         "text": "The heart slows as the body settles.",
         "organ": "heart"
@@ -274,7 +274,7 @@
       "direction": "up",
       "value": 100,
       "unit": "mg/dL",
-      "line": "Blood glucose up · about 100 mg/dL · measured",
+      "line": "Blood glucose up · about 100 mg/dL · illustrative, not measured",
       "body": {
         "text": "Sugar from food passes into the blood.",
         "organ": "bloodvasculature"
@@ -294,7 +294,7 @@
       "direction": "up",
       "value": 175,
       "unit": "mg/dL",
-      "line": "Blood glucose up · about 175 mg/dL · measured",
+      "line": "Blood glucose up · about 175 mg/dL · illustrative, not measured",
       "body": {
         "text": "Sugar from food passes into the blood.",
         "organ": "bloodvasculature"
@@ -354,7 +354,7 @@
       "direction": "down",
       "value": 105,
       "unit": "mg/dL",
-      "line": "Blood glucose down · about 105 mg/dL · measured",
+      "line": "Blood glucose down · about 105 mg/dL · illustrative, not measured",
       "body": {
         "text": "Muscle and liver take sugar out of the blood.",
         "organ": "liver"

@@ -4,7 +4,7 @@ import { isoLocalDate } from "@/infrastructure/format-measure";
 import { Button } from "@/infrastructure/ui-kit/button";
 import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
-import { resolveSyncDateWindow } from "./sync-window";
+import { pickEndDate, pickStartDate, windowLimits } from "./sync-window";
 
 export type DateRangeValue = Readonly<{
   startDate: string;
@@ -48,6 +48,8 @@ export const DateRangeBar = ({
     const r = rangeForDays(p.days);
     return r.startDate === value.startDate && r.endDate === value.endDate;
   });
+  const today = isoLocalDate();
+  const { startMin, endMax } = windowLimits(value, today);
 
   return (
     <div className="surface mt-6 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
@@ -72,16 +74,10 @@ export const DateRangeBar = ({
           From
           <input
             type="date"
+            min={startMin}
             max={value.endDate}
             value={value.startDate}
-            onChange={(e) =>
-              onChange(
-                resolveSyncDateWindow({
-                  startDate: e.target.value || value.startDate,
-                  endDate: value.endDate,
-                }),
-              )
-            }
+            onChange={(e) => onChange(pickStartDate(value, e.target.value))}
             className="border-input bg-background text-foreground rounded-md border px-2 py-1 font-mono text-xs"
           />
         </label>
@@ -90,16 +86,9 @@ export const DateRangeBar = ({
           <input
             type="date"
             min={value.startDate}
-            max={isoLocalDate()}
+            max={endMax}
             value={value.endDate}
-            onChange={(e) =>
-              onChange(
-                resolveSyncDateWindow({
-                  startDate: value.startDate,
-                  endDate: e.target.value || value.endDate,
-                }),
-              )
-            }
+            onChange={(e) => onChange(pickEndDate(value, e.target.value, today))}
             className="border-input bg-background text-foreground rounded-md border px-2 py-1 font-mono text-xs"
           />
         </label>

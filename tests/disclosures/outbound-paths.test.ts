@@ -90,6 +90,10 @@ const OUTBOUND: Readonly<Record<string, Entry>> = {
     exempt:
       "maps responses the sync already fetched into a FHIR bundle; it sends nothing",
   },
+  "infrastructure/open-twin-adapters/vitronic.ts": {
+    exempt:
+      "maps BodyLoop lists the host client already fetched into a FHIR bundle; it never builds the provider's client and sends nothing",
+  },
   "features/oura/summary.ts": { exempt: TYPES_ONLY },
   "features/oura/fixtures/synthetic-sync-data.ts": { exempt: TYPES_ONLY },
   "features/google-health/fixtures/synthetic-sync-responses.ts": { exempt: TYPES_ONLY },
@@ -208,7 +212,7 @@ const SCRIPTS: Readonly<Record<string, string>> = {
     "counts tokens of a synthetic prompt on the local Ollama",
   "scripts/local-https-gateway.mjs": "a TLS gateway on loopback in front of the app",
   "scripts/voice/serve.ts":
-    "the speech sidecar on loopback; whisper.cpp and Piper run on this machine",
+    "the speech sidecar on loopback; whisper.cpp, and a local voice only if the person set one up, run on this machine",
   "scripts/voice/round-trip.ts":
     "times the speech sidecar on loopback with fixed sentences; refuses any other address",
   "scripts/oura-oauth-proxy.mjs": "a redirect proxy on localhost for the OAuth return",
