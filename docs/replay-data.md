@@ -175,6 +175,29 @@ recorded day every status is "Not classified", with that reason. Synthetic
 demonstrations show every rule. Without enough data a status is "Not enough data", never
 Usual, on any origin, since it judges nothing.
 
+## Ten nights
+
+`nightSummaries(history, person, dates)` in `nights.ts` gives one summary per date, in
+order, from that person's days of that origin only. A date the history does not hold is
+"nothing recorded" and shows no value; it never borrows a neighbour's.
+
+| Field                                           | Provenance | Notes                                                                                          |
+| ----------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| `resting_heart_rate`, `hrv`                     | measured   | The device's nightly values, with source and time.                                             |
+| `baselines`, `bands`                            | derived    | Band: median ± 1.4826 × MAD of the 28 nights before. Unavailable without 7 nights.             |
+| `resting_delta`                                 | derived    | This night less the baseline median; unavailable without a baseline.                           |
+| `steps`                                         | derived    | The sum of the steps recorded, and whether they cover at least 90% of the day.                 |
+| `activity_minutes`                              | derived    | Minutes of each recorded walk and run; unavailable when no activity is recorded at all.        |
+| `peak_heart_rate`, `lowest_night_heart_rate`    | derived    | With the reading they came from. `night` is the sleep before waking, for the strip.            |
+| `availability`, `availability_text`, `coverage` | derived    | Complete, partial or none, said in words; coverage per stream over the day's quarter-hours.    |
+| `status`, `sentence`                            | derived    | Under `resting_heart_rate_elevated_nights` (demo only); the sentence states numbers, no cause. |
+
+A night 5 /min or more above the resting baseline is raised: alone it is Notable, the
+second in a row or later Worth a look, otherwise Usual. Without a baseline it is Not
+enough data. On the demo, 24 October is raised alone and 26–27 October in a row; person B
+has no baseline on any night. Every evidence id names its day (`2026-10-27/night-resting-hr`),
+the night's own reading as well as the baseline's, so ten nights never share one id.
+
 ## Heart-rate zones
 
 `zoneMinutes(day, person)` in `zones.ts` gives the minutes a day spent in each of four
