@@ -39,6 +39,15 @@ describe("voice in the doctor", () => {
     ]);
   });
 
+  test("a sidecar that only listens: answers are read aloud in the browser", async () => {
+    const sidecar = await startFakeSpeechSidecar({ listenOnly: true });
+    running.push(sidecar);
+    const probe = await probeVoice({ VOICE_SIDECAR_URL: sidecar.baseUrl }, home);
+    expect(voiceSection(probe)[2]).toBe(
+      "  [ok]      Sidecar answers: fake fixed sentences; answers read aloud in the browser",
+    );
+  });
+
   test("names what is missing", () => {
     expect(voiceSection({ setUp: true, url: null, health: null })[2]).toBe(
       "  [off]     VOICE_SIDECAR_URL not set: voice stays off in the app",

@@ -7,8 +7,9 @@ import { speechHealthSchema } from "../../infrastructure/speech/contract";
 /**
  * Voice for `bun run doctor` (docs/voice.md): whether the engines are set up
  * (`voice.json` from `voice:setup`), whether `VOICE_SIDECAR_URL` is set and on
- * this machine, and whether the sidecar answers its health. Read-only, and it
- * says nothing when voice was never asked for.
+ * this machine, and whether the sidecar answers its health, with its engine
+ * and, only if a person set one up, its local voice. Read-only, and it says
+ * nothing when voice was never asked for.
  */
 
 export type VoiceProbe = Readonly<{
@@ -43,7 +44,10 @@ export const probeVoice = async (
             parsed?.success === true
               ? {
                   stt: `${parsed.data.stt.engine} ${parsed.data.stt.model}`,
-                  tts: `${parsed.data.tts.engine} ${parsed.data.tts.voices.en}, ${parsed.data.tts.voices.de}`,
+                  tts:
+                    parsed.data.tts === null
+                      ? "answers read aloud in the browser"
+                      : `${parsed.data.tts.engine} ${parsed.data.tts.voices.en}, ${parsed.data.tts.voices.de}`,
                 }
               : null,
           )
