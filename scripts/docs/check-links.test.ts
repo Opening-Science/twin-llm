@@ -200,6 +200,7 @@ describe("pagesToCheck", () => {
       "docs/runbook.md",
       "skills/sleep/SKILL.md",
       "knowledge/opentwin/metric-glossary.md",
+      "data/anatomy/glucose-particles/HANDOFF.md",
       "public/fonts/README.md",
       "python/README.md",
       ".github/pull_request_template.md",
