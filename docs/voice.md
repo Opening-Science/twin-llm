@@ -115,10 +115,15 @@ stops. One answer plays at a time.
 
 What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
 code, tables, images, web addresses and bracketed citation ids are left out, a link keeps
-its words, and a heading or list item ends as a sentence. The text goes to
-`/api/voice/speak` in pieces of whole sentences of up to 400 characters, so the first
-plays while the next is made, and nothing is kept once it has played. A spoken turn is
-known only to the open page; a reloaded thread is not read back on its own.
+its words, and a heading or list item ends as a sentence. It is read with the browser's
+own voices (the Web Speech API, `infrastructure/speech/browser-speech.ts`), in pieces of
+whole sentences of up to 400 characters, so nothing is downloaded and nothing goes to the
+sidecar. Only a voice on this machine is used, en-GB or de-DE first, then any English or
+German one: some browsers also offer voices that speak through their maker's servers, and
+those are never picked. A browser with no such voice says so beside the button and reads
+nothing. Which voices there are depends on the system; nothing is kept once it has played.
+A spoken turn is known only to the open page; a reloaded thread is not read back on its
+own.
 
 ## The twin turns
 
