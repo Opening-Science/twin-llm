@@ -1,3 +1,5 @@
+import { collectorKey } from "@/packages/audit/answer-scope";
+
 export type GuidelineCitation = {
   readonly tool: string;
   readonly id: string;
@@ -25,8 +27,9 @@ export const recordGuidelineTurn = (
   sessionId: string,
   sources: readonly GuidelineCitation[],
 ): void => {
-  const prev = turns.get(sessionId) ?? { sources: [] };
-  turns.set(sessionId, { sources: [...prev.sources, ...sources] });
+  const key = collectorKey(sessionId);
+  const prev = turns.get(key) ?? { sources: [] };
+  turns.set(key, { sources: [...prev.sources, ...sources] });
 };
 
 export const drainGuidelineTurn = (sessionId: string): GuidelineTurn => {

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { summariseRun } from "./eval-runs";
 import { type ResultsData } from "./load-results";
-import { EvalRunsBody } from "./results-section";
+import { BenchmarkBody, EvalRunsBody } from "./results-section";
 
 const REPORT = [
   "## Scores: ollama:qwen3:4b",
@@ -45,5 +45,25 @@ describe("EvalRunsBody claim sources (#612)", () => {
   test("a report without them shows no claim-sources block", () => {
     const html = renderToStaticMarkup(<EvalRunsBody data={data(REPORT)} />);
     expect(html).not.toContain("claim sources");
+  });
+});
+
+describe("Lab commands on a phone", () => {
+  const lines = (html: string) => html.match(/class="command-line"/g)?.length ?? 0;
+
+  test("the evaluation commands wrap one line per command, as on the checks", () => {
+    const html = renderToStaticMarkup(
+      <EvalRunsBody data={{ ...data(REPORT), runs: [] }} />,
+    );
+    expect(lines(html)).toBe(3);
+  });
+
+  test("the benchmark command and its note wrap one line each", () => {
+    const html = renderToStaticMarkup(
+      <BenchmarkBody
+        data={{ dir: ".rhythm-bench", runs: 0, path: null, read: { kind: "missing" } }}
+      />,
+    );
+    expect(lines(html)).toBe(2);
   });
 });

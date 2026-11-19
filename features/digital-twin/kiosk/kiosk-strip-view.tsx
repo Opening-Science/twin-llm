@@ -1,7 +1,7 @@
 import { type KioskDay } from "@/packages/query-tools/kiosk-day";
 
 import { KIOSK_STRIP_HOURS } from "./kiosk-copy";
-import { dayStrip } from "./kiosk-strip";
+import { dayShare, dayStrip } from "./kiosk-strip";
 
 const percent = (share: number): string => `${(share * 100).toFixed(3)}%`;
 
@@ -39,7 +39,9 @@ export const KioskDayStrip = ({
       </div>
       <div className="kiosk-strip-hours">
         {KIOSK_STRIP_HOURS.map((hour) => (
-          <span key={hour}>{hour}</span>
+          <span key={hour} style={{ left: percent(dayShare(hour)) }}>
+            {hour}
+          </span>
         ))}
       </div>
     </div>

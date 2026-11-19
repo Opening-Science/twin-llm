@@ -247,6 +247,27 @@ const tooSoon = (deps: VaultServiceDeps, actorId: string): Refused | null => {
   return { ...refused(429, VAULT_COPY.wait(seconds)), retryAfterSeconds: seconds };
 };
 
+/**
+ * Runs one setup, unlock or recovery while no other runs for the actor. A
+ * request that arrives while one is being checked is refused like a try
+ * inside the wait, without a KDF run, so the wait between wrong tries cannot
+ * be skipped by sending them at once, and two setups never write two keys.
+ */
+const oneAtATime = async <T>(
+  deps: VaultServiceDeps,
+  actorId: string,
+  run: () => Promise<T | Refused>,
+): Promise<T | Refused> => {
+  if (!deps.sessions.beginAttempt(actorId)) {
+    return { ...refused(429, VAULT_COPY.wait(1)), retryAfterSeconds: 1 };
+  }
+  try {
+    return await run();
+  } finally {
+    deps.sessions.endAttempt(actorId);
+  }
+};
+
 /** Counts a wrong attempt and writes its row (a failed row never turns a refusal into a pass). */
 const wrongAttempt = async (
   deps: VaultServiceDeps,
@@ -267,6 +288,14 @@ export const setUpVault = async (
 ): Promise<OpenedWithCode | Refused> => {
   const problem = passphraseProblem(passphrase);
   if (problem !== null) return refused(400, problem);
+  return oneAtATime(deps, actorId, () => setUpNow(deps, actorId, passphrase));
+};
+
+const setUpNow = async (
+  deps: VaultServiceDeps,
+  actorId: string,
+  passphrase: string,
+): Promise<OpenedWithCode | Refused> => {
   const existing = await deps.read(actorId);
   if (existing.kind === "found") return refused(409, VAULT_COPY.alreadySetUp);
   if (existing.kind === "unreadable") return refused(500, VAULT_COPY.unreadable);
@@ -305,6 +334,13 @@ export const unlockVault = async (
   deps: VaultServiceDeps,
   actorId: string,
   passphrase: string,
+): Promise<Opened | Refused> =>
+  oneAtATime(deps, actorId, () => unlockNow(deps, actorId, passphrase));
+
+const unlockNow = async (
+  deps: VaultServiceDeps,
+  actorId: string,
+  passphrase: string,
 ): Promise<Opened | Refused> => {
   const wait = tooSoon(deps, actorId);
   if (wait !== null) return wait;
@@ -328,6 +364,14 @@ export const unlockVault = async (
 
 /** A forgotten passphrase: the recovery code opens the key, which is rewrapped under a new passphrase and a new code. */
 export const recoverVault = async (
+  deps: VaultServiceDeps,
+  actorId: string,
+  code: string,
+  newPassphrase: string,
+): Promise<OpenedWithCode | Refused> =>
+  oneAtATime(deps, actorId, () => recoverNow(deps, actorId, code, newPassphrase));
+
+const recoverNow = async (
   deps: VaultServiceDeps,
   actorId: string,
   code: string,
