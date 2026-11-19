@@ -79,6 +79,26 @@ const COPY: Readonly<Record<WearableSyncProvider, SyncCopy>> = {
 const errorName = (error: unknown): string =>
   error instanceof Error ? error.name : "unknown";
 
+/**
+ * The body as a sync request, field by field: dates only as text, the
+ * sandbox only as `true`, so the sync and the ledger read the same flag.
+ * Anything else (null, an array, a number) is no request, so the default
+ * window applies.
+ */
+export const parseSyncRequest = (body: unknown): WearableSyncRequest => {
+  const record =
+    typeof body === "object" && body !== null && !Array.isArray(body) ? body : {};
+  const text = (key: string) => {
+    const value: unknown = Reflect.get(record, key);
+    return typeof value === "string" ? value : undefined;
+  };
+  return {
+    sandbox: Reflect.get(record, "sandbox") === true ? true : undefined,
+    startDate: text("startDate"),
+    endDate: text("endDate"),
+  };
+};
+
 export const createWearableSyncHandler = (deps: WearableSyncDeps) => {
   const copy = COPY[deps.provider];
 
@@ -97,8 +117,8 @@ export const createWearableSyncHandler = (deps: WearableSyncDeps) => {
       return NextResponse.json({ error: "User record missing." }, { status: 400 });
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { sandbox, startDate, endDate } = body as WearableSyncRequest;
+    const body: unknown = await request.json().catch(() => ({}));
+    const { sandbox, startDate, endDate } = parseSyncRequest(body);
 
     try {
       const summary = await auditThenSave(

@@ -24,6 +24,34 @@ const CATALOG: readonly CatalogModel[] = [
   model("llama3.2:3b", "Llama 3.2 3B", "meta"),
 ];
 
+const GENERAL: CatalogModel = {
+  ...model("agent:gp", "General"),
+  agent: {
+    id: "gp",
+    name: "General",
+    role: "A synthetic role.",
+    skill: null,
+    baseModelId: "qwen3:8b",
+    baseModelName: "qwen3:8b",
+  },
+};
+
+describe("a specialist's column names its model beside another answer (#859)", () => {
+  const catalog = [GENERAL, model("qwen3:8b", "qwen3:8b"), ...CATALOG];
+  const names = (modelIds: readonly string[]) => {
+    const result = planTurn({ prompt: "Latest glucose?", modelIds }, catalog, "ollama");
+    return result.ok ? result.plan.models.map((each) => each.name) : result.error;
+  };
+
+  test("General on its own model beside qwen3:4b says which model it ran on", () => {
+    expect(names(["agent:gp", "qwen3:4b"])).toEqual(["General · qwen3:8b", "Qwen3 4B"]);
+  });
+
+  test("alone it stays General", () => {
+    expect(names(["agent:gp"])).toEqual(["General"]);
+  });
+});
+
 describe("the turn plan (SERVER-SPEC 3.1)", () => {
   test("first failure wins, in order", () => {
     expect(planTurn({ prompt: "  ", modelIds: [] }, null, "ollama")).toEqual({

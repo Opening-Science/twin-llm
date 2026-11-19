@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { useCopy } from "@/infrastructure/locale/locale-provider";
 import { formatNumber } from "@/infrastructure/format-measure";
 import { mergeRecentThreads, type ShellThread } from "@/infrastructure/recent-threads";
 import { useThreadHistory } from "@/infrastructure/thread-history-store";
@@ -25,7 +26,8 @@ import {
 } from "@/infrastructure/ui-kit/nav-icons";
 
 import { dayKey, groupByDay, type ViewerDay } from "./day-groups";
-import { isCurrentSection, modelCountText, SECTIONS, type SectionKey } from "./sections";
+import { isCurrentSection, SECTIONS, type SectionKey } from "./sections";
+import { SHELL_COPY } from "./shell-copy";
 import { threadIdOfPath } from "./thread-crumb";
 
 /**
@@ -53,12 +55,6 @@ export type SidebarData = Readonly<{
   vaultLocked: boolean;
   slots: SidebarSlots;
 }>;
-
-export const SIDEBAR_COPY = {
-  locked: "Locked. Unlock to see your threads.",
-  empty: "No threads yet. Your first prompt starts one.",
-  signIn: "Sign in to keep your threads and come back to them.",
-} as const;
 
 const SECTION_ICON: Readonly<
   Record<SectionKey, (props: { className?: string }) => ReactNode>
@@ -111,6 +107,7 @@ export const SidebarPanel = ({
   onFollow?: () => void;
 }>) => {
   const path = usePathname();
+  const copy = useCopy(SHELL_COPY);
 
   // Following a link (or the Search row) closes a peeking panel or the phone
   // menu first. Capture, so the menu is gone before search opens its own box.
@@ -128,7 +125,7 @@ export const SidebarPanel = ({
         {headerControl}
       </div>
 
-      <nav aria-label="Sections" className="flex shrink-0 flex-col px-3 pb-4">
+      <nav aria-label={copy.sectionsLabel} className="flex shrink-0 flex-col px-3 pb-4">
         {data.slots.searchRow}
         {SECTIONS.map((section) => {
           const Icon = SECTION_ICON[section.key];
@@ -140,7 +137,7 @@ export const SidebarPanel = ({
               aria-current={isCurrentSection(section.href, path) ? "page" : undefined}
             >
               <Icon />
-              {section.label}
+              {copy.sections[section.key]}
               {section.key === "customize" && data.slots.customizeBadge}
             </Link>
           );
@@ -162,6 +159,7 @@ const YourThreads = ({
   path,
 }: Readonly<{ data: SidebarData; path: string | null }>) => {
   const headingId = useId();
+  const copy = useCopy(SHELL_COPY);
   const { touched, hidden } = useThreadHistory();
   const viewer = useViewerDay(data.renderedAt);
   const merged = useMemo(
@@ -174,25 +172,23 @@ const YourThreads = ({
     if (!data.signedIn) {
       return data.slots.signIn === null ? null : (
         <div className="flex flex-col items-start gap-2 px-2.5 text-sm">
-          <p className="text-muted-foreground">{SIDEBAR_COPY.signIn}</p>
+          <p className="text-muted-foreground">{copy.signIn}</p>
           {data.slots.signIn}
         </div>
       );
     }
     if (data.vaultLocked) {
-      return (
-        <p className="text-muted-foreground px-2.5 text-sm">{SIDEBAR_COPY.locked}</p>
-      );
+      return <p className="text-muted-foreground px-2.5 text-sm">{copy.locked}</p>;
     }
     if (merged.length === 0) {
-      return <p className="text-muted-foreground px-2.5 text-sm">{SIDEBAR_COPY.empty}</p>;
+      return <p className="text-muted-foreground px-2.5 text-sm">{copy.empty}</p>;
     }
     return groupByDay(merged, viewer).map((group) => {
       const groupId = `${headingId}-${group.label.replace(" ", "-")}`;
       return (
         <div key={group.label} className="mb-4">
           <h3 id={groupId} className="text-muted-foreground px-2.5 pb-1 text-xs">
-            {group.label}
+            {copy.days[group.label]}
           </h3>
           <ul aria-labelledby={groupId} className="flex flex-col">
             {group.threads.map((thread) => (
@@ -203,11 +199,14 @@ const YourThreads = ({
                   aria-current={thread.id === openId ? "page" : undefined}
                 >
                   <span className="min-w-0 flex-1 truncate">
-                    {thread.title.trim() === "" ? "Thread" : thread.title}
+                    {thread.title.trim() === "" ? copy.untitledThread : thread.title}
                   </span>
                   <span className="text-muted-foreground shrink-0 font-mono text-xs">
                     <span className="sr-only">, </span>
-                    {modelCountText(thread.modelCount, (value) => formatNumber(value, 0))}
+                    {copy.models(
+                      formatNumber(thread.modelCount, 0),
+                      thread.modelCount === 1,
+                    )}
                   </span>
                 </Link>
               </li>
@@ -225,7 +224,7 @@ const YourThreads = ({
     >
       <div className="mb-3 flex items-center justify-between px-2.5">
         <h2 id={headingId} className="text-eyebrow">
-          Your threads
+          {copy.yourThreads}
         </h2>
         {data.signedIn && (
           <Link
@@ -233,7 +232,7 @@ const YourThreads = ({
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 rounded-sm text-xs"
           >
             <PlusIcon className="size-3.5" />
-            New
+            {copy.newThread}
           </Link>
         )}
       </div>

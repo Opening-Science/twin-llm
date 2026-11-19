@@ -314,6 +314,8 @@ export const createStreamModelResponse =
       },
       {
         turnId,
+        // A Compare or Specialists turn runs one of these per answer (#856).
+        answerId: modelId,
         messages,
         wearables: turnWearables,
         abortSignal: context.stop?.signal,

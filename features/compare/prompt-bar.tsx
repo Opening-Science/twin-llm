@@ -12,6 +12,7 @@ import {
   unknownCommandHint,
 } from "@/features/commands/command-palette";
 import {
+  builtInDraft,
   COMPACT_COMMAND,
   type Command,
   matchCommands,
@@ -250,20 +251,6 @@ export const PromptBar = ({
     setConnectOpen(false);
   };
 
-  const send = () => {
-    if (!canSend) return;
-    const sent =
-      skill === null
-        ? { ...chipSend(draft, chip), skill: null }
-        : { prompt: skill.prompt, label: null, skill: skill.skill.name };
-    onSend({ ...sent, models: picked, effort });
-    setDraft("");
-    setChip(null);
-    setDismissed(null);
-    setConnectOpen(false);
-    setActive(0);
-  };
-
   const pickCommand = (command: Command) => {
     if (command.name === TWIN_COMMAND) {
       changeDraft("");
@@ -282,6 +269,26 @@ export const PromptBar = ({
     }
     changeDraft(withCommand(command.name));
     box.current?.focus();
+  };
+
+  const send = () => {
+    // `/twin` alone runs the command from the button too, never as a prompt.
+    const builtIn = builtInDraft(draft);
+    if (builtIn !== null && !sending) {
+      pickCommand(builtIn);
+      return;
+    }
+    if (!canSend) return;
+    const sent =
+      skill === null
+        ? { ...chipSend(draft, chip), skill: null }
+        : { prompt: skill.prompt, label: null, skill: skill.skill.name };
+    onSend({ ...sent, models: picked, effort });
+    setDraft("");
+    setChip(null);
+    setDismissed(null);
+    setConnectOpen(false);
+    setActive(0);
   };
 
   const pickSource = (option: SourceOption) => {

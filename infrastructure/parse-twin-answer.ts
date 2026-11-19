@@ -9,8 +9,9 @@ import {
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
+import { cellsOf, statedFrom } from "@/infrastructure/wearable-cell";
 import { metricDay } from "@/infrastructure/wearable-provenance";
-import { isCitationToken } from "@/infrastructure/source-ids";
+import { looksLikeId, UNSUPPORTED_MARK } from "@/infrastructure/source-ids";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
 
 export type { EvidenceAttribution } from "@/infrastructure/oura-types";
@@ -164,8 +165,15 @@ const KEY_LIKE = /^[a-z0-9_-]{2,}(?:\.[a-z0-9_-]+)+$/i;
  * token is `none` or key-like (`- key`). Other bullet words are prose, not
  * citations: `- Sleep score was 80` cites nothing, and is left to the label
  * fallback in `resolveAttribution`.
+ *
+ * `[unsupported]` and a source id the turn's searches returned are no key
+ * (#612). A source id no search returned is one (#850), so it is counted
+ * among the hallucinated keys rather than nowhere.
  */
-const parseCitedKeys = (evidenceSection: string | null): string[] => {
+const parseCitedKeys = (
+  evidenceSection: string | null,
+  returnedIds: ReadonlySet<string>,
+): string[] => {
   if (!evidenceSection) return [];
   const keys: string[] = [];
   const seen = new Set<string>();
@@ -182,10 +190,10 @@ const parseCitedKeys = (evidenceSection: string | null): string[] => {
     if (!trimmed || trimmed.startsWith("#")) continue;
 
     for (const match of trimmed.matchAll(/\[([a-z0-9_.-]+)\]/gi)) {
-      // A literature citation is not a key (#612): the search tools ask for
-      // these, and a model that also lists them under Evidence Used has not
-      // invented a key.
-      if (!isCitationToken(match[1] ?? "")) push(match[1]);
+      const token = match[1] ?? "";
+      const lower = token.toLowerCase();
+      const returned = looksLikeId(token) && returnedIds.has(lower);
+      if (!returned && lower !== UNSUPPORTED_MARK) push(token);
     }
 
     if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
@@ -261,10 +269,13 @@ export const resolveAttribution = (
 /**
  * Each cited value with the check of the number the reply states for it
  * against its stored reading (#545). A value that is not a number keeps no check.
+ * A number that does not match also says which other offered reading it is,
+ * when it is exactly one of them (#508, `statedFrom`).
  */
 export const withValueChecks = (
   attribution: readonly EvidenceAttribution[],
   reply: string,
+  offered: readonly OfferedMetric[] = [],
 ): EvidenceAttribution[] => {
   const checks = checkCitedValues(
     reply,
@@ -275,9 +286,28 @@ export const withValueChecks = (
       ...(item.unit === undefined ? {} : { unit: item.unit }),
     })),
   );
+  const cells = cellsOf(offered);
   return attribution.map((item, index) => {
     const valueCheck = checks[index];
-    return valueCheck == null ? item : { ...item, valueCheck };
+    if (valueCheck == null) return item;
+    const from =
+      valueCheck.status === "not_matched" && valueCheck.stated !== undefined
+        ? statedFrom(
+            {
+              key: item.metricKey,
+              label: item.label,
+              value: item.value,
+              ...(item.unit === undefined ? {} : { unit: item.unit }),
+              ...(item.day === undefined ? {} : { date: item.day }),
+              ...(item.source === undefined ? {} : { source: item.source }),
+            },
+            valueCheck.stated,
+            cells,
+          )
+        : null;
+    return from === null
+      ? { ...item, valueCheck }
+      : { ...item, valueCheck, statedFrom: from };
   });
 };
 
@@ -314,10 +344,13 @@ const normalizeSummaries = (
  * Splits a Twin LLM structured reply into CoT, answer body, and attributions.
  * Citations are checked against `offeredMetrics` of the snapshots passed in,
  * the same keys the system prompt listed, whichever caller passes them.
+ * `returnedIds` holds the lower-case source ids the turn's searches returned
+ * (the keys of `referenceSources`); none when the turn searched nothing.
  */
 export const parseTwinAnswer = (
   reply: string,
   summaries: WearableSummaries | OuraSummary | null | undefined,
+  returnedIds: ReadonlySet<string> = new Set(),
 ): ParsedTwinAnswer => {
   // Thinking a model leaked past `think: false` is never the answer; it stands
   // in for the reasoning only when the reply has no Reasoning section.
@@ -328,7 +361,7 @@ export const parseTwinAnswer = (
   const evidenceSection = sectionText(spans, text, "evidence");
   const answerSection = withoutGuidanceEcho(sectionText(spans, text, "answer"));
   const uncertaintyText = withoutGuidanceEcho(sectionText(spans, text, "uncertainty"));
-  const citedKeys = parseCitedKeys(evidenceSection);
+  const citedKeys = parseCitedKeys(evidenceSection, returnedIds);
   const realKeys = citedKeysForDataBasis(citedKeys);
 
   return {
@@ -343,6 +376,7 @@ export const parseTwinAnswer = (
     attribution: withValueChecks(
       resolveAttribution(citedKeys, offered, evidenceSection),
       text,
+      offered,
     ),
     declined: classifyCompletion(text) === "REFUSE",
     offeredKeyCount: offered.length,
