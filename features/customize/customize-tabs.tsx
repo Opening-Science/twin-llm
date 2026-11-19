@@ -4,23 +4,34 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useCopy, useLocale } from "@/infrastructure/locale/locale-provider";
+import { htmlLang } from "@/infrastructure/locale/locale";
+
+import { CUSTOMIZE_COPY, type CustomizeTabKey } from "./customize-copy";
 import { centredScrollLeft, type RowOverflow, rowOverflow } from "./row-overflow";
 
 /**
  * Customize's parts: the skills you can run, the agents built on them
  * (#221), your twin notes (#43), scheduled skill runs (#54), the data you bring, the services you link, consent to learn from your data (#145), and every keep or withhold choice in one list (#507). Links, not buttons, so each part has its own address
- * and the browser's back button works.
+ * and the browser's back button works. Their names are in `customize-copy.ts`.
  */
-export const CUSTOMIZE_TABS = [
-  { href: "/customize", label: "Skills" },
-  { href: "/customize/agents", label: "Agents" },
-  { href: "/customize/memory", label: "Memory" },
-  { href: "/customize/tasks", label: "Tasks" },
-  { href: "/customize/data", label: "Data" },
-  { href: "/customize/connectors", label: "Connectors" },
-  { href: "/customize/privacy", label: "Privacy" },
-  { href: "/customize/settings", label: "Settings" },
-] as const;
+export const CUSTOMIZE_TABS: readonly Readonly<{ key: CustomizeTabKey; href: string }>[] =
+  [
+    { key: "skills", href: "/customize" },
+    { key: "agents", href: "/customize/agents" },
+    { key: "memory", href: "/customize/memory" },
+    { key: "tasks", href: "/customize/tasks" },
+    { key: "data", href: "/customize/data" },
+    { key: "connectors", href: "/customize/connectors" },
+    { key: "privacy", href: "/customize/privacy" },
+    { key: "settings", href: "/customize/settings" },
+  ];
+
+/** The words and `lang` of Customize's section links, in the viewer's language. */
+export const useCustomizeNav = () => {
+  const copy = useCopy(CUSTOMIZE_COPY);
+  return { copy, lang: htmlLang(useLocale()) };
+};
 
 export const currentTab = (path: string): string =>
   CUSTOMIZE_TABS.find(({ href }) => href !== "/customize" && path.startsWith(href))
@@ -28,6 +39,7 @@ export const currentTab = (path: string): string =>
 
 export const CustomizeTabs = () => {
   const current = currentTab(usePathname());
+  const { copy, lang } = useCustomizeNav();
   const nav = useRef<HTMLElement>(null);
   const [more, setMore] = useState<RowOverflow>({ start: false, end: false });
 
@@ -60,24 +72,26 @@ export const CustomizeTabs = () => {
       row.removeEventListener("focusin", onFocus);
       resize.disconnect();
     };
-  }, [current]);
+    // The language changes the tabs' widths, so the row is centred again.
+  }, [current, lang]);
 
   return (
     <nav
       ref={nav}
-      aria-label="Customize"
+      lang={lang}
+      aria-label={copy.navLabel}
       className="segmented mt-6"
       data-more-start={more.start || undefined}
       data-more-end={more.end || undefined}
     >
-      {CUSTOMIZE_TABS.map(({ href, label }) => (
+      {CUSTOMIZE_TABS.map(({ key, href }) => (
         <Link
           key={href}
           href={href}
           aria-current={href === current ? "page" : undefined}
           className="segmented-item"
         >
-          {label}
+          {copy.tabs[key]}
         </Link>
       ))}
     </nav>

@@ -170,6 +170,20 @@ export const dateAxisTicks = (start: number, end: number): readonly TimeTick[] =
   });
 };
 
+/**
+ * The time ticks whose labels fit side by side in `plotWidth`: every
+ * `labelIndexes` step, the last always kept. Room per label is about 7 px a
+ * character of 11 px text plus a gap, so "2018" needs 48 px and "Mar 2021" 76.
+ */
+export const fitTimeTicks = (
+  ticks: readonly TimeTick[],
+  plotWidth: number,
+): readonly TimeTick[] => {
+  const longest = ticks.reduce((most, tick) => Math.max(most, tick.label.length), 0);
+  const room = longest * 7 + 20;
+  return labelIndexes(ticks.length, Math.floor(plotWidth / room)).map((i) => ticks[i]!);
+};
+
 /** x for a time: proportional to time inside [start, end]; a zero span centres. */
 export const timeScale =
   (start: number, end: number, left: number, width: number) =>

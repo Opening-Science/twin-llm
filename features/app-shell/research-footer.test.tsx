@@ -38,10 +38,10 @@ describe("research footer (binding text)", () => {
     );
   });
 
-  test("without residency the research sentence stands alone", () => {
+  test("without residency the research sentence stands alone, marked as English", () => {
     const html = renderToStaticMarkup(createElement(ResearchFooter));
     expect(html).toBe(
-      `<footer class="research-footer"><p class="hidden sm:block"><span class="research-footer-half">${RESEARCH_FOOTER_TEXT}</span></p><details class="research-footer-phone sm:hidden"><summary>${RESEARCH_FOOTER_SHORT} <span class="research-footer-more">More</span><span class="research-footer-less">Less</span></summary><p class="mt-1">${RESEARCH_FOOTER_TEXT}</p></details></footer>`,
+      `<footer class="research-footer" lang="en-GB"><p class="hidden sm:block"><span class="research-footer-half">${RESEARCH_FOOTER_TEXT}</span></p><details class="research-footer-phone sm:hidden"><summary>${RESEARCH_FOOTER_SHORT} <span class="research-footer-more">More</span><span class="research-footer-less">Less</span></summary><p class="mt-1">${RESEARCH_FOOTER_TEXT}</p></details></footer>`,
     );
   });
 

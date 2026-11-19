@@ -27,7 +27,7 @@ const fakeFetch = (answers: Readonly<Record<string, () => Response>>) => {
 };
 
 describe("listRemoteGpuModels", () => {
-  test("merges every tunnel in URL order and routes each id to the URL that listed it", async () => {
+  test("merges every tunnel and routes each id to the URL that listed it", async () => {
     const { calls, fetch } = fakeFetch({
       [`${PORT_8000}/models`]: () =>
         modelList({ id: "onprem-ai/Apertus-v1.5-70B-FP8", max_model_len: 16384 }),
@@ -41,9 +41,10 @@ describe("listRemoteGpuModels", () => {
       fetch,
     });
 
+    // Equal windows sort by name.
     expect(catalog.models.map((model) => model.id)).toEqual([
-      "onprem-ai/Apertus-v1.5-70B-FP8",
       "apertus-70b-fp8",
+      "onprem-ai/Apertus-v1.5-70B-FP8",
     ]);
     expect([...catalog.routes]).toEqual([
       ["onprem-ai/Apertus-v1.5-70B-FP8", PORT_8000],
@@ -141,12 +142,41 @@ describe("listRemoteGpuModels", () => {
     expect(
       catalog.models.map((model) => [model.id, model.contextTokens] as const),
     ).toEqual([
-      ["apertus-70b-fp8", 16384],
       ["swiss-ai/Apertus-v1.5-8B", 32768],
+      ["apertus-70b-fp8", 16384],
     ]);
     expect([...catalog.routes]).toEqual([
       ["apertus-70b-fp8", PORT_8000],
       ["swiss-ai/Apertus-v1.5-8B", PORT_8002],
+    ]);
+  });
+
+  test("lists the widest window first across servers, then the ones that report none", async () => {
+    const { fetch } = fakeFetch({
+      [`${PORT_8000}/models`]: () =>
+        new Response(
+          JSON.stringify({
+            data: [{ id: "no-window" }, { id: "small", max_model_len: 8192 }],
+          }),
+        ),
+      [`${PORT_8002}/models`]: () => modelList({ id: "wide", max_model_len: 131072 }),
+    });
+
+    const catalog = await listRemoteGpuModels({
+      baseUrls: [PORT_8000, PORT_8002],
+      apiKey: null,
+      fetch,
+    });
+
+    expect(catalog.models.map((model) => model.id)).toEqual([
+      "wide",
+      "small",
+      "no-window",
+    ]);
+    expect([...catalog.routes]).toEqual([
+      ["small", PORT_8000],
+      ["no-window", PORT_8000],
+      ["wide", PORT_8002],
     ]);
   });
 
@@ -176,18 +206,18 @@ describe("listRemoteGpuModels", () => {
 
     expect(catalog.models).toEqual([
       {
-        id: "swiss-ai/Apertus-8B-Instruct-2509",
-        name: "swiss-ai/Apertus-8B-Instruct-2509",
-        provider: "Exoscale (Switzerland)",
-        providerId: "exoscale",
-        contextTokens: 32768,
-      },
-      {
         id: "Qwen/Qwen3-8B",
         name: "Qwen/Qwen3-8B",
         provider: "Exoscale (Switzerland)",
         providerId: "exoscale",
         contextTokens: 40960,
+      },
+      {
+        id: "swiss-ai/Apertus-8B-Instruct-2509",
+        name: "swiss-ai/Apertus-8B-Instruct-2509",
+        provider: "Exoscale (Switzerland)",
+        providerId: "exoscale",
+        contextTokens: 32768,
       },
     ]);
     expect([...catalog.routes]).toEqual([

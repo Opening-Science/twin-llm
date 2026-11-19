@@ -16,6 +16,7 @@
         "@open-twin/fhir-r4": "file:.open-twin/packages/fhir-r4",
         "@open-twin/provider-google-health": "file:.open-twin/packages/provider-google-health",
         "@open-twin/provider-oura": "file:.open-twin/packages/provider-oura",
+        "@open-twin/provider-vitronic": "file:.open-twin/packages/provider-vitronic",
         "@open-twin/provider-whoop": "file:.open-twin/packages/provider-whoop",
         "@openrouter/ai-sdk-provider": "3.0.0",
         "@pdf-lib/fontkit": "1.1.1",
@@ -398,6 +399,8 @@
     "@open-twin/provider-google-health": ["@open-twin/provider-google-health@file:.open-twin/packages/provider-google-health", { "dependencies": { "@googleapis/health": "7.0.1", "@types/fhir": "0.0.44", "googleapis": "188.0.0" }, "devDependencies": { "@lhncbc/ucum-lhc": "8.0.1", "@rollup/plugin-swc": "0.4.1", "@types/node": "26.6.5", "jest-extended": "7.0.0", "reflect-metadata": "0.2.2", "tsup": "9.0.0", "typescript": "5.9.3", "vitest": "5.0.5" }, "peerDependencies": { "@open-twin/fhir-core": "0.1.0" } }],
 
     "@open-twin/provider-oura": ["@open-twin/provider-oura@file:.open-twin/packages/provider-oura", { "dependencies": { "@types/fhir": "0.0.44", "zod": "4.6.7" }, "devDependencies": { "@lhncbc/ucum-lhc": "8.0.1", "@rollup/plugin-swc": "0.4.1", "@types/node": "26.6.5", "jest-extended": "7.0.0", "reflect-metadata": "0.2.2", "tsup": "9.0.0", "typescript": "5.9.3", "vitest": "5.0.5" }, "peerDependencies": { "@open-twin/fhir-core": "0.1.0" } }],
+
+    "@open-twin/provider-vitronic": ["@open-twin/provider-vitronic@file:.open-twin/packages/provider-vitronic", { "dependencies": { "@open-twin/fhir-core": "file:../fhir-core", "@types/fhir": "0.0.44", "zod": "4.6.7" }, "devDependencies": { "@lhncbc/ucum-lhc": "8.0.1", "@rollup/plugin-swc": "0.4.1", "@types/node": "26.6.5", "jest-extended": "7.0.0", "reflect-metadata": "0.2.2", "tsup": "9.0.0", "typescript": "5.9.3", "vitest": "5.0.5" } }],
 
     "@open-twin/provider-whoop": ["@open-twin/provider-whoop@file:.open-twin/packages/provider-whoop", { "dependencies": { "@types/fhir": "0.0.44", "zod": "4.6.7" }, "devDependencies": { "@lhncbc/ucum-lhc": "8.0.1", "@rollup/plugin-swc": "0.4.1", "@types/node": "26.6.5", "jest-extended": "7.0.0", "reflect-metadata": "0.2.2", "tsup": "9.0.0", "typescript": "5.9.3", "vitest": "5.0.5" }, "peerDependencies": { "@open-twin/fhir-core": "0.1.0" } }],
 
@@ -2261,6 +2264,10 @@
 
     "@open-twin/provider-oura/@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
 
+    "@open-twin/provider-vitronic/@open-twin/fhir-core": ["@open-twin/fhir-core@file:.open-twin/packages/fhir-core", { "dependencies": { "@types/fhir": "0.0.44" }, "devDependencies": { "@lhncbc/ucum-lhc": "8.0.1", "@types/node": "26.6.5", "tsup": "9.0.0", "typescript": "5.9.3", "vitest": "5.0.5" } }],
+
+    "@open-twin/provider-vitronic/@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
+
     "@open-twin/provider-whoop/@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
 
     "@posthog/ai/@ai-sdk/provider": ["@ai-sdk/provider@4.0.4", "", { "dependencies": { "json-schema": "0.4.0" } }, "sha512-tbHKNLirllUNF3ZlkCsXnwab2ZV1Sl4b1H/Cp9ruCce15IBmskE8Gwkk0yo9xDWY+jho2of7lVXtwSsyrq7cwQ=="],
@@ -2424,6 +2431,8 @@
     "@open-twin/provider-google-health/googleapis/googleapis-common": ["googleapis-common@9.1.0", "", { "dependencies": { "extend": "^3.0.2", "gaxios": "^7.3.0", "google-auth-library": "^11.0.0", "google-logging-utils": "^2.0.0", "qs": "^6.7.0", "url-template": "^2.0.8" } }, "sha512-UJBElspYPJb0+fI8q0LxARw1hPnwd9yd5NqhKqEUPxjhnB1jdsRP7rlRTBp69JS5Vo10bCiRE9+ISsIG2A+Ttg=="],
 
     "@open-twin/provider-oura/@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
+
+    "@open-twin/provider-vitronic/@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
     "@open-twin/provider-whoop/@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
