@@ -189,5 +189,8 @@ const SOURCE_LABELS: ReadonlyMap<string, string> = new Map([
   [WEARABLE_CONTEXT_SOURCE, "Your linked wearables"] as const,
 ]);
 
+/** What the palette and Customize say of a person's own skill (#174): it has no eval cases. */
+export const OWN_SKILL_LABEL = "Yours · not evaluated";
+
 /** A source id as the palette names it. */
 export const skillSourceLabel = (id: string): string => SOURCE_LABELS.get(id) ?? id;

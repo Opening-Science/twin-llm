@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { connectorBadge, loopbackHostHint, syncDetail } from "./connector-status";
+import {
+  connectorBadge,
+  loopbackHostHint,
+  syncDetail,
+  unlinkOutcome,
+} from "./connector-status";
 
 describe("connectorBadge", () => {
   test("maps every state to one label and tone", () => {
@@ -43,5 +48,21 @@ describe("loopbackHostHint", () => {
   test("stays quiet on localhost or a real host", () => {
     expect(loopbackHostHint("localhost", "3000")).toBeNull();
     expect(loopbackHostHint("twinllm.example.invalid", "")).toBeNull();
+  });
+});
+
+describe("unlinkOutcome", () => {
+  test("says unlinked only when the server unlinked it", () => {
+    expect(unlinkOutcome("Oura", true)).toEqual({
+      message: "Oura unlinked.",
+      failure: null,
+    });
+  });
+
+  test("a failed unlink says it is still linked, never that it is gone", () => {
+    expect(unlinkOutcome("WHOOP", false)).toEqual({
+      message: null,
+      failure: "Couldn’t unlink WHOOP. It is still linked; try Unlink again.",
+    });
   });
 });

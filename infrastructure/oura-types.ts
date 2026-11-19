@@ -4,6 +4,7 @@
  * import each other for types alone.
  */
 import type { ValueCheck } from "./cited-value-check";
+import type { StatedFrom } from "./wearable-cell";
 import type { WearableSourceId } from "./wearable-provenance";
 import type { HeldBackNote, SourceRuleNote } from "./wearable-source-rules";
 
@@ -47,4 +48,11 @@ export type EvidenceAttribution = Readonly<{
    * value that is not a number.
    */
   valueCheck?: ValueCheck;
+  /**
+   * The other offered reading the stated number is, when it does not match
+   * this one (#508, `wearable-cell.ts`): its source, day and how it differs.
+   * Absent when the number matches, is no offered reading, or is more than
+   * one, and on answers stored before.
+   */
+  statedFrom?: StatedFrom;
 }>;

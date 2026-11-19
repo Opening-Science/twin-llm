@@ -9,8 +9,10 @@ import THRESHOLDS_JSON from "./day-thresholds.json";
  *
  * - One measured beat per reading, about the signal that moved most since its
  *   own last reading, each change over its own scale: 20 /min of heart rate
- *   weighs as much as 15 mg/dL of glucose. A tie, or a first reading, goes to
- *   heart rate, then blood glucose. A change under 5 /min or 10 mg/dL is "steady".
+ *   weighs as much as 15 mg/dL of glucose. A change under 5 /min or 10 mg/dL is
+ *   "steady", and a change past its steady band leads a steady one whatever
+ *   their weights. A tie, or a first reading, goes to heart rate, then blood
+ *   glucose.
  * - Sensor glucose (a continuous monitor) is its own signal: its change is
  *   taken against the sensor reading before, never against blood, and its
  *   windows are its own. It trails blood glucose by several minutes, and its
@@ -191,11 +193,19 @@ const moved = (candidate: Candidate): number =>
     : Math.abs(candidate.change) /
       (candidate.measure === "heart_rate" ? SCALE.heart_rate : SCALE.glucose);
 
+const isSteady = (candidate: Candidate): boolean =>
+  directionOf(candidate.measure, candidate.change) === "steady";
+
+/** A change past its steady band leads a steady one; otherwise the larger weighted change. */
+const leads = (candidate: Candidate, best: Candidate): boolean =>
+  isSteady(candidate) === isSteady(best)
+    ? moved(candidate) > moved(best)
+    : isSteady(best);
+
 const measuredBeat = (reading: DayReading, before: Previous): DayBeat | null => {
   const event = reading.event ?? "Reading";
   const chosen = candidatesOf(reading, before).reduce<Candidate | null>(
-    (best, candidate) =>
-      best === null || moved(candidate) > moved(best) ? candidate : best,
+    (best, candidate) => (best === null || leads(candidate, best) ? candidate : best),
     null,
   );
   if (chosen === null) return null;
