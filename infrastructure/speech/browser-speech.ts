@@ -62,8 +62,10 @@ export const browserVoices = (
 
 /**
  * Queues each piece as one utterance in the language's locale and voice, and
- * settles when the last has ended. Stopping cancels the browser's speech and
- * settles quietly; a failed utterance cancels the rest and rejects.
+ * settles when the last has ended. `onFirstWords` runs once, when the browser
+ * starts saying the first piece (its `start` event), not when it is queued.
+ * Stopping cancels the browser's speech and settles quietly; a failed
+ * utterance cancels the rest and rejects.
  */
 export const sayAll = (
   synth: Synth,
@@ -71,6 +73,7 @@ export const sayAll = (
   voice: SpeechSynthesisVoice,
   language: SpeechLanguage,
   signal: AbortSignal,
+  onFirstWords: () => void = () => undefined,
 ): Promise<void> =>
   new Promise((resolve, reject) => {
     if (signal.aborted) {
@@ -96,6 +99,11 @@ export const sayAll = (
         synth.cancel();
         settle(new Error(event.error));
       });
+      if (index === 0) {
+        utterance.addEventListener("start", () => {
+          if (!signal.aborted) onFirstWords();
+        });
+      }
       if (index === pieces.length - 1) {
         utterance.addEventListener("end", () => settle(null));
       }

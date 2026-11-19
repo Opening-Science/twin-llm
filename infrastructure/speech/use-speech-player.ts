@@ -77,9 +77,9 @@ export const useSpeechPlayer = (): SpeechPlayer => {
       const voice = localVoice(await browserVoices(synth), language);
       if (controller.signal.aborted) return null;
       if (voice === null) return noLocalVoice(language);
-      const saying = sayAll(synth, chunks, voice, language, controller.signal);
-      setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) });
-      await saying;
+      await sayAll(synth, chunks, voice, language, controller.signal, () =>
+        setLastTimings({ id, firstSoundMs: Math.round(performance.now() - started) }),
+      );
       return null;
     };
     void run()
