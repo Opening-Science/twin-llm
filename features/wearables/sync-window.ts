@@ -53,6 +53,54 @@ export const resolveSyncDateWindow = (options?: {
   return { startDate: startRaw, endDate: endRaw };
 };
 
+const ymd = (day: string): [number, number, number] => {
+  const [y, m, d] = day.split("-").map(Number);
+  return [y!, m! - 1, d!];
+};
+
+const shiftDays = (day: string, days: number): string =>
+  utcDay(new Date(Date.UTC(...ymd(day)) + days * MS_PER_DAY));
+
+const earlier = (a: string, b: string) => (a < b ? a : b);
+const later = (a: string, b: string) => (a > b ? a : b);
+
+/**
+ * How far the date pickers may go, so they never offer a day the window
+ * refuses: From at most 90 days back from To, To at most 90 days after
+ * From and never after today.
+ */
+export const windowLimits = (
+  window: SyncDateWindow,
+  today: string,
+): Readonly<{ startMin: string; endMax: string }> => ({
+  startMin: shiftDays(window.endDate, -(MAX_INCLUSIVE_DAYS - 1)),
+  endMax: earlier(today, shiftDays(window.startDate, MAX_INCLUSIVE_DAYS - 1)),
+});
+
+/** A picked From, kept inside the limits; a cleared or malformed pick keeps the window. */
+export const pickStartDate = (window: SyncDateWindow, picked: string): SyncDateWindow => {
+  if (parseUtcDate(picked) === null) return window;
+  const min = shiftDays(window.endDate, -(MAX_INCLUSIVE_DAYS - 1));
+  return {
+    startDate: earlier(later(picked, min), window.endDate),
+    endDate: window.endDate,
+  };
+};
+
+/** A picked To, kept inside the limits; a cleared or malformed pick keeps the window. */
+export const pickEndDate = (
+  window: SyncDateWindow,
+  picked: string,
+  today: string,
+): SyncDateWindow => {
+  if (parseUtcDate(picked) === null) return window;
+  const { endMax } = windowLimits(window, today);
+  return {
+    startDate: window.startDate,
+    endDate: later(earlier(picked, endMax), window.startDate),
+  };
+};
+
 /** UTC day bounds for Whoop (and similar) timestamp APIs. */
 export const syncWindowToUtcTimestamps = (window: SyncDateWindow) => ({
   start: `${window.startDate}T00:00:00.000Z`,

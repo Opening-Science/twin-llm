@@ -106,6 +106,45 @@ describe("citedValueLine (#545)", () => {
     );
   });
 
+  test("a mismatch that is another offered reading names that reading", () => {
+    const mismatch = { ...chip, valueCheck: { status: "not_matched", stated: "52 ms" } };
+    expect(
+      citedValueLine({
+        ...mismatch,
+        statedFrom: { source: "whoop", day: "2026-01-02", verdict: "wrong_source" },
+      }),
+    ).toBe(
+      "Doesn't match the cited reading: the answer says 52 ms, which is the WHOOP reading, 2 Jan 2026",
+    );
+    expect(
+      citedValueLine({
+        ...mismatch,
+        statedFrom: { source: "whoop", verdict: "wrong_source" },
+      }),
+    ).toBe(
+      "Doesn't match the cited reading: the answer says 52 ms, which is the WHOOP reading",
+    );
+  });
+
+  test("a stored statedFrom that does not parse is left out", () => {
+    const mismatch = { ...chip, valueCheck: { status: "not_matched", stated: "52 ms" } };
+    for (const statedFrom of [
+      null,
+      "whoop",
+      { source: "fitbit" },
+      { day: "2026-01-02" },
+    ]) {
+      expect(citedValueLine({ ...mismatch, statedFrom })).toBe(
+        "Doesn't match the cited reading: the answer says 52 ms",
+      );
+    }
+    expect(
+      citedValueLine({ ...mismatch, statedFrom: { source: "whoop", day: "yesterday" } }),
+    ).toBe(
+      "Doesn't match the cited reading: the answer says 52 ms, which is the WHOOP reading",
+    );
+  });
+
   test("no number stated, no check stored, or a check it does not know: as before", () => {
     expect(citedValueLine({ ...chip, valueCheck: { status: "unstated" } })).toBe(
       "From Oura, 2 Jan 2026",

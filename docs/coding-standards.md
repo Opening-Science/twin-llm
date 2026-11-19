@@ -290,7 +290,7 @@ and works the same on server and client.
   number and `formatMetricValue(metric)` for a stored metric. Do not call `toFixed`,
   `Math.round` or `toISOString().slice(0, 10)` to prepare text for the screen anywhere
   else. Chart coordinates and React keys are not display text.
-- The locale is `en-GB` (`12,345.7`, `16 Oct 2026`).
+- The locale is `en-GB` (`12,345.7`, `16 Oct 2026`), in the German interface too.
 - Degrees are written `12.3°`, without a space. Stored BodyLoop data keeps its `deg`
   unit. Powers are typeset the same way through `formatUnit`: a stored `m2`, `m3` or
   `kg/m2` reads `m²`, `m³`, `kg/m²`.
@@ -299,3 +299,18 @@ and works the same on server and client.
 - "Today" is `isoLocalDate()`, the viewer's own calendar day, not a UTC date.
 - Metric names come from `metricLabel(key)` and carry no date; show a date separately
   with `formatDate`. Stored keys and labels are never rewritten.
+
+## Interface language
+
+The interface is English by default and German when the viewer picks it with the
+button beside the theme toggle. The choice is the `twinllm-locale` cookie; the root
+layout reads it, sets `<html lang>` (`en-GB` or `de`) and hands it to client components
+(`infrastructure/locale/`).
+
+- A feature keeps its own words in a `Translated<…>` table next to its code, one entry
+  per language with the same shape (`features/app-shell/shell-copy.ts`). A client
+  component reads its table with `useCopy`; a server component with `serverLocale()`.
+- A test checks that every key has a German entry and that it is not left in English.
+- Only the interface's own words are translated. Model answers, stored data, metric
+  names, the docs and the research footer (binding text) stay as they are.
+- Screens without a table yet stay in English; add one when a screen is translated.

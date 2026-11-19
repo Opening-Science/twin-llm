@@ -97,3 +97,47 @@ export const SYNTHETIC_HEIGHT_ROW = {
     },
   },
 };
+
+const syntheticMarker = (marker_path: string, position: [number, number, number]) => ({
+  marker_type: "anatomical",
+  marker_path,
+  position,
+  normal: null,
+});
+
+/** Invented, in the API's SI units: metres. */
+export const SYNTHETIC_DISTANCE_ROW = {
+  distance_path: "torso.shoulder.M",
+  from_marker: "arm.acromion.R",
+  to_marker: "arm.acromion.L",
+  distances: {
+    linear_distance: 0.4,
+    linear_distance_x: 0.4,
+    linear_distance_y: 0,
+    linear_distance_z: 0,
+  },
+  preference: null,
+  details: {
+    from_marker: syntheticMarker("arm.acromion.R", [-0.2, 0, 1.45]),
+    to_marker: syntheticMarker("arm.acromion.L", [0.2, 0, 1.45]),
+  },
+};
+
+/** Invented, in the API's SI units: radians (π/2 is a right angle). */
+export const SYNTHETIC_ANGLE_ROW = {
+  angle_path: "arm.shoulder.R",
+  at_marker: "arm.shoulder.R",
+  from_marker: "arm.arm.R",
+  to_marker: "torso.spine1.M",
+  angles: {
+    primary: Math.PI / 2,
+    supplementary: Math.PI / 2,
+    conjugate: (3 * Math.PI) / 2,
+  },
+  preference: "primary",
+  details: {
+    at_marker: syntheticMarker("arm.shoulder.R", [-0.18, 0, 1.42]),
+    from_marker: syntheticMarker("arm.arm.R", [-0.2, 0, 1.2]),
+    to_marker: syntheticMarker("torso.spine1.M", [0, 0, 1.2]),
+  },
+};

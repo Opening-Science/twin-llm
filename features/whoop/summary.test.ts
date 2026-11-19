@@ -18,10 +18,10 @@ describe("buildWhoopSummary golden", () => {
       ["whoop.recovery.score.2026-01-03", 40, null],
       ["whoop.cycle.strain.2026-01-01", 11.5, null],
       ["whoop.cycle.avg_hr.2026-01-01", 71, "bpm"],
-      ["whoop.sleep.performance.2026-01-01", 88, "%"],
-      ["whoop.sleep.efficiency.2026-01-01", 91.3, "%"],
-      ["whoop.sleep.consistency.2026-01-01", 77, "%"],
-      ["whoop.sleep.in_bed_min.2026-01-01", 450, "min"],
+      ["whoop.sleep.performance.2026-01-02", 88, "%"],
+      ["whoop.sleep.efficiency.2026-01-02", 91.3, "%"],
+      ["whoop.sleep.consistency.2026-01-02", 77, "%"],
+      ["whoop.sleep.in_bed_min.2026-01-02", 450, "min"],
       ["whoop.workout.duration.running.2026-01-02", 46, "min"],
       ["whoop.workout.strain.running.2026-01-02", 12.3, null],
       ["whoop.workout.avg_hr.running.2026-01-02", 148, "bpm"],
@@ -81,10 +81,10 @@ describe("buildWhoopSummary golden", () => {
     ]);
     expect(fields(10)).toEqual([
       ["date", "key", "label", "unit", "value"],
-      "whoop.sleep.in_bed_min.2026-01-01",
-      "Whoop time in bed (2026-01-01)",
+      "whoop.sleep.in_bed_min.2026-01-02",
+      "Whoop time in bed (2026-01-02)",
       450,
-      "2026-01-01",
+      "2026-01-02",
       "min",
     ]);
   });
@@ -94,7 +94,12 @@ describe("buildWhoopSummary golden", () => {
     expect(keys).not.toContain("whoop.recovery.hrv.2026-01-03");
     expect(keys).not.toContain("whoop.recovery.rhr.2026-01-03");
     expect(keys).not.toContain("whoop.recovery.score.2026-01-04");
-    expect(keys).not.toContain("whoop.sleep.performance.2026-01-02");
+    // The nap (performance 50) shares the night's day of waking but is left out.
+    expect(
+      summary.metrics
+        .filter((m) => m.key.startsWith("whoop.sleep.performance."))
+        .map((m) => m.value),
+    ).toEqual([88]);
   });
 
   test("narrative header and first cited line", () => {
@@ -104,6 +109,12 @@ describe("buildWhoopSummary golden", () => {
       "- [whoop.recovery.score.2026-01-02] Whoop recovery score (2026-01-02): 64",
     ]);
     expect(summary.window).toEqual({ startDate: "2026-01-01", endDate: "2026-01-04" });
+  });
+
+  test("a night is keyed by the day of waking, as Oura and the CSV import key it", () => {
+    const keys = summary.metrics.map((m) => m.key);
+    expect(keys).toContain("whoop.sleep.performance.2026-01-02");
+    expect(keys).not.toContain("whoop.sleep.performance.2026-01-01");
   });
 
   test("empty payload abstains with the fixed narrative", () => {
@@ -117,5 +128,44 @@ describe("buildWhoopSummary golden", () => {
       metrics: [],
       narrative: "No Whoop metrics were available for this window.",
     });
+  });
+});
+
+describe("buildWhoopSummary sleep day", () => {
+  const night = (
+    id: string,
+    start: string,
+    end: string | undefined,
+    performance: number,
+  ) => ({
+    id,
+    start,
+    ...(end === undefined ? {} : { end }),
+    nap: false,
+    score_state: "SCORED",
+    score: { sleep_performance_percentage: performance },
+  });
+  const sleepKeys = (sleep: ReturnType<typeof night>[]) =>
+    buildWhoopSummary(
+      { recovery: [], cycles: [], sleep, workouts: [] },
+      { startDate: "2026-02-01", endDate: "2026-02-04" },
+    ).metrics.map((m) => [m.key, m.value, m.date]);
+
+  test("bedtimes just after and just before one UTC midnight are two nights", () => {
+    expect(
+      sleepKeys([
+        night("early", "2026-02-02T00:10:00.000Z", "2026-02-02T07:00:00.000Z", 81),
+        night("late", "2026-02-02T23:50:00.000Z", "2026-02-03T07:30:00.000Z", 74),
+      ]),
+    ).toEqual([
+      ["whoop.sleep.performance.2026-02-02", 81, "2026-02-02"],
+      ["whoop.sleep.performance.2026-02-03", 74, "2026-02-03"],
+    ]);
+  });
+
+  test("a sleep with no end has no day of waking and gives no metric", () => {
+    expect(sleepKeys([night("open", "2026-02-02T23:00:00.000Z", undefined, 70)])).toEqual(
+      [],
+    );
   });
 });

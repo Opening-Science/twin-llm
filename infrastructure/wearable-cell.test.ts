@@ -6,6 +6,7 @@ import {
   citationVerdict,
   confusableCells,
   measureOfKey,
+  statedFrom,
   traceStated,
   type WearableCell,
 } from "./wearable-cell";
@@ -181,5 +182,50 @@ describe("confusableCells", () => {
         cellsOf([ouraSteps, { ...ouraSteps, key: "google.steps.2026-01-02" }]),
       ),
     ).toHaveLength(1);
+  });
+});
+
+describe("statedFrom", () => {
+  test("names the other reading and how it differs", () => {
+    expect(statedFrom(ouraHrv, "52 ms", cells())).toEqual({
+      source: "whoop",
+      day: "2026-01-02",
+      verdict: "wrong_source",
+    });
+    expect(statedFrom(whoopHrv, "48 ms", cells())).toEqual({
+      source: "whoop",
+      day: "2026-01-01",
+      verdict: "wrong_day",
+    });
+  });
+
+  test("never the cited reading itself, nor a number two readings hold", () => {
+    expect(statedFrom(ouraHrv, "45 ms", cells())).toBeNull();
+    const close = cellsOf([
+      ouraHrv,
+      { ...whoopHrv, value: 52 },
+      { ...whoopHrvDayBefore, value: 52 },
+    ]);
+    expect(statedFrom(ouraHrv, "52 ms", close)).toBeNull();
+  });
+
+  test("only a reading of the same day or a neighbouring one, not a coincidence weeks off", () => {
+    const weekLater = { ...whoopHrvDayBefore, key: "whoop.recovery.hrv.2026-01-09" };
+    const dayAfter = { ...whoopHrvDayBefore, key: "whoop.recovery.hrv.2026-01-03" };
+    expect(statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, weekLater]))).toBeNull();
+    expect(statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, dayAfter]))).toEqual({
+      source: "whoop",
+      day: "2026-01-03",
+      verdict: "wrong_day",
+    });
+    // A far reading of the same value does not make a near one ambiguous.
+    expect(
+      statedFrom(whoopHrv, "48 ms", cellsOf([whoopHrv, dayAfter, weekLater])),
+    ).toEqual({ source: "whoop", day: "2026-01-03", verdict: "wrong_day" });
+  });
+
+  test("no reading holds it, or the cited value is not a number", () => {
+    expect(statedFrom(ouraHrv, "61 ms", cells())).toBeNull();
+    expect(statedFrom({ ...ouraHrv, value: "n/a" }, "52 ms", cells())).toBeNull();
   });
 });
