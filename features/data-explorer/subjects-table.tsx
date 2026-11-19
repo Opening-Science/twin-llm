@@ -7,6 +7,7 @@ import {
   defaultDir,
   type SubjectPage,
   type SubjectQuery,
+  searchFormFields,
   type SubjectSort,
   subjectQueryString,
 } from "./subject-table";
@@ -82,10 +83,9 @@ export const SubjectsTable = ({
         action={COHORT_SUBJECTS}
         className="flex flex-wrap items-end gap-2"
       >
-        <input type="hidden" name="cohort" value={cohortId} />
-        {query.sort !== "observations" && (
-          <input type="hidden" name="sort" value={query.sort} />
-        )}
+        {searchFormFields(cohortId, query).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label
             htmlFor="subject-search"

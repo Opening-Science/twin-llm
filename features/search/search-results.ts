@@ -16,7 +16,11 @@ export type ServerAnswer = Readonly<{
   semantic: boolean;
 }>;
 
-export type ResultGroup = Readonly<{ title: string; items: readonly SearchItem[] }>;
+/** A group's heading, in English; the box shows it in the viewer's language. */
+export type GroupTitle =
+  "Recents" | "Actions" | "Threads" | "Pages" | "Docs" | "Commands";
+
+export type ResultGroup = Readonly<{ title: GroupTitle; items: readonly SearchItem[] }>;
 
 /** The server is asked only for a typed query on a tab that shows its kinds. */
 export const wantsServer = (query: string, tab: SearchTab): boolean =>

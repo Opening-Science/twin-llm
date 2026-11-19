@@ -97,9 +97,12 @@ export const buildWhoopSummary = (
     }
   }
 
+  // A night is keyed by the day of waking, as Oura's `day` and the Whoop CSV
+  // import are, so the same night lines up across sources. The API sends UTC
+  // only, so this is the UTC day of `end`. A sleep with no end has no day.
   for (const row of data.sleep) {
-    if (row.nap) continue;
-    const day = dayKey(row.start);
+    if (row.nap || !row.end) continue;
+    const day = dayKey(row.end);
     const score = row.score;
     if (!score) continue;
     if (score.sleep_performance_percentage !== undefined) {

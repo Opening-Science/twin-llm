@@ -126,7 +126,9 @@ guideline id ending in its year such as `[ean-als-2024]`, or `[unsupported]`;
 `infrastructure/source-ids.ts`) is not a key (#612): the
 search tools ask for these, and the 2 November General agent run listed
 `[ean-ms-palliative-2020]` under Evidence Used, where it counted as a
-hallucinated key. A
+hallucinated key. That holds only for an id one of the turn's searches
+returned (#850): a source id no search returned, such as
+`[made-up-guideline-2023]`, is a hallucinated key. A
 label-only match gives an attribution chip but never counts toward
 `sufficient_data`. Offered keys go to
 `evidence_keys`; the rest go to `hallucinated_keys`. Attribution
@@ -246,7 +248,10 @@ and pin smoke. It is not adapter output.
 
 `features/chat/stream-model-response.ts` builds the document once, in
 `onFinish`, after this turn's audit rows (`session_id = turnId`) are read
-, with the server's `DATA_MODE`. The UI stream holds back its `finish`
+, with the server's `DATA_MODE`. The answers of a Compare or Specialists turn
+share that session, so each document keeps only the rows its own tool calls
+wrote, and only the sources its own searches collected
+(`packages/audit/answer-scope.ts`, #856). The UI stream holds back its `finish`
 chunk until then and sends metrics and document together in one
 `message-metadata` chunk. If the audit read or build fails, the stream still
 finishes, without a document, and the text is stored without one. If storing

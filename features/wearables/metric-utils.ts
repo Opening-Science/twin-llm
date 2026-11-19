@@ -48,12 +48,18 @@ export const pointsByPrefix = (
   const points = [...metrics]
     .filter((m) => m.key.startsWith(prefix) && typeof m.value === "number" && m.date)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-  // One point per day (prefer later / longer entries already ordered).
-  const byDay = new Map<string, ChartPoint>();
+  // One point per day. Oura stores a nap under the same day as the night, and
+  // after it, so the night's main sleep wins; otherwise the later entry does.
+  const isMain = (key: string) => key.includes(".long_sleep.");
+  const byDay = new Map<string, Readonly<{ point: ChartPoint; main: boolean }>>();
   for (const m of points) {
-    byDay.set(m.date!, { date: m.date!, value: m.value as number });
+    const main = isMain(m.key);
+    if (byDay.get(m.date!)?.main && !main) continue;
+    byDay.set(m.date!, { point: { date: m.date!, value: m.value as number }, main });
   }
-  return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return [...byDay.values()]
+    .map(({ point }) => point)
+    .sort((a, b) => a.date.localeCompare(b.date));
 };
 
 export const filterMetricsByRange = (

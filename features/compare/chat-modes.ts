@@ -270,14 +270,6 @@ export const initialModeState = (
 
 // --- what is sent -----------------------------------------------------------------
 
-/** Compare's rows as shown and sent: refitted to the question until chosen. */
-export const compareRows = (
-  state: ModeState,
-  context: ModeContext,
-  prompt: string,
-): readonly string[] =>
-  state.compareChosen ? state.compare : compareDefaults(context, prompt);
-
 /** Specialists' rows as shown: refitted to the question until chosen. */
 export const specialistPicks = (
   state: ModeState,
@@ -285,6 +277,35 @@ export const specialistPicks = (
   prompt: string,
 ): readonly string[] =>
   state.specialistsChosen ? state.specialists : specialistDefaults(context, prompt);
+
+/**
+ * A specialist as Compare adds it: on the model picked for it in Specialists
+ * when that pair is offered here, else on its own model (#859).
+ */
+const carriedRow = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+  id: string,
+): string =>
+  specialistPicks(state, context, prompt).find(
+    (pick) => specialistOf(pick) === id && offered(pick, context),
+  ) ?? id;
+
+/**
+ * Compare's rows as shown and sent: refitted to the question until chosen,
+ * each default specialist on the model it has in Specialists.
+ */
+export const compareRows = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+): readonly string[] =>
+  state.compareChosen
+    ? state.compare
+    : compareDefaults(context, prompt).map((id) =>
+        carriedRow(state, context, prompt, id),
+      );
 
 /** The specialists the Specialists mode sends: its rows the catalog offers here. */
 const specialistIds = (
@@ -309,9 +330,18 @@ export const specialistModel = (id: string, context: ModeContext): string | null
 };
 
 /**
- * The state with one Specialists row moved to another model: its plain
- * `agent:<id>` row on its own model, else the pair `agent:<id>@<model>`.
+ * A specialist's row on a model: its plain `agent:<id>` row on its own
+ * model, else the pair `agent:<id>@<model>`.
  */
+const rowOnModel = (id: string, modelId: string, context: ModeContext): string => {
+  const specialist = specialistOf(id);
+  const own = findCatalogRow(specialist, context.catalog)?.agent?.baseModelId;
+  return own === modelId
+    ? specialist
+    : pairedModelId(specialist.slice(AGENT_ID_PREFIX.length), modelId);
+};
+
+/** The state with one Specialists row moved to another model. */
 export const setSpecialistModel = (
   state: ModeState,
   context: ModeContext,
@@ -319,18 +349,36 @@ export const setSpecialistModel = (
   id: string,
   modelId: string,
 ): ModeState => {
-  const specialist = specialistOf(id);
-  const own = findCatalogRow(specialist, context.catalog)?.agent?.baseModelId;
-  const next =
-    own === modelId
-      ? specialist
-      : pairedModelId(specialist.slice(AGENT_ID_PREFIX.length), modelId);
+  const next = rowOnModel(id, modelId, context);
   return {
     ...state,
     specialists: specialistPicks(state, context, prompt).map((each) =>
       each === id ? next : each,
     ),
     specialistsChosen: true,
+    fromThread: false,
+  };
+};
+
+/**
+ * The state with one Compare row moved to another model, as
+ * `setSpecialistModel` does in Specialists (#859).
+ */
+export const setCompareModel = (
+  state: ModeState,
+  context: ModeContext,
+  prompt: string,
+  id: string,
+  modelId: string,
+): ModeState => {
+  const next = rowOnModel(id, modelId, context);
+  const rows = compareRows(state, context, prompt).map((each) =>
+    each === id ? next : each,
+  );
+  return {
+    ...state,
+    compare: [...new Set(rows)],
+    compareChosen: true,
     fromThread: false,
   };
 };
@@ -392,16 +440,20 @@ export const pickedModels = (
         : state.mode === "specialists"
           ? specialistIds(state, context, prompt)
           : compareRows(state, context, prompt);
-  return [...new Set(ids)]
+  const sent = [...new Set(ids)]
     .filter((id) => offered(id, context))
-    .slice(0, MAX_SELECTED_MODELS)
-    .flatMap((id) => {
-      const row = findCatalogRow(id, context.catalog);
-      if (row === null) return [];
-      return [
-        { id, name: turnModelName({ id, name: row.name }, context.catalog, prompt) },
-      ];
-    });
+    .slice(0, MAX_SELECTED_MODELS);
+  return sent.flatMap((id) => {
+    const row = findCatalogRow(id, context.catalog);
+    if (row === null) return [];
+    const name = turnModelName(
+      { id, name: row.name },
+      context.catalog,
+      prompt,
+      sent.length,
+    );
+    return [{ id, name }];
+  });
 };
 
 /**
@@ -478,18 +530,16 @@ const listOf = (
     case "specialists":
       return specialistPicks(state, context, prompt).map(specialistOf);
     case "compare":
-      return compareRows(state, context, prompt);
+      return compareRows(state, context, prompt).map(specialistOf);
   }
 };
-
-const toggled = (ids: readonly string[], id: string): string[] =>
-  ids.includes(id) ? ids.filter((each) => each !== id) : [...ids, id];
 
 /**
  * The state with one box ticked or unticked; the rule is checked by
  * `boxDisabled`. Basic's list is one choice, so a pick replaces the last. A
- * specialist unticked goes with whichever model it was on; one ticked joins
- * on its own model.
+ * specialist unticked goes with whichever model it was on. One ticked joins
+ * on its own model in Specialists, and in Compare on the model Specialists
+ * has for it.
  */
 export const toggleRow = (
   state: ModeState,
@@ -508,13 +558,13 @@ export const toggleRow = (
         : [...picks, id];
       return { ...state, specialists: next, specialistsChosen: true, fromThread: false };
     }
-    case "compare":
-      return {
-        ...state,
-        compare: toggled(compareRows(state, context, prompt), id),
-        compareChosen: true,
-        fromThread: false,
-      };
+    case "compare": {
+      const rows = compareRows(state, context, prompt);
+      const next = rows.some((each) => specialistOf(each) === id)
+        ? rows.filter((each) => specialistOf(each) !== id)
+        : [...rows, carriedRow(state, context, prompt, id)];
+      return { ...state, compare: next, compareChosen: true, fromThread: false };
+    }
   }
 };
 
