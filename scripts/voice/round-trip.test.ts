@@ -6,7 +6,13 @@ import {
 } from "@/infrastructure/speech/fake-speech-sidecar";
 import { encodeWav, wavInfo } from "@/infrastructure/speech/wav";
 
-import { pcmSamples, resample, roundTrip, toSidecarWav } from "./round-trip";
+import {
+  NO_LOCAL_VOICE,
+  pcmSamples,
+  resample,
+  roundTrip,
+  toSidecarWav,
+} from "./round-trip";
 
 const running: FakeSpeechSidecar[] = [];
 afterEach(() => {
@@ -79,6 +85,15 @@ describe("voice:time helpers", () => {
       { kind: "speak", language: "de", text: "Zeig mir mein Herz." },
       { kind: "transcribe", language: "de", audioMs: 250 },
     ]);
+  });
+
+  test("a sidecar that only listens has nothing to time, and says why", async () => {
+    const sidecar = await startFakeSpeechSidecar({ listenOnly: true });
+    running.push(sidecar);
+    await expect(roundTrip(sidecar.baseUrl, "en", "Show me my heart.")).rejects.toThrow(
+      NO_LOCAL_VOICE,
+    );
+    expect(sidecar.received).toEqual([]);
   });
 
   test("refuses a sidecar that is not on this machine, before any request", async () => {

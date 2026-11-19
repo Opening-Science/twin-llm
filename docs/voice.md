@@ -123,11 +123,14 @@ Kokoro is not wired in.
 
 ## Timings
 
-`bun run voice:time` times the sidecar on this machine for the kiosk trial (#615). For two
-fixed sentences per language it asks the sidecar to speak the sentence, turns Piper's WAV
-into the 16 kHz input shape and asks the sidecar to write it down again, so it needs no
-microphone and keeps no recording. It prints one line per sentence and appends the same
-to `timings.jsonl` in the setup's folder (`--out` to change it):
+`bun run voice:time` times the sidecar on this machine for the kiosk trial (#615). It needs
+a sidecar with a local voice of your own (above); one that only listens has nothing to
+speak, so `voice:time` says so and stops. In the app, each spoken question and each answer
+read aloud shows its own timings. For two fixed sentences per language it asks the sidecar
+to speak the sentence, turns the voice's WAV into the 16 kHz input shape and asks the
+sidecar to write it down again, so it needs no microphone and keeps no recording. It prints
+one line per sentence and appends the same to `timings.jsonl` in the setup's folder
+(`--out` to change it):
 
 ```text
 de  speak 410 ms  heard 1650 ms of audio in 720 ms  total 1190 ms  "Zeig mir mein Herz."

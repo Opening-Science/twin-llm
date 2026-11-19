@@ -9,8 +9,12 @@ import { encodeWav, SPEECH_SAMPLE_RATE, wavInfo } from "@/infrastructure/speech/
  * One timed round trip through the speech sidecar (#615), for `voice:time`
  * (`time.ts`): the sidecar speaks a fixed sentence, the spoken WAV is turned
  * into the 16 kHz shape, and the sidecar writes it down again. No microphone
- * is needed and no recording is kept.
+ * is needed and no recording is kept. It needs a sidecar with a local voice a
+ * person set up themselves; by default the sidecar only listens.
  */
+
+export const NO_LOCAL_VOICE =
+  "voice:time needs a sidecar with a local voice of your own (docs/voice.md); this one only listens";
 
 export const ROUND_TRIP_SENTENCES: Readonly<Record<SpeechLanguage, readonly string[]>> = {
   en: ["Show me my heart.", "How was my blood sugar after breakfast?"],
@@ -84,6 +88,7 @@ export const roundTrip = async (
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ text: sentence, language }),
   });
+  if (spoken.status === 404) throw new Error(NO_LOCAL_VOICE);
   if (!spoken.ok) throw new Error(`speak answered ${spoken.status}`);
   const speakMs = Number(spoken.headers.get(SPEAK_ELAPSED_HEADER) ?? "0");
   const wav = toSidecarWav(new Uint8Array(await spoken.arrayBuffer()));
