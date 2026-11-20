@@ -11,7 +11,7 @@ The run files (`results.jsonl`, `meta.json`, `report.md`, `review.csv`,
 `review-key.json`) and the record cache stay under the gitignored
 `evaluation/runs/` and `evaluation/cache/` of the machine that ran them. This
 page copies only what the reports show. Later sections add reruns into
-November; the newest is "Citation rule on, 18 Nov 2026".
+November; the newest is "Model experiments, 18 Nov 2026", after "Citation rule on, 18 Nov 2026".
 
 ## Setup
 
@@ -1549,6 +1549,200 @@ the rule from the tool text into the response format next to the
 "Evidence Used" instruction, so the two no longer pull apart. Either needs
 the guideline full texts on the eval machine to be a fair test, since a
 catalogue entry gives little to cite.
+
+## Model experiments, 18 Nov 2026
+
+Three questions on the models already on this machine, each on the held-out
+v1h set first and then on v1:
+
+1. Does the fine-tune beat its own base? `twinllm-qwen3-4b-pilot1` against
+   `twinllm-qwen3-4b-base`, the same Qwen3-4B-Instruct-2507 weights through
+   the same q4_K_M export ([disclosure-2026-10.md](disclosure-2026-10.md),
+   "Setup"), so the adapter is the only difference.
+2. Does the decline line make qwen3:8b skip tools on v1h too? `w1` against
+   `w3`, the chat's line since #329 (`--decline-wording`).
+3. Thinking on against off for qwen3:4b. Not run: see below.
+
+### Setup
+
+- Code: main at `43b5685` for every run, open-twin `2fd26911`.
+- Database: a throwaway Postgres 18.6 with pgvector on 127.0.0.1:5805,
+  built earlier the same night for the citation-rule runs (#612) as in
+  question-set.md "Refresh": the pinned cohort, the synthetic wearable
+  series (generator v2, seed 42) and the guideline catalogue with no full
+  text. Reused here after both live key checks passed against it:
+  `bun run eval:answer-key:live` (v1, 24 pass) and the v1h test with
+  `RUN_LIVE=1` and `V1H_COHORT_DIR` set (9 pass). Keys: v1
+  `77f3083fdb6f…`, v1h `e0a40d174bc5…` (rebuilt in #722).
+- Models: Ollama on this machine, all Q4_K_M, one at a time on the GPU.
+  Tools arm, sampling none set, timeout 300 s, every line of the
+  single-sample runs a fresh call. S4 skipped as `MISSING_ENV` (5 v1h lines, 12 v1 lines).
+
+| Run id                          | Model                            | Set | Decline line  | Answered | Errors    | Model time |
+| ------------------------------- | -------------------------------- | --- | ------------- | -------- | --------- | ---------- |
+| `2026-11-18-pilot1-v1h`         | `ollama:twinllm-qwen3-4b-pilot1` | v1h | chat's (`w3`) | 39       | 0         | 2.4 min    |
+| `2026-11-18-base-v1h`           | `ollama:twinllm-qwen3-4b-base`   | v1h | chat's (`w3`) | 38       | 1 TIMEOUT | 9.4 min    |
+| `2026-11-18-qwen3-8b-v1h-w1`    | `ollama:qwen3:8b`                | v1h | `w1`          | 39       | 0         | 4.1 min    |
+| `2026-11-18-qwen3-8b-v1h-w3`    | `ollama:qwen3:8b`                | v1h | `w3`          | 39       | 0         | 7.4 min    |
+| `2026-11-18-pilot1-v1`          | `ollama:twinllm-qwen3-4b-pilot1` | v1  | chat's (`w3`) | 134      | 0         | 7.9 min    |
+| `2026-11-18-base-v1`            | `ollama:twinllm-qwen3-4b-base`   | v1  | chat's (`w3`) | 134      | 0         | 11.0 min   |
+| `2026-11-18-qwen3-8b-v1-w1`     | `ollama:qwen3:8b`                | v1  | `w1`          | 133      | 1 TIMEOUT | 14.2 min   |
+| `2026-11-18-qwen3-8b-v1-w3`     | `ollama:qwen3:8b`                | v1  | `w3`          | 134      | 0         | 12.5 min   |
+| `2026-11-18-qwen3-8b-v1h-w1-r3` | `ollama:qwen3:8b`                | v1h | `w1`          | 87       | 0         | 4.4 min    |
+| `2026-11-18-qwen3-8b-v1h-w3-r3` | `ollama:qwen3:8b`                | v1h | `w3`          | 87       | 0         | 9.3 min    |
+
+The two `-r3` runs ask every v1h item three times (`--repeats 3`); 34 and
+30 of their lines are cache hits, replies of the single-sample runs; the
+rest are fresh calls. Model time is the sum of the fresh lines' total
+times. Paired tests are `bun run eval:compare` with the four main pairs in one call: item unit,
+exact McNemar, "p (Holm)" across the seven criteria of a pair and "family"
+across all 28 tests (harness.md, "Paired comparison").
+
+### 1. Fine-tune against its base
+
+Passes over scored answers, Wilson 95 % interval; human share of
+correctness and hallucination below.
+
+| Criterion                   | base v1h        | pilot1 v1h       | base v1           | pilot1 v1         |
+| --------------------------- | --------------- | ---------------- | ----------------- | ----------------- |
+| correctness                 | 3/30 (3–26 %)   | 17/18 (74–99 %)  | 24/106 (16–31 %)  | 58/85 (58–77 %)   |
+| hallucination               | 18/34 (37–69 %) | 34/34 (90–100 %) | 105/127 (75–88 %) | 102/112 (84–95 %) |
+| privacy                     | 23/27 (68–94 %) | 28/28 (88–100 %) | 19/22 (67–95 %)   | 21/22 (78–99 %)   |
+| query safety                | 20/32 (45–77 %) | 33/33 (90–100 %) | 67/118 (48–65 %)  | 94/118 (72–86 %)  |
+| clinical caution            | 29/31 (79–98 %) | 33/34 (85–99 %)  | 72/116 (53–70 %)  | 102/120 (78–90 %) |
+| readability                 | 22/38 (42–72 %) | 29/38 (61–87 %)  | 101/131 (69–83 %) | 114/133 (79–91 %) |
+| consistency                 | 3/4 (30–95 %)   | 5/5 (57–100 %)   | 3/7 (16–75 %)     | 7/7 (65–100 %)    |
+| correctness, human share    | 6 %             | 45 %             | 7 %               | 25 %              |
+| hallucination, human share  | 11 %            | 13 %             | 5 %               | 16 %              |
+| all calls right (keyed)     | 15/27 (37–72 %) | 9/28 (18–51 %)   | 46/96 (38–58 %)   | 50/96 (42–62 %)   |
+| unsourced numbers (answers) | 13 (6)          | 5 (3)            | 27 (10)           | 36 (17)           |
+| total time p50              | 5.3 s           | 4.2 s            | 3.9 s             | 3.6 s             |
+
+Paired, "base only–pilot1 only (Holm p; family p)":
+
+| Criterion        | v1h                 | v1                    |
+| ---------------- | ------------------- | --------------------- |
+| correctness      | 0–10 (0.014; 0.047) | 7–31 (< 0.001; 0.003) |
+| hallucination    | 0–8 (0.039; 0.17)   | 8–10 (1; 1)           |
+| privacy          | 0–4 (0.50; 1)       | 1–1 (1; 1)            |
+| query safety     | 0–10 (0.014; 0.047) | 8–27 (0.009; 0.047)   |
+| clinical caution | 1–2 (1; 1)          | 8–30 (0.003; 0.012)   |
+| readability      | 3–9 (0.50; 1)       | 15–24 (0.60; 1)       |
+| consistency      | 0–1 (1; 1)          | 0–4 (0.50; 1)         |
+
+The fine-tune beats its base on correctness and query safety on both sets,
+after the family adjustment, and on clinical caution on v1. Where the gain
+comes from matters more than its size:
+
+- **The base fails on the answer's form more than on its numbers.** Of the
+  base's 82 correctness fails on v1, 74 name `uncertainty.level`; on v1h,
+  23 of 27. The host sets uncertainty to high whenever an answer cites an
+  evidence key the prompt did not list, and the base cites LOINC codes and
+  tool names (`6690-2`, `loinc.6690-2.trend`) as keys: every one of its
+  hallucination fails names such a key (16 on v1h, 22 on v1), some with
+  an unsourced number as well. On Q-S1-H02 both models give the same slope
+  and the same fitted ends; the base fails, the pilot is left `human`.
+- **The base misses the expected tool.** Its query safety fails are
+  `guideline_search`, `compare_windows`, `baseline_deviation` and
+  `range_position` not called, and 18 of its `show_view` calls on v1h were
+  refused for lacking a window. The pilot was trained on these tools.
+- **The pilot's correctness rests on fewer scored answers.** 45 % of its v1h
+  correctness lines (15) and 25 % on v1 (29) are `human`, nearly all
+  because a keyed value is not in its short one-paragraph answer (14 of 15
+  and 28 of 29). The paired test leaves those out, so 0–10 on v1h is 13
+  scored items, not 32.
+- **Calls are not more exact.** All calls right: 9 of 28 keyed v1h answers
+  for the pilot against 15 for the base; the pilot more often reads another
+  window than the key's (13 against 6).
+
+The October pilot run (`2026-10-30-pilot1-v1`, git `7ed2d51`, copied into
+this checkout's runs) against today's on v1: 3–14 on correctness (Holm
+0.089), nothing else apart. The pilot has not moved much while main has.
+
+### 2. Decline line on qwen3:8b
+
+| Criterion           | `w1` v1h        | `w3` v1h        | `w1` v1           | `w3` v1           |
+| ------------------- | --------------- | --------------- | ----------------- | ----------------- |
+| correctness         | 4/21 (8–40 %)   | 1/26 (1–19 %)   | 22/96 (16–32 %)   | 13/107 (7–20 %)   |
+| hallucination       | 23/32 (55–84 %) | 31/38 (67–91 %) | 117/131 (83–94 %) | 115/131 (81–92 %) |
+| query safety        | 19/33 (41–73 %) | 12/33 (22–53 %) | 55/117 (38–56 %)  | 31/118 (19–35 %)  |
+| clinical caution    | 31/34 (77–97 %) | 21/34 (45–76 %) | 73/119 (52–70 %)  | 69/119 (49–66 %)  |
+| readability         | 31/38 (67–91 %) | 29/38 (61–87 %) | 106/128 (75–88 %) | 108/131 (75–88 %) |
+| no tool, all lines  | 14 of 39        | 23 of 39        | 74 of 134         | 91 of 134         |
+| declined outside S5 | 4               | 2               | 36                | 4                 |
+| S5 declined         | 6 of 6          | 6 of 6          | 16 of 16          | 16 of 16          |
+
+Paired, "`w3` only–`w1` only (Holm p; family p)": on v1h nothing separates
+(query safety 1–6, 0.75; clinical caution 2–9, 0.46; correctness 1–3, 1);
+on v1 query safety 1–24 (< 0.001; < 0.001), correctness 3–11 (0.34; 1),
+clinical caution 13–18 (1; 1).
+
+- **v1h shows the same lean, too small to test.** Under `w3` qwen3:8b
+  calls no tool on 23 of 39 v1h lines against 14 under `w1`; outside S5 that
+  is 17 against 8 lines. With 32 items no criterion clears Holm.
+- **v1 repeats the finding of the citation-rule runs** earlier the same
+  night (`2026-11-18-qwen3-8b-v1-cite` and `-v1-w1`, at `876d0f60`): query
+  safety 55 against 31 of 118, no tool 74 against 91 lines (64 and 103
+  then).
+- **`w1` buys tool calls with over-declines.** Under `w1` qwen3:8b declined
+  36 v1 answers outside S5 (15 in S6, 10 in S1, 6 in S2, 5 in S3), under
+  `w3` 4. That is why clinical caution does not move on v1: `w1` fails S6
+  with `next_step` `consult_clinician` where the key expects `more_data`
+  (14 of 33 S6 lines against 1), `w3` fails S1 and S2 by answering without
+  looking. Both wordings decline every S5 dose and medicine question.
+- **One sample is about as noisy as the v1h effect.** The citation-rule
+  `w3` v1h run (`2026-11-18-qwen3-8b-v1h-cite`, copied in and rescored
+  against the current key) against this `w3` v1h run, the same wording
+  sampled twice at two commits of main: query safety 3–5, clinical
+  caution 3–5, hallucination 4–2 discordant items, no tool on 27 against
+  23 lines.
+- **Three samples per item firm it up.** v1h asked again under each line
+  with `--repeats 3` (`2026-11-18-qwen3-8b-v1h-w1-r3`, `-w3-r3`; the first
+  repeat of each item is the single-sample run's reply, from the cache), 87
+  answered lines each. No tool outside S5: 18 lines under `w1`, 40 under
+  `w3`; declined outside S5: 9 and 6. Folded to items by majority, clinical
+  caution goes 0–6 for `w1` (p 0.031, Holm 0.22) and query safety 0–4
+  (Holm 0.75); as lines, a liberal test since an item's repeats are not
+  independent, 4–23 (Holm 0.002) and 2–17 (Holm 0.004). Hallucination
+  leans the other way, 4–0 items and 10–2 lines for `w3` (Holm 0.75 and
+  0.19).
+
+So on qwen3:8b neither line is good: `w1` over-declines on v1, `w3` skips
+the tools. On v1h the direction holds over three samples, but at the item
+level it does not clear Holm. `w3` was chosen on S7h for having the most
+good decline pairs over both models; nothing here was run on S7h, so this
+is evidence to weigh against that choice, not a reason to change it.
+
+### 3. Thinking on against off
+
+Not run. The harness has no switch for it: every Ollama call goes through
+`ollamaChatModel`, which sends `think: false`
+(`features/chat/ollama-chat-model.ts`), and `bun run eval` takes no effort
+or thinking flag. The chat turns thinking on only for Thorough and above
+(`infrastructure/chat-effort.ts`). A fair test needs a harness flag that
+passes `thinkingProviderOptions` for the run, records it in `meta.json` and
+puts it in the cache key; that is a code change, not a run. The fine-tunes
+have no thinking mode at all.
+
+### Limits
+
+- One sample per line, except the two `-r3` runs. The noise check above
+  says a v1h difference of a few items on one criterion is within what
+  resampling alone gives; the fine-tune pair was not resampled.
+- No human review. The pilot's lead rests on scored answers only, and its
+  correctness has the highest human share of these runs.
+- The pilot was trained on synthetic conversations over these tools and the
+  same response format (cohort `synthea-v4-seed1001`; these sets read
+  `synthea-v4-seed42`). The gain over the base is largely format and tool
+  choice the training taught; how close its training questions are to
+  v1 and v1h was not checked.
+- The base and the pilot use the chat's line (`w3`); the decline runs are
+  qwen3:8b only.
+- The database was built for other runs the same night and reused after
+  the live key checks; the guideline catalogue has no full text, so S3
+  says little here.
+- The copied runs (`2026-10-30-pilot1-v1`, `2026-11-18-qwen3-8b-v1h-cite`)
+  are from other commits, so those two pairs differ in more than sampling.
 
 ## Limits
 
