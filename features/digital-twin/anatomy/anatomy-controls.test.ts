@@ -193,6 +193,10 @@ describe("AnatomyControls", () => {
 
   test("a demo body that is not posed (the static fallback) never claims the stance", () => {
     expect(anatomyFitNote("bbox", "demo")).toBe(DEMO_FIT_NOTE_UNPOSED);
+    // The segment fit says what it does, and whose body it is not, on a scan.
+    expect(anatomyFitNote("segments")).toContain("part by part");
+    expect(anatomyFitNote("segments")).toContain("Not the scanned person's anatomy.");
+    expect(anatomyFitNote("segments", "demo", true)).toContain("stands unposed");
     expect(DEMO_FIT_NOTE_UNPOSED).not.toContain("stance");
     for (const html of [demoHtml(), demoHtml(false)]) {
       expect(html).toContain(DEMO_FIT_NOTE_UNPOSED);

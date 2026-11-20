@@ -2,10 +2,12 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
+import { Color, type Material, Matrix4, type Object3D, Quaternion, Vector3 } from "three";
+
+import { atlasJoints } from "@/packages/anatomy/atlas-joints";
 
 import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
-import { fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
+import { fitAtlasToScan, placeFittedAtlas, type AtlasFit } from "@/packages/anatomy/fit";
 import { fittedAtlasApiUrl } from "@/packages/anatomy/fitted-atlases";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
 import {
@@ -17,6 +19,7 @@ import {
   type AtlasLayerId,
 } from "@/packages/anatomy/layers";
 import { ATLASES, atlasApiUrl, type AtlasId } from "@/packages/anatomy/manifest";
+import { segmentsFromSkin, type Segments } from "@/packages/anatomy/segments";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
 import { disposeObject3D } from "../dispose-object";
@@ -25,6 +28,7 @@ import { PickSurface } from "../environment/pick-surface";
 import { LiveConditioning, type LiveStatus } from "../live/live-conditioning";
 import { type BeatPattern } from "../live/heart-cycle";
 import { type LiveVitals } from "../live/live-rates";
+import { type RigBinding } from "../motion/rig-map";
 import { useTwinPalette } from "../use-twin-palette";
 import { type AnatomyLoad } from "./anatomy-state";
 import {
@@ -39,12 +43,32 @@ import {
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
+import { readBody } from "./read-body";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
+import {
+  followBody,
+  followMatrix,
+  skinAtlas,
+  type FitSkeleton,
+  type Following,
+} from "./skinned-atlas";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
 const TRIANGLE_WARNING = 2_500_000;
 
 type ScanSurface = Readonly<{ material: Material; uniforms: LayerUniforms }>;
+
+/** A loaded atlas, and its fit skeleton when it was skinned for the segment fit. */
+type Loaded = Readonly<{
+  atlas: PreparedAtlas;
+  skin: Readonly<{
+    skeleton: FitSkeleton;
+    segments: Segments;
+    held: ReadonlySet<number>;
+  }> | null;
+}>;
+
+const IN_PLACE = new Matrix4();
 
 const NO_PARTS: PreparedAtlas["parts"] = [];
 const NO_GROUPS: PreparedAtlas["groups"] = [];
@@ -61,6 +85,8 @@ export const AnatomyLayers = ({
   statureM,
   atlasId,
   fittedBody = null,
+  segmentFit = false,
+  binding = null,
   requested,
   retry,
   targetDepth,
@@ -81,6 +107,13 @@ export const AnatomyLayers = ({
    * body" shows it: that file loads and takes the body's own transform.
    */
   fittedBody?: DemoBodyId | null;
+  /**
+   * "Fit atlas to body" without a fitted file: the atlas is skinned and laid
+   * on the body segment by segment, following `binding`'s bones. A body it
+   * cannot read keeps the one-scale fit.
+   */
+  segmentFit?: boolean;
+  binding?: RigBinding | null;
   requested: boolean;
   retry: number;
   targetDepth: number;
@@ -106,7 +139,8 @@ export const AnatomyLayers = ({
     fittedBody === null ? atlasApiUrl(atlasId) : fittedAtlasApiUrl(fittedBody, atlasId);
   // State renders the atlas; the refs are what the frame loop mutates, since
   // three.js objects are configured in place every frame.
-  const [prepared, setPrepared] = useState<PreparedAtlas | null>(null);
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const prepared = loaded?.atlas ?? null;
   const preparedRef = useRef<PreparedAtlas | null>(null);
   const scanSurfacesRef = useRef<readonly ScanSurface[]>([]);
   const fitOkRef = useRef(false);
@@ -119,7 +153,7 @@ export const AnatomyLayers = ({
   useEffect(() => {
     if (!requested) return;
     let cancelled = false;
-    let loaded: PreparedAtlas | null = null;
+    let shown: Loaded | null = null;
     let lastPercent = -1;
     onLoad({ kind: "loading", percent: null });
     loadAtlasGltf(url, (fraction) => {
@@ -133,21 +167,29 @@ export const AnatomyLayers = ({
           disposeObject3D(gltf.scene);
           return;
         }
-        let ready: PreparedAtlas;
+        let ready: Loaded;
         try {
-          ready = prepareAtlas(gltf.scene, ATLASES[atlasId]);
+          const plain = prepareAtlas(gltf.scene, ATLASES[atlasId]);
+          const segments = segmentFit
+            ? segmentsFromSkin(plain.hull, atlasJoints(atlasId))
+            : null;
+          ready = segments
+            ? (({ atlas, ...skin }) => ({ atlas, skin: { ...skin, segments } }))(
+                skinAtlas(plain, segments),
+              )
+            : { atlas: plain, skin: null };
         } catch {
           disposeObject3D(gltf.scene);
           onLoad({ kind: "error" });
           return;
         }
         if (cancelled) {
-          disposeObject3D(ready.root);
+          disposeObject3D(ready.atlas.root);
           return;
         }
-        loaded = ready;
-        preparedRef.current = ready;
-        setPrepared(ready);
+        shown = ready;
+        preparedRef.current = ready.atlas;
+        setLoaded(ready);
       })
       .catch(() => {
         if (!cancelled) onLoad({ kind: "error" });
@@ -155,13 +197,15 @@ export const AnatomyLayers = ({
     return () => {
       cancelled = true;
       preparedRef.current = null;
-      setPrepared(null);
-      if (loaded) {
-        loaded.root.removeFromParent();
-        disposeObject3D(loaded.root);
+      setLoaded(null);
+      if (shown) {
+        shown.atlas.root.removeFromParent();
+        disposeObject3D(shown.atlas.root);
+        // The skeleton's bone texture is not part of any mesh.
+        shown.skin?.skeleton.dispose();
       }
     };
-  }, [requested, atlasId, url, retry, onLoad]);
+  }, [requested, atlasId, url, retry, segmentFit, onLoad]);
 
   useEffect(() => {
     if (!scanRoot || !requested) return;
@@ -196,16 +240,37 @@ export const AnatomyLayers = ({
     );
   }, [prepared, scanRoot, statureM, atlasId, fittedBody]);
 
+  // A skinned atlas is placed by its skeleton: on the body's segments where
+  // they can be read, else by the one-scale fit's matrix on every bone.
+  const skin = loaded?.skin ?? null;
+  const following = useMemo((): Following | null => {
+    if (!skin || !scanRoot || !binding) return null;
+    const body = readBody(scanRoot, binding);
+    return body && followBody(skin.segments, body, skin.held);
+  }, [skin, scanRoot, binding]);
+  const placed = useMemo(
+    (): AtlasFit | null =>
+      skin && following
+        ? { matrix: IN_PLACE, scale: 1, anchor: "segments", ok: true }
+        : fit,
+    [skin, following, fit],
+  );
+  useEffect(() => {
+    if (skin && fit) skin.skeleton.follow(following ?? followMatrix(fit.matrix));
+  }, [skin, following, fit]);
+
   const transform = useMemo(() => {
-    if (!fit?.ok) return null;
+    if (!placed?.ok) return null;
     const position = new Vector3();
     const quaternion = new Quaternion();
     const scale = new Vector3();
-    fit.matrix.decompose(position, quaternion, scale);
+    // The skeleton places a skinned atlas, so its root stays where it is.
+    (skin ? IN_PLACE : placed.matrix).decompose(position, quaternion, scale);
     return { position, quaternion, scale };
-  }, [fit]);
+  }, [placed, skin]);
 
   useEffect(() => {
+    const fit = placed;
     fitOkRef.current = fit?.ok === true;
     if (!prepared || !fit) return;
     onLoad({
@@ -224,7 +289,7 @@ export const AnatomyLayers = ({
       );
     }
     invalidate();
-  }, [prepared, fit, onLoad, invalidate]);
+  }, [prepared, placed, onLoad, invalidate]);
 
   // The glow is per material and set only when the highlight or the atlas
   // changes; the frame loop never touches it.
