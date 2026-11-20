@@ -83,7 +83,7 @@ particles.setDensity(0.25); // 45 enabled particles.
 
 The adapter rejects non-finite/out-of-range density and missing/incomplete pools. For Babylon.js, Unity or another host, use the same ranks and its mesh-render visibility API; no specific engine extension is required.
 
-No glucose-to-density clinical rule is prescribed here. #865 owns any eventual mapping, missing-data behavior, reduced motion and off-screen suspension. Historical timeline speed and heartbeat cadence must not multiply this clip's rate.
+No glucose-to-density rule is set here. #865 owns any eventual mapping, missing-data behavior, reduced motion and off-screen suspension. Historical timeline speed and heartbeat cadence must not multiply this clip's rate.
 
 Explanation: **"Illustrative particles, not measured glucose particles or blood velocity."**
 
@@ -95,7 +95,7 @@ No automatic body-fit, skin weights or pose deformation is included. When the at
 
 The review GLB uses a cyan vessel material with `alphaMode: BLEND`, alpha 0.17, roughness 0.48 and restrained emission; skeleton alpha is 0.055. Particles use an opaque warm-gold emissive material. Preview materials are applied to independent copies; original anatomy geometry/materials remain intact in the Blender source.
 
-The application has custom layer fading and depth prepasses. #865 must agree and demonstrate how this material treatment fits those passes and layer/depth selection. Visibility in the standalone viewer does not prove that integration. No organ rings, flashing, or heartbeat animation was added.
+The application has custom layer fading and depth prepasses. #865 must agree and demonstrate how this material fits those passes and layer/depth selection. Visibility in the standalone viewer does not prove that integration. No organ rings, flashing, or heartbeat animation was added.
 
 ## Validation and remaining acceptance
 
@@ -106,7 +106,7 @@ The application has custom layer fading and depth prepasses. #865 must agree and
 - Interior classification uses majority voting over three oblique rays to handle mesh-edge intersection degeneracies; 592 samples had disagreeing ray votes. This is a sampled geometric check, not a medical validation.
 - The exported clip loads and runs with the stock Three.js `GLTFLoader` / `AnimationMixer`, without Blender.
 - An exploratory desktop run on Apple M2 Max / macOS 26.6.2 reported about 60 fps for the three-panel viewer. A stricter follow-up requiring continuous clip advancement was interrupted when the embedded browser became hidden; this is **not a certified animated-performance result**.
-- Moving-pose support, mobile/full-application 30 fps, final material treatment, and an agreed integration budget are **not signed off**. The particle-only budget is a proposal, not an agreement with the integration owner.
+- Moving-pose support, mobile/full-application 30 fps, final materials, and an agreed integration budget are **not signed off**. The particle-only budget is a proposal, not an agreement with the integration owner.
 
 At full density, the review scene renders 1,034,355 triangles and approximately 182 mesh draw calls. Its anatomy cost is not the incremental integration cost: the production companion adds only the 180 particles.
 
