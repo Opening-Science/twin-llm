@@ -187,6 +187,10 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "anatomy:quantise-fitted":
     "quantises the atlases fitted to synthetic demo bodies; no data rows",
   "fonts:install": TOOLING,
+  "voice:setup":
+    "downloads and builds the pinned whisper.cpp and its model after the person says yes; no data rows",
+  "voice:serve":
+    "serves speech to text on loopback, and text to speech only with a voice the person set up; keeps nothing it hears or says and trains nothing",
   "synthea:generate": GENERATOR,
   "synthea:s7": GENERATOR,
   "synthea:pin": GENERATOR,
