@@ -111,7 +111,10 @@ The answer to a spoken question is read back once it is finished, in the languag
 asked in: the first finished answer of that turn with words to say, once. One that failed,
 was stopped or is withheld is not read. Every other finished answer gets a Read aloud
 button while voice is on, in the language picked on the prompt bar; pressed again it
-stops. One answer plays at a time.
+stops. One answer plays at a time. Once an answer has started, "First words after 0.4s"
+stays beside its button: the time from the press, or from the answer's end, until the
+browser starts saying the first piece (the utterance's `start` event), the speaking half of
+the timings #615 asks for.
 
 What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
 code, tables, images, web addresses and bracketed citation ids are left out, a link keeps

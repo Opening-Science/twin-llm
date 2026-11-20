@@ -102,6 +102,38 @@ describe("sayAll", () => {
     expect(done).toBe(true);
   });
 
+  test("marks the first words when the browser starts speaking, not when they are queued", async () => {
+    const { synth, queued } = stubSynth();
+    const marks: string[] = [];
+    const saying = sayAll(
+      synth,
+      ["One.", "Two."],
+      DANIEL,
+      "en",
+      new AbortController().signal,
+      () => marks.push("first words"),
+    );
+    expect(marks).toEqual([]);
+    queued[0]?.fire("start");
+    queued[1]?.fire("start");
+    expect(marks).toEqual(["first words"]);
+    queued[1]?.fire("end");
+    await saying;
+  });
+
+  test("an answer stopped before it is heard marks nothing", async () => {
+    const { synth, queued } = stubSynth();
+    const marks: string[] = [];
+    const controller = new AbortController();
+    const saying = sayAll(synth, ["One."], DANIEL, "en", controller.signal, () =>
+      marks.push("first words"),
+    );
+    controller.abort();
+    queued[0]?.fire("start");
+    await saying;
+    expect(marks).toEqual([]);
+  });
+
   test("stopping cancels the browser's speech and is not a failure", async () => {
     const { synth, queued, cancelled } = stubSynth();
     const controller = new AbortController();
