@@ -93,10 +93,7 @@ data/vitronic/
 # Guideline full text (operator-extracted UTF-8; never commit PDFs or body text)
 data/guidelines/
 # Reference-anatomy atlases (CC BY 4.0, fetched by bun run anatomy:fetch; never commit)
-data/anatomy/*
-!data/anatomy/glucose-particles/
-data/anatomy/glucose-particles/*
-!data/anatomy/glucose-particles/HANDOFF.md
+data/anatomy/
 # Open-licence article text (bun run literature:fetch; never commit downloaded text)
 data/literature/
 # Synthetic genomes and reports (bun run genome:synth / genome:ingest)

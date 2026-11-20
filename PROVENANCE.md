@@ -56,6 +56,14 @@ Downloaded by `bun run anatomy:fetch` from `https://opentwin.opening.science/mod
 | HuBMAP HRA (female) | `hra.ao.glb`         | 15,388,344 | `37468cf1180b0367a698d40eefd962df0b12a53c1ce74a29d8b70a8af5dc0eb1` | `"dksd31cn5gxs95tq0"` | 2026-08-18    |
 | HuBMAP HRA (male)   | `hra-m.ao.glb`       | 8,489,716  | `5d820f289a529ef6ee6d2a1158c867d33f25dceaf269eebbbcd46f85b602addc` | `"dksd31t6ixvk51ypg"` | 2026-08-18    |
 
+## Anatomy effects (release download, not committed)
+
+Downloaded by `bun run anatomy:fetch` from the `anatomy-effects-v1` release of this repository into gitignored `data/anatomy/glucose-particles/`; every byte is checked against the pin in `packages/anatomy/effects.ts`. Made by the Open Science Foundation from the BodyParts3D atlas (`bodyparts3d.ao.glb`, pinned above) in Blender: particle paths measured inside the vessels and baked as animation. The Blender source and route scripts are not published.
+
+| Effect            | File                    | Bytes     | SHA-256                                                            | Made       |
+| ----------------- | ----------------------- | --------- | ------------------------------------------------------------------ | ---------- |
+| Glucose particles | `glucose-particles.glb` | 1,749,892 | `000834e73f4b008eb81a753a50d924ce52a8564b1cdec10bdb3911f90429d169` | 2026-11-19 |
+
 ## Synthetic demo bodies (fetched, not committed)
 
 Downloaded by `bun run anatomy:fetch` from `https://opentwin.opening.science/models/` into gitignored `data/anatomy/`; every byte is checked against the pin in `packages/anatomy/demo-bodies.ts`. ANNY (NAVER LABS Europe / NAVER Corporation, arXiv:2511.03589), baked by open-twin-xr `scripts/anny/bake.py` and posed to BodyParts3D; Apache-2.0 code over CC0-1.0 shape assets; no scan of any person. The build commit behind these files is not published upstream.

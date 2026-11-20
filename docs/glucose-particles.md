@@ -6,11 +6,11 @@ Particles are now **25% larger in radius/diameter**, with a requester-approved m
 
 ## Deliverables
 
-- [Integration asset](./glucose-particles.glb): particles only, **1,749,892 bytes**. Load alongside the original atlas; do not load a second anatomy into the application.
-- [Optional Three.js density adapter](../../../features/digital-twin/glucose-density-control.ts).
+- Integration asset: `data/anatomy/glucose-particles/glucose-particles.glb` after `bun run anatomy:fetch` (release `anatomy-effects-v1`), particles only, **1,749,892 bytes**. Load alongside the original atlas; do not load a second anatomy into the application.
+- [Optional Three.js density adapter](../features/digital-twin/glucose-density-control.ts).
 - This handoff.
 
-The GLB and this handoff are explicitly committed as an exception to the repository's ignored anatomy/GLB convention. No API route or Digital Twin runtime integration is included. The asset is not automatically served just because it is committed.
+The GLB is not committed. Like the atlases, `bun run anatomy:fetch` downloads it from the `anatomy-effects-v1` release of this repository into the gitignored `data/anatomy/glucose-particles/` and installs it only when its bytes match the pin in `packages/anatomy/effects.ts`. No API route or Digital Twin runtime integration is included here.
 
 Integration GLB SHA-256:
 `000834e73f4b008eb81a753a50d924ce52a8564b1cdec10bdb3911f90429d169`.
@@ -112,16 +112,16 @@ At full density, the review scene renders 1,034,355 triangles and approximately 
 
 ## Review and future integration
 
-The committed particle-only GLB can be opened in a glTF animation viewer, but it contains no anatomy. Load it beside the original BodyParts3D atlas with the same atlas-level transform for an alignment review. Use the density adapter example above for programmatic control.
+The particle-only GLB can be opened in a glTF animation viewer, but it contains no anatomy. Load it beside the original BodyParts3D atlas with the same atlas-level transform for an alignment review. Use the density adapter example above for programmatic control.
 
 The obsolete recordings, standalone HTML viewer and local preview server were removed during handoff cleanup. The supporting authoring files and detailed validation reports are local-only; the validation summary above records the checks performed on this export, not tooling delivered in this commit.
 
-For later application integration, serve the committed asset through a dedicated, versioned anatomy-effects route; load it separately from anatomy preprocessing; attach it to the atlas-level fit group; advance its mixer at fixed 1x speed; and connect density to application state. Respect anatomy visibility/depth, reduced motion and off-screen suspension, and dispose of the owned resources on cleanup. Keep unsupported atlas/fitted/moving-pose states explicit.
+For later application integration, serve the fetched asset through a dedicated, versioned anatomy-effects route; load it separately from anatomy preprocessing; attach it to the atlas-level fit group; advance its mixer at fixed 1x speed; and connect density to application state. Respect anatomy visibility/depth, reduced motion and off-screen suspension, and dispose of the owned resources on cleanup. Keep unsupported atlas/fitted/moving-pose states explicit.
 
-Reauthoring requires the original Blender source, route data and local authoring scripts. Editing guide curves alone does not automatically rebake actions. None of those authoring dependencies is required to play the committed GLB.
+Reauthoring requires the original Blender source, route data and local authoring scripts. Editing guide curves alone does not automatically rebake actions. None of those authoring dependencies is required to play the GLB.
 
 ## Attribution
 
-BodyParts3D, (c) The Database Center for Life Science, licensed under CC Attribution 4.0 International: https://creativecommons.org/licenses/by/4.0/
+BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International: https://creativecommons.org/licenses/by/4.0/ (DBCLS's written confirmation of the 2025 relicence from CC BY-SA 2.1 JP is still pending; until then the worst case is share-alike under CC BY-SA 2.1 JP on this model file, never on this code; see NOTICE).
 
-Derivative changes: measured illustrative particle routes and baked animation; independent preview materials and lighting. Retain the source attribution on redistributed anatomy and derivatives. The repository documents a pending upstream licence-confirmation caveat concerning the former CC BY-SA 2.1 JP licence; this deliverable does not resolve it. See [the anatomy licence notes](../../../docs/anatomy.md).
+Derivative changes: measured illustrative particle routes and baked animation; independent preview materials and lighting. Retain the source attribution on redistributed anatomy and derivatives. See [the anatomy licence notes](anatomy.md).
