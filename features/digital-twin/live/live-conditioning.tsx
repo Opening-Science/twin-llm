@@ -30,7 +30,6 @@ import {
   chamberContraction,
   rhythmNow,
   startClock,
-  vesselExpansion,
 } from "./heart-cycle";
 import { setVascularPulse } from "./vascular-pulse";
 import { type LiveVitals } from "./live-rates";
@@ -247,7 +246,7 @@ export const LiveConditioning = ({
         // Scale, chambers and glow, whichever this atlas used.
         setPartScale(part.mesh, 1);
         setHeartChambers(part.mesh, root, null);
-        setVascularPulse(part.mesh, root, null);
+        setVascularPulse(part.mesh, null);
         setLiveGlow(part.mesh.material as Material, 0, live.current.colours.pulse);
       }
       statusRef.current = IDLE_STATUS;
@@ -287,13 +286,9 @@ export const LiveConditioning = ({
         : null;
     clockRef.current = clock;
     const contraction = clock ? chamberContraction(clock, chamberSetting.pattern) : null;
-    const vascular =
-      clock && contraction
-        ? {
-            heart: Math.max(0.5 * contraction.atria, contraction.ventricles),
-            vessels: vesselExpansion(clock, chamberSetting.pattern),
-          }
-        : null;
+    const vascular = contraction
+      ? Math.max(0.5 * contraction.atria, contraction.ventricles)
+      : null;
 
     const beat =
       contraction === null && heart && rates.heart
@@ -309,7 +304,7 @@ export const LiveConditioning = ({
       setPartScale(part.mesh, scheme === "hra" && beat > 0 ? 1 + HEART_SCALE * beat : 1);
       if (scheme === "hra") {
         setHeartChambers(part.mesh, atlasRoot, contraction);
-      } else if (!setVascularPulse(part.mesh, atlasRoot, vascular)) {
+      } else if (!setVascularPulse(part.mesh, vascular)) {
         vascularUnavailable = true;
       }
       setLiveGlow(

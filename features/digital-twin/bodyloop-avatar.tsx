@@ -80,6 +80,7 @@ import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
 import { NightPlayback, useNightPlayback } from "./live/night-playback";
 import { nightPlaybackFor } from "./live/night-series";
 import {
+  heartPickDismissal,
   linkedRows,
   pickHighlight,
   pickHighlights,
@@ -676,12 +677,15 @@ export const BodyLoopAvatar = ({
     wasActiveRef.current = environment.active;
     setResetKey((value) => value + 1);
   }, [environment.active]);
-  // Closing the card restores the full-body view and returns keyboard focus.
+  const { clearHighlight: clearPickedHeart, resetView: resetPickedHeart } =
+    heartPickDismissal(picked, pickLit, environment.active);
+  // Return keyboard focus on every close, but reframe only an inline heart pick.
   const closeCard = useCallback(() => {
     setPicked(null);
-    resetView();
+    if (clearPickedHeart) anatomyDispatch({ type: "highlight", highlight: null });
+    if (resetPickedHeart) resetView();
     viewRef.current?.focus();
-  }, [resetView]);
+  }, [anatomyDispatch, clearPickedHeart, resetPickedHeart, resetView]);
   const { live: measuredVitals } = biomarkers;
   // Night playback replaces the newest readings while it is open, inline only.
   const night = useNightPlayback(biomarkerSubject, reducedMotion);
@@ -758,8 +762,10 @@ export const BodyLoopAvatar = ({
     picked === null ||
     pickVisible(picked.target, targetDepth, shownLayers, hiddenSystems);
   useEffect(() => {
-    if (!pickedShown) setPicked(null);
-  }, [pickedShown]);
+    if (pickedShown) return;
+    setPicked(null);
+    if (clearPickedHeart) anatomyDispatch({ type: "highlight", highlight: null });
+  }, [anatomyDispatch, clearPickedHeart, pickedShown]);
   // The biomarker catalogue counts too: a subject with no scan rows still gets it.
   const hasPanelRows =
     properties.length +
@@ -938,6 +944,7 @@ export const BodyLoopAvatar = ({
             layers={anatomy.state.layers}
             hiddenSystems={anatomy.state.hiddenSystems}
             highlight={anatomy.state.highlight}
+            highlightFromPick={pickLit}
             reducedMotion={reducedMotion}
             onLoad={anatomy.onLoad}
             onPick={onPick}

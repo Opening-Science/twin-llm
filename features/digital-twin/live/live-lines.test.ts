@@ -83,7 +83,7 @@ describe("liveLines", () => {
     ]);
   });
 
-  test("BodyParts3D describes the delayed vessel pulse as illustrative, with an explicit unavailable state", () => {
+  test("BodyParts3D describes illustrative heart-only motion, with an explicit unavailable state", () => {
     const beating = { ...on(true, false, false), chambers: "sinus" } as const;
     const lines = liveLines(beating, VITALS, "bodyparts3d", TODAY);
     expect(lines).toEqual([
@@ -93,8 +93,9 @@ describe("liveLines", () => {
       "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.",
     ]);
     expect(lines[2]).toContain(
-      "vessel surfaces expand together 100 ms after the ventricular pulse",
+      "heart structures contract gently while vessels stay still",
     );
+    expect(lines[2]).toContain("illustrative, not measured physiology");
     expect(lines).not.toContain(CHAMBERS_LINE);
     expect(lines).not.toContain(BODYPARTS3D_HEART_NOTE);
     const stopped = liveLines(on(true, false, false), VITALS, "bodyparts3d", TODAY);

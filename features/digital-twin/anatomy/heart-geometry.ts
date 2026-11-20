@@ -1,6 +1,10 @@
 import { Box3, type Mesh, type Object3D, Vector3 } from "three";
 import { z } from "zod";
 
+import { type Highlight } from "@/packages/anatomy/highlight";
+import { layerMix, partShown, type AtlasLayerId } from "@/packages/anatomy/layers";
+import { type OrganSystem } from "@/packages/anatomy/systems";
+
 // Cardiac walls, cavities, myocardium and valves in the pinned BodyParts3D metadata.
 // Coronary vessels are deliberately excluded.
 const HEART_STRUCTURES = new Set([
@@ -92,6 +96,39 @@ export const heartWorldBox = (mesh: Mesh, tagged: boolean): Box3 | null => {
       point.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
       box.expandByPoint(point);
     }
+  }
+  return box.isEmpty() ? null : box;
+};
+
+/** A raycast already focuses a picked heart, so only other highlights can focus it here. */
+export const focusesHeartHighlight = (highlight: Highlight | null, fromPick: boolean) =>
+  !fromPick &&
+  highlight?.kind === "groups" &&
+  highlight.ids.length === 1 &&
+  highlight.ids[0] === "heart";
+
+/** Frame the whole visible HRA heart, not just the mesh the ray hit. */
+export const heartGroupWorldBox = (
+  parts: readonly Readonly<{
+    mesh: Mesh;
+    group: string | null;
+    layer: AtlasLayerId;
+    system: OrganSystem;
+  }>[],
+  depth: number,
+  layers: Readonly<Record<AtlasLayerId, boolean>>,
+  hiddenSystems: readonly OrganSystem[],
+): Box3 | null => {
+  const box = new Box3();
+  for (const part of parts) {
+    if (
+      part.group !== "heart" ||
+      !partShown(part, layers, hiddenSystems) ||
+      !layerMix(part.layer, depth).visible
+    )
+      continue;
+    const bounds = heartWorldBox(part.mesh, false);
+    if (bounds) box.union(bounds);
   }
   return box.isEmpty() ? null : box;
 };

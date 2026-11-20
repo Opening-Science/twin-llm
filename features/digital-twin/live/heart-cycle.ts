@@ -16,8 +16,6 @@ export const ATRIAL_S = 0.11;
 export const VENTRICULAR_S = 0.32;
 /** Share of the ventricular curve spent contracting; the rest relaxes. */
 export const VENTRICULAR_PEAK = 0.3;
-/** All vessels share the ventricular envelope, delayed by 100 ms (illustrative). */
-export const VESSEL_DELAY_S = 0.1;
 /** In atrial fibrillation the atria quiver instead of contracting: this share of a contraction, at this rate. */
 export const AF_QUIVER = 0.2;
 export const AF_QUIVER_HZ = 6;
@@ -155,23 +153,6 @@ export const chamberContraction = (
         ? 0
         : contractionCurve((clock.elapsed - atrialStart) / (ATRIAL_S * scale));
   return { atria, ventricles };
-};
-
-/** Retains a delayed tail across beat boundaries, including short irregular intervals. */
-export const vesselExpansion = (clock: BeatClock, pattern: BeatPattern): number => {
-  let expansion = 0;
-  let age = clock.elapsed;
-  const longestPulse = VESSEL_DELAY_S + VENTRICULAR_S * 1.2;
-  for (let index = clock.index; age <= Math.min(clock.time, longestPulse); index -= 1) {
-    const duration =
-      VENTRICULAR_S * durationScale(intervalSec(pattern, index, clock.bpm));
-    expansion = Math.max(
-      expansion,
-      contractionCurve((age - VESSEL_DELAY_S) / duration, VENTRICULAR_PEAK),
-    );
-    age += intervalSec(pattern, index - 1, clock.bpm);
-  }
-  return expansion;
 };
 
 /** What the atria are doing now, for the line beside the view. */

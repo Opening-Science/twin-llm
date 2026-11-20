@@ -1,7 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { BufferAttribute, BufferGeometry, Group, Mesh, Vector3 } from "three";
+import {
+  BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
+  Group,
+  Mesh,
+  Vector3,
+} from "three";
 
-import { heartVertexMask, heartWorldBox, isHeartHit } from "./heart-geometry";
+import {
+  focusesHeartHighlight,
+  heartGroupWorldBox,
+  heartVertexMask,
+  heartWorldBox,
+  isHeartHit,
+} from "./heart-geometry";
 
 const taggedHeart = () => {
   const root = new Group();
@@ -50,6 +63,44 @@ describe("heart geometry for picking and focusing", () => {
     expect(
       isHeartHit({ mesh, group: "bloodvasculature", system: "cardiovascular" }, null),
     ).toBe(false);
+  });
+
+  test("HRA pick glow cannot request a second focus, but a non-pick heart highlight can", () => {
+    const heart = { kind: "groups", ids: ["heart"] } as const;
+    expect(focusesHeartHighlight(heart, true)).toBe(false);
+    expect(focusesHeartHighlight(null, false)).toBe(false);
+    expect(focusesHeartHighlight(heart, false)).toBe(true);
+    expect(
+      focusesHeartHighlight({ kind: "groups", ids: ["heart", "liver"] }, false),
+    ).toBe(false);
+    expect(
+      focusesHeartHighlight({ kind: "system", ids: ["cardiovascular"] }, false),
+    ).toBe(false);
+  });
+
+  test("HRA focus frames all visible heart meshes and excludes other groups", () => {
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1));
+    const second = mesh.clone();
+    second.position.x = 2;
+    const vessel = mesh.clone();
+    vessel.position.x = 100;
+    const heart = {
+      mesh,
+      group: "heart",
+      layer: "organs",
+      system: "cardiovascular",
+    } as const;
+    const parts = [
+      heart,
+      { ...heart, mesh: second },
+      { ...heart, mesh: vessel, group: "bloodvasculature" },
+    ];
+    const layers = { muscle: true, skeleton: true, organs: true };
+    const bounds = heartGroupWorldBox(parts, 3, layers, []);
+    expect(bounds?.min.x).toBe(-0.5);
+    expect(bounds?.max.x).toBe(2.5);
+    expect(heartGroupWorldBox(parts, 0, layers, [])).toBeNull();
+    expect(heartGroupWorldBox(parts, 3, layers, ["cardiovascular"])).toBeNull();
   });
 
   test("focus bounds contain only the heart, including the atlas placement transform", () => {

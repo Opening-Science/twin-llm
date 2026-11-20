@@ -15,8 +15,6 @@ import {
   startClock,
   VENTRICULAR_PEAK,
   VENTRICULAR_S,
-  VESSEL_DELAY_S,
-  vesselExpansion,
 } from "./heart-cycle";
 
 const at = (elapsed: number, bpm = 60, index = 0, time = elapsed) => ({
@@ -24,46 +22,6 @@ const at = (elapsed: number, bpm = 60, index = 0, time = elapsed) => ({
   elapsed,
   bpm,
   time,
-});
-
-describe("vesselExpansion", () => {
-  test("the vessel pulse follows the ventricular pulse by 100 ms at different rates", () => {
-    expect(VESSEL_DELAY_S).toBe(0.1);
-    for (const bpm of [45, 60, 90, 120, 180]) {
-      const duration = VENTRICULAR_S * Math.min(1.2, Math.max(0.5, Math.sqrt(60 / bpm)));
-      const peak = duration * VENTRICULAR_PEAK;
-      expect(vesselExpansion(at(0, bpm), REGULAR_PATTERN)).toBe(0);
-      expect(vesselExpansion(at(0.099, bpm), REGULAR_PATTERN)).toBe(0);
-      expect(vesselExpansion(at(0.1, bpm), REGULAR_PATTERN)).toBe(0);
-      expect(vesselExpansion(at(peak + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(1, 10);
-      for (const fraction of [0.1, 0.3, 0.6, 0.9]) {
-        const time = duration * fraction;
-        expect(vesselExpansion(at(time + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(
-          chamberContraction(at(time, bpm), REGULAR_PATTERN).ventricles,
-          10,
-        );
-      }
-      expect(vesselExpansion(at(duration + 0.1, bpm), REGULAR_PATTERN)).toBeCloseTo(
-        0,
-        10,
-      );
-    }
-  });
-
-  test("a delayed pulse finishes smoothly across a short irregular beat boundary", () => {
-    const pattern: BeatPattern = {
-      rr: [0.25, 0.75],
-      labels: ["sinus", "sinus"],
-      start: 0,
-    };
-    const before = vesselExpansion(at(0.249999, 60, 0, 0.249999), pattern);
-    const after = vesselExpansion(at(0.000001, 60, 1, 0.250001), pattern);
-    expect(before).toBeGreaterThan(0);
-    expect(after).toBeCloseTo(before, 4);
-    expect(vesselExpansion(at(0.02, 60, 1, 0.27), pattern)).toBe(0);
-    // Starting on an arbitrary pattern index must not invent a previous pulse.
-    expect(vesselExpansion(at(0, 60, 1, 0), pattern)).toBe(0);
-  });
 });
 
 describe("contractionCurve", () => {

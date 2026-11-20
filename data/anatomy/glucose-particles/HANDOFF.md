@@ -7,10 +7,10 @@ Particles are now **25% larger in radius/diameter**, with a requester-approved m
 ## Deliverables
 
 - [Integration asset](./glucose-particles.glb): particles only, **1,749,892 bytes**. Load alongside the original atlas; do not load a second anatomy into the application.
-- [Optional Three.js density adapter](./density-control.mjs).
+- [Optional Three.js density adapter](../../../features/digital-twin/glucose-density-control.ts).
 - This handoff.
 
-These three files are explicitly committed as an exception to the repository's ignored anatomy/GLB convention. No API route or Digital Twin integration is included. The asset is not automatically served just because it is committed.
+The GLB and this handoff are explicitly committed as an exception to the repository's ignored anatomy/GLB convention. No API route or Digital Twin runtime integration is included. The asset is not automatically served just because it is committed.
 
 Integration GLB SHA-256:
 `000834e73f4b008eb81a753a50d924ce52a8564b1cdec10bdb3911f90429d169`.
@@ -31,18 +31,18 @@ Routes were derived from cross-sections of actual connected vessel geometry, wit
 
 ## Animation contract
 
-| Property | Value |
-|---|---|
-| Embedded clip | `GlucoseFlow` |
-| Duration | Exactly 12 seconds, starting at time 0 |
-| Tracks | 360 LINEAR translation/scale channels |
-| Particle count | 180 nodes; one shared mesh and material |
-| Geometry | 80 triangles per particle; 14,400 rendered particle triangles |
-| Authoring sampling | 60 Hz, then redundant-key reduction at 0.000001 tolerance |
-| Units | Metres |
-| Export frame | glTF +Y up, +Z front, +X subject's left; original atlas origin |
-| Blender frame | +Z up, -Y front; original transforms preserved |
-| Dependencies | Core glTF 2.0; no required extensions, simulations, caches or scripts |
+| Property           | Value                                                                 |
+| ------------------ | --------------------------------------------------------------------- |
+| Embedded clip      | `GlucoseFlow`                                                         |
+| Duration           | Exactly 12 seconds, starting at time 0                                |
+| Tracks             | 360 LINEAR translation/scale channels                                 |
+| Particle count     | 180 nodes; one shared mesh and material                               |
+| Geometry           | 80 triangles per particle; 14,400 rendered particle triangles         |
+| Authoring sampling | 60 Hz, then redundant-key reduction at 0.000001 tolerance             |
+| Units              | Metres                                                                |
+| Export frame       | glTF +Y up, +Z front, +X subject's left; original atlas origin        |
+| Blender frame      | +Z up, -Y front; original transforms preserved                        |
+| Dependencies       | Core glTF 2.0; no required extensions, simulations, caches or scripts |
 
 Set the action to repeat indefinitely at **1x**; glTF itself does not store a playback-loop flag. All track endpoints match. Individual particles smoothly shrink at route exits and reset only while zero-sized, avoiding visible return paths.
 
@@ -51,7 +51,7 @@ Set the action to repeat indefinitely at **1x**; glTF itself does not store a pl
 The GLB contains a bounded pool of 180 independently addressable, animated mesh nodes. Each has standard glTF `extras`:
 
 ```json
-{"glucoseDensityRank": 0, "glucoseDensityCount": 180, "glucoseDensityVersion": 1}
+{ "glucoseDensityRank": 0, "glucoseDensityCount": 180, "glucoseDensityVersion": 1 }
 ```
 
 Ranks are unique from 0 through 179. Stable node names `GlucoseParticle_000` through `GlucoseParticle_179` provide a fallback for importers that discard extras. Preserve either the names or metadata through your import/optimization pipeline.
@@ -64,13 +64,15 @@ GLB does not contain executable controller code or a universal density-slider pr
 
 Three.js example:
 
-```js
-import { createGlucoseDensityController } from "./density-control.mjs";
+```ts
+import { createGlucoseDensityController } from "@/features/digital-twin/glucose-density-control";
 
 const gltf = await loader.loadAsync("glucose-particles.glb");
 scene.add(gltf.scene);
 const mixer = new THREE.AnimationMixer(gltf.scene);
-const action = mixer.clipAction(gltf.animations.find(clip => clip.name === "GlucoseFlow"));
+const clip = gltf.animations.find((clip) => clip.name === "GlucoseFlow");
+if (!clip) throw new Error("Missing GlucoseFlow animation.");
+const action = mixer.clipAction(clip);
 action.timeScale = 1;
 action.play();
 const particles = createGlucoseDensityController(gltf.scene);

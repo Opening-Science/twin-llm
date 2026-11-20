@@ -1,7 +1,7 @@
 import { formatDate, formatMeasure, formatNumber } from "@/infrastructure/format-measure";
 import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
-import { AV_DELAY_S, VESSEL_DELAY_S } from "./heart-cycle";
+import { AV_DELAY_S } from "./heart-cycle";
 import { type HeartRhythm } from "./heart-rhythm";
 import { type HrvBelowUsual, type LiveRate } from "./live-rates";
 
@@ -46,9 +46,10 @@ export const chambersTimingLine = (timing: HeartTiming, now: "sinus" | "af"): st
 
 export const BODYPARTS3D_HEART_NOTE =
   "On this atlas the heart is part of the whole cardiovascular system, so the system glows, more softly.";
-export const BODYPARTS3D_BEAT_NOTE = `Experimental anatomical beat: tagged heart structures contract gently; vessel surfaces expand together ${Math.round(VESSEL_DELAY_S * 1000)} ms after the ventricular pulse, without whole-system scaling. Motion and delay are illustrative, not measured physiology.`;
+export const BODYPARTS3D_BEAT_NOTE =
+  "Experimental anatomical beat: tagged heart structures contract gently while vessels stay still. The motion is illustrative, not measured physiology.";
 export const BODYPARTS3D_BEAT_UNAVAILABLE =
-  "Vessel animation unavailable: this atlas lacks the anatomy IDs or geometry needed to separate heart and vessels. Only the cardiovascular glow is shown.";
+  "Heart animation unavailable: this atlas lacks the anatomy IDs or geometry needed to separate heart and vessels. Only the cardiovascular glow is shown.";
 export const BODYPARTS3D_BREATH_NOTE =
   "On this atlas the lungs are part of the whole respiratory system, nose and airways included, so the system glows instead of moving.";
 

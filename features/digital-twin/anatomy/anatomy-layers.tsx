@@ -2,7 +2,14 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box3, Color, type Material, type Object3D, Quaternion, Vector3 } from "three";
+import {
+  type Box3,
+  Color,
+  type Material,
+  type Object3D,
+  Quaternion,
+  Vector3,
+} from "three";
 
 import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
 import { fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
@@ -39,7 +46,7 @@ import {
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
-import { heartWorldBox } from "./heart-geometry";
+import { focusesHeartHighlight, heartGroupWorldBox } from "./heart-geometry";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
@@ -68,6 +75,7 @@ export const AnatomyLayers = ({
   layers,
   hiddenSystems,
   highlight,
+  highlightFromPick = false,
   reducedMotion,
   onLoad,
   onPick,
@@ -89,6 +97,7 @@ export const AnatomyLayers = ({
   layers: Readonly<Record<AtlasLayerId, boolean>>;
   hiddenSystems: readonly OrganSystem[];
   highlight: Highlight | null;
+  highlightFromPick?: boolean;
   reducedMotion: boolean;
   onLoad: (load: AnatomyLoad) => void;
   /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
@@ -289,27 +298,20 @@ export const AnatomyLayers = ({
   const readDepth = useCallback(() => depthRef.current, []);
   const ready = prepared !== null && transform !== null;
   useEffect(() => {
-    if (
-      !ready ||
-      !onHeartFocus ||
-      highlight?.kind !== "groups" ||
-      highlight.ids.length !== 1 ||
-      highlight.ids[0] !== "heart"
-    )
+    if (!ready || !onHeartFocus || !focusesHeartHighlight(highlight, highlightFromPick))
       return;
-    const box = new Box3();
-    for (const part of prepared.parts) {
-      if (
-        part.group !== "heart" ||
-        !partShown(part, layers, hiddenSystems) ||
-        !layerMix(part.layer, targetDepth).visible
-      )
-        continue;
-      const bounds = heartWorldBox(part.mesh, false);
-      if (bounds) box.union(bounds);
-    }
-    if (!box.isEmpty()) onHeartFocus(box);
-  }, [ready, prepared, highlight, onHeartFocus, layers, hiddenSystems, targetDepth]);
+    const box = heartGroupWorldBox(prepared.parts, targetDepth, layers, hiddenSystems);
+    if (box) onHeartFocus(box);
+  }, [
+    ready,
+    prepared,
+    highlight,
+    highlightFromPick,
+    onHeartFocus,
+    layers,
+    hiddenSystems,
+    targetDepth,
+  ]);
   const pick = (
     <PickSurface
       enabled={onPick !== undefined}
