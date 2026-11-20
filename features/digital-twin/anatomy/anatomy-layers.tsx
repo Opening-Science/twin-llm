@@ -22,9 +22,6 @@ import { type OrganSystem } from "@/packages/anatomy/systems";
 import { disposeObject3D } from "../dispose-object";
 import { type Picked } from "../environment/pick-part";
 import { PickSurface } from "../environment/pick-surface";
-import { LiveConditioning, type LiveStatus } from "../live/live-conditioning";
-import { type BeatPattern } from "../live/heart-cycle";
-import { type LiveVitals } from "../live/live-rates";
 import { useTwinPalette } from "../use-twin-palette";
 import { type AnatomyLoad } from "./anatomy-state";
 import {
@@ -41,6 +38,13 @@ import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
 import { heartWorldBox } from "./heart-geometry";
 import { collectScanMaterials, readScanFrame } from "./scan-frame";
+import { attachGlucoseHeartOpacity, setGlucoseHeartOpacity } from "./glucose-material";
+import { organFocusOpacity } from "./organ-focus";
+import {
+  AtlasVisualizationEffect,
+  resolveAtlasVisualization,
+  type AtlasVisualization,
+} from "./atlas-visualization";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
 const TRIANGLE_WARNING = 2_500_000;
@@ -72,7 +76,8 @@ export const AnatomyLayers = ({
   onLoad,
   onPick,
   onHeartFocus,
-  liveVitals,
+  visualization = null,
+  moving = false,
 }: Readonly<{
   scanRoot: Object3D | null;
   /** The scan's measured stature in metres, when it has one; the fit prefers it. */
@@ -94,14 +99,8 @@ export const AnatomyLayers = ({
   /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
   onPick?: (picked: Picked | null) => void;
   onHeartFocus?: (box: Box3) => void;
-  /** Live vitals (G4): what drives the heartbeat, breathing and HRV glow. */
-  liveVitals?: Readonly<{
-    enabled: boolean;
-    vitals: LiveVitals;
-    /** The heart chambers (#53): whether they beat, and on which beats. */
-    chambers: Readonly<{ on: boolean; pattern: BeatPattern }>;
-    onStatus: (status: LiveStatus) => void;
-  }>;
+  visualization?: AtlasVisualization | null;
+  moving?: boolean;
 }>) => {
   const invalidate = useThree((state) => state.invalidate);
   const ring = useTwinPalette().ring;
@@ -114,6 +113,19 @@ export const AnatomyLayers = ({
   const scanSurfacesRef = useRef<readonly ScanSurface[]>([]);
   const fitOkRef = useRef(false);
   const depthRef = useRef(0);
+  const activeVisualization = resolveAtlasVisualization(visualization, {
+    atlasId,
+    fitted: fittedBody !== null,
+    moving,
+  });
+  const organFocusOn = activeVisualization?.focus === "heart";
+  const vesselsVisible = useCallback(
+    () =>
+      preparedRef.current?.parts.some(
+        (part) => part.system === "cardiovascular" && part.mesh.visible,
+      ) === true,
+    [],
+  );
   const live = useRef({ targetDepth, layers, hiddenSystems, reducedMotion });
   useEffect(() => {
     live.current = { targetDepth, layers, hiddenSystems, reducedMotion };
@@ -139,7 +151,13 @@ export const AnatomyLayers = ({
         let ready: PreparedAtlas;
         try {
           ready = prepareAtlas(gltf.scene, ATLASES[atlasId]);
-        } catch {
+          if (atlasId === "bodyparts3d" && fittedBody === null) {
+            for (const part of ready.parts) {
+              if (part.system === "cardiovascular") attachGlucoseHeartOpacity(part.mesh);
+            }
+          }
+        } catch (error) {
+          console.error("[anatomy] Atlas preparation failed", error);
           disposeObject3D(gltf.scene);
           onLoad({ kind: "error" });
           return;
@@ -164,7 +182,7 @@ export const AnatomyLayers = ({
         disposeObject3D(loaded.root);
       }
     };
-  }, [requested, atlasId, url, retry, onLoad]);
+  }, [requested, atlasId, fittedBody, url, retry, onLoad]);
 
   useEffect(() => {
     if (!scanRoot || !requested) return;
@@ -249,7 +267,7 @@ export const AnatomyLayers = ({
   // Frames render on demand: kick one whenever an input changes.
   useEffect(() => {
     invalidate();
-  }, [targetDepth, layers, hiddenSystems, invalidate]);
+  }, [targetDepth, layers, hiddenSystems, organFocusOn, invalidate]);
 
   useFrame((_, delta) => {
     const {
@@ -276,8 +294,18 @@ export const AnatomyLayers = ({
       }
       for (const part of atlas.parts) {
         const mix = applyMask(layerMix(part.layer, next), partShown(part, shown, hidden));
-        const mode = blendModeFor(mix, "atlas");
+        const focusOrgan = organFocusOn && part.layer === "organs";
+        // A shared depth prepass would hide the heart behind other translucent organs.
+        const mode = focusOrgan ? "blend" : blendModeFor(mix, "atlas");
         Object.assign(part.mesh, { visible: mix.visible });
+        Object.assign(part.mesh.material, {
+          opacity: organFocusOpacity(
+            part,
+            focusOrgan,
+            atlasId === "bodyparts3d" && fittedBody !== null,
+          ),
+        });
+        setGlucoseHeartOpacity(part.mesh.material as Material, focusOrgan);
         setBlendMode(part.mesh.material as Material, mode);
         setLayerPasses(part.mesh, part.layer, mode);
       }
@@ -327,23 +355,21 @@ export const AnatomyLayers = ({
   return (
     <>
       {pick}
-      {liveVitals ? (
-        <LiveConditioning
-          enabled={liveVitals.enabled}
-          vitals={liveVitals.vitals}
-          scheme={ATLASES[atlasId].scheme}
-          parts={prepared.parts}
-          root={prepared.root}
-          chambers={liveVitals.chambers}
-          onStatus={liveVitals.onStatus}
-        />
-      ) : null}
       <group
         position={transform.position}
         quaternion={transform.quaternion}
         scale={transform.scale}
       >
         <primitive object={prepared.root} />
+        {activeVisualization ? (
+          <AtlasVisualizationEffect
+            visualization={activeVisualization.effect}
+            atlasId={atlasId}
+            atlas={prepared}
+            reducedMotion={reducedMotion}
+            vesselsVisible={vesselsVisible}
+          />
+        ) : null}
       </group>
     </>
   );

@@ -3,7 +3,11 @@ import { type Ref } from "react";
 import { Button } from "@/infrastructure/ui-kit/button";
 
 import { ENTER_ENVIRONMENT, EXIT_ENVIRONMENT } from "./environment/environment-copy";
-import { CHAMBERS_TOGGLE, LIVE_TOGGLE } from "./live/live-copy";
+import { CHAMBERS_TOGGLE } from "./live/live-copy";
+import {
+  LiveVitalsControl,
+  type LiveVitalsControlModel,
+} from "./live/live-vitals-control";
 import { DANCE_TEMPOS } from "./motion/dance";
 import { MOTION_LABEL, TEMPO_LABEL, tempoOption } from "./motion/motion-copy";
 import { type MotionControl } from "./motion/use-body-motion";
@@ -37,8 +41,9 @@ export type ViewToolbarProps = Readonly<{
   onZoom: (direction: "in" | "out") => void;
   /** Scans only; the demo body has no landmarks. */
   landmarks?: Readonly<{ shown: boolean; onToggle: () => void }>;
-  /** Live vitals (G4); only when the subject has a rate and motion is allowed. */
-  liveVitals?: Readonly<{ on: boolean; onToggle: () => void }>;
+  /** Exclusive HR and illustrative glucose views, with controls behind one disclosure. */
+  liveVitals?: LiveVitalsControlModel;
+  onLiveInteract?: () => void;
   /** Anatomical beat; BodyParts3D uses a gentle heart beat and delayed vessel expansion. */
   heartChambers?: Readonly<{ on: boolean; onToggle: () => void }>;
   /** Whole-body motion (#51), once a body has loaded. */
@@ -55,6 +60,7 @@ export const ViewToolbar = ({
   onZoom,
   landmarks,
   liveVitals,
+  onLiveInteract,
   heartChambers,
   motion,
   environment,
@@ -92,14 +98,7 @@ export const ViewToolbar = ({
           </Button>
         ) : null}
         {liveVitals ? (
-          <Button
-            size="sm"
-            aria-pressed={liveVitals.on}
-            onClick={liveVitals.onToggle}
-            className={PRESSED}
-          >
-            {LIVE_TOGGLE}
-          </Button>
+          <LiveVitalsControl model={liveVitals} onInteract={onLiveInteract} />
         ) : null}
         {heartChambers ? (
           <Button

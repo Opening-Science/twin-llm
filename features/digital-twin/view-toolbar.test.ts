@@ -13,6 +13,26 @@ const BASE: ViewToolbarProps = {
   onZoom: noop,
 };
 
+const LIVE: NonNullable<ViewToolbarProps["liveVitals"]> = {
+  mode: "hr",
+  onSelect: noop,
+  hrUnavailable: null,
+  heartRate: {
+    bpm: 70,
+    overridden: false,
+    nightPlayback: false,
+    onChange: noop,
+    onReset: noop,
+  },
+  glucose: {
+    density: 0.5,
+    status: "idle",
+    unavailable: null,
+    onDensity: noop,
+    onRetry: noop,
+  },
+};
+
 /** Each button as [visible text, aria-label, aria-pressed], in order. */
 const buttons = (props: ViewToolbarProps) =>
   [
@@ -50,7 +70,7 @@ describe("ViewToolbar", () => {
       groups({
         ...BASE,
         landmarks: { shown: true, onToggle: noop },
-        liveVitals: { on: true, onToggle: noop },
+        liveVitals: LIVE,
         environment: { active: true, onToggle: noop },
       }),
     ).toEqual([
@@ -127,23 +147,28 @@ describe("ViewToolbar", () => {
     expect(envButton(true)).toContain("border-input");
   });
 
-  test("live vitals: one labelled toggle that reports its state", () => {
-    expect(buttons({ ...BASE, liveVitals: { on: false, onToggle: noop } })).toEqual([
+  test("live vitals: one disclosure that reports whether a mode is selected", () => {
+    expect(buttons({ ...BASE, liveVitals: { ...LIVE, mode: null } })).toEqual([
       ["Reset view", null, null],
       ["Pause", null, null],
       ["+", "Zoom in", null],
       ["−", "Zoom out", null],
       ["Live vitals", null, "false"],
     ]);
-    expect(buttons({ ...BASE, liveVitals: { on: true, onToggle: noop } })[4]).toEqual([
+    expect(buttons({ ...BASE, liveVitals: LIVE })[4]).toEqual([
       "Live vitals",
       null,
       "true",
     ]);
+    const html = renderToStaticMarkup(
+      createElement(ViewToolbar, { ...BASE, liveVitals: LIVE }),
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain("Vessel particles");
   });
 
   test("anatomical beat: a pressed-state toggle after Live vitals, only when offered", () => {
-    const live = { on: true, onToggle: noop };
+    const live = LIVE;
     expect(
       buttons({
         ...BASE,
@@ -174,7 +199,6 @@ describe("ViewToolbar", () => {
       onToggleRotate: () => calls.push("rotate"),
       onZoom: (direction) => calls.push(`zoom-${direction}`),
       landmarks: { shown: true, onToggle: () => calls.push("landmarks") },
-      liveVitals: { on: false, onToggle: () => calls.push("live") },
       environment: { active: false, onToggle: () => calls.push("environment") },
     });
     for (const click of clickable(tree)) click();
@@ -184,7 +208,6 @@ describe("ViewToolbar", () => {
       "zoom-in",
       "zoom-out",
       "landmarks",
-      "live",
       "environment",
     ]);
   });
@@ -200,9 +223,7 @@ describe("ViewToolbar", () => {
       onTempo: noop,
       dayLines: null,
     };
-    expect(
-      groups({ ...BASE, liveVitals: { on: false, onToggle: noop }, motion }),
-    ).toEqual([
+    expect(groups({ ...BASE, liveVitals: { ...LIVE, mode: null }, motion })).toEqual([
       ["View", ["Reset view", "Pause", "+", "−"]],
       ["Show", ["Live vitals", "Walk", "Run", "Idle", "Dance loop", "Dance (video)"]],
     ]);

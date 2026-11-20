@@ -17,10 +17,30 @@ import {
   type FittedAtlasId,
 } from "@/packages/anatomy/fitted-atlases";
 import { RIGGED_BODIES, riggedBodyVersion } from "@/packages/anatomy/rigged-bodies";
+import {
+  GLUCOSE_EFFECT,
+  anatomyEffectVersion,
+  isAnatomyEffectId,
+} from "@/packages/anatomy/effects";
 
 import { ANATOMY_NOT_INSTALLED_API, FITTED_NOT_INSTALLED_API } from "./anatomy-copy";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
 import { createPinnedGlbHandler } from "./pinned-glb-handler";
+
+export const createAnatomyEffectHandler = (
+  deps: Readonly<{
+    openEffect: () => Promise<Uint8Array<ArrayBuffer> | null>;
+  }>,
+) =>
+  createPinnedGlbHandler({
+    param: "effectId",
+    isId: isAnatomyEffectId,
+    sha256: () => GLUCOSE_EFFECT.sha256,
+    version: anatomyEffectVersion,
+    open: deps.openEffect,
+    notInstalled:
+      "Anatomy effect not installed. Restore the committed glucose particle asset.",
+  });
 
 /**
  * GET /api/anatomy/atlas/:atlasId. Atlases are public CC BY files from a closed

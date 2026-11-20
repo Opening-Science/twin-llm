@@ -43,6 +43,66 @@ To bump a pin: download the new file, record its bytes and SHA-256 in `packages/
 
 Atlases are public CC BY files from a closed list, not personal data, so the routes need no audit row. They are not served from `public/`, which Next serves with `max-age=0`.
 
+## Illustrative vessel particles
+
+`AnatomyLayers` accepts one typed `visualization` configuration (or `null`).
+Each variant keeps its settings and callbacks in its own `model`.
+`anatomy/atlas-visualization.tsx` owns atlas/pose compatibility, anatomy-focus
+policy and renderer selection. Add future visualization variants there instead
+of adding effect-specific props to `AnatomyLayers`; controls remain outside the
+renderer. Effects share the atlas placement and unmount when deselected or
+unsupported, releasing their resources and restoring animation state.
+
+Open **Live vitals** in the view toolbar to choose **HR** or **Glucose levels**.
+These modes are mutually exclusive; pressing the selected option turns it off.
+The **Vessel particles** slider appears only under **Glucose levels** and controls
+0–180 particles (initially 90). Glucose mode selects **Organs** depth; leave
+**Cardiovascular** enabled to see the particles. They are
+illustrative particles, not measured glucose particles or blood velocity; no clinical
+mapping is applied. HR uses the existing recorded readings by default. Its temporary
+25–230 bpm slider changes animation only, not the recorded value; reset returns to
+the recorded rate, or an explicitly illustrative 70 bpm if none exists. The
+override is scoped to the current subject and Demo person and is not saved. Night
+playback takes priority (including gaps) and disables the slider while open; the
+override resumes afterwards. Both views work without an HR reading.
+
+In HR and glucose modes, other organ systems become translucent (12% opacity), vessels use
+17% opacity, and the tagged heart structures remain more opaque (90%). The heart
+mask uses the same BodyParts3D anatomy IDs as picking and heartbeat animation,
+not the cardiovascular mesh's whole-body bounds. Organs blend without their shared
+depth prepass so translucent lungs do not hide the heart. Layer, system and depth
+visibility still apply. Selecting either mode selects **Organs** depth. HRA uses its
+separate heart mesh; on a fitted BodyParts3D atlas, which does not use the tagged
+heart mask, the entire cardiovascular system remains at 90% rather than hiding the
+heart. Leaving both modes restores the normal opacity and depth
+passes; zero density hides particles but keeps the glucose-mode anatomy appearance.
+
+- The committed particle-only companion is served separately through
+  `GET /api/anatomy/effects/glucose-particles?v=000834e73f4b008e`, using the same
+  pinned-GLB caching and missing-file rules. It is included in Next's deployment
+  tracing independently of `ANATOMY_DATA_DIR`; no second anatomy is loaded.
+- Its 12-second `GlucoseFlow` clip repeats at fixed 1x. Density only toggles ranked
+  node visibility and does not restart or retime the clip.
+- At load time the particle mesh is enlarged 20% in each dimension compared with
+  the committed GLB, without changing its paths or animated scale. The handoff's
+  vessel-wall clearance validation covers the original asset, not this larger size;
+  larger particles may protrude through vessel walls.
+- The companion is a sibling of the atlas under the same fit/placement group,
+  not a child of a vessel mesh. It follows depth and cardiovascular visibility,
+  freezes for reduced motion, and suspends while off screen or the tab is hidden.
+- Only the original standing BodyParts3D atlas is supported. HRA, Blender-fitted
+  atlases and body motion explicitly disable the control and detach the effect.
+  The baked paths do not deform with heartbeat-driven vessel expansion.
+- The renderer and density controller (`glucose-particles.tsx`, `glucose-flow.ts`)
+  accept density as an input; the temporary `glucose-control.tsx` slider owns no
+  animation logic. Future application state can replace the slider without
+  changing the asset or playback controller. GPU and mixer resources are released
+  when the effect is detached, retried or the viewer unmounts.
+
+Asset contract, scope, attribution and authoring limitations:
+[particle handoff](../data/anatomy/glucose-particles/HANDOFF.md).
+The derivative retains the BodyParts3D attribution and licence caveat above.
+
 ## Frames and fit
 
 Measured on the pinned files (2026-10-13):
@@ -129,7 +189,7 @@ turn's UI context names.
 - **HRV glow:** a steady soft blue glow on the brain (HRA) or the nervous system (BodyParts3D) when HRV is below this person's usual level (rule in `docs/biomarkers.md`).
 - The glow is added on top of the highlight in `layer-material.ts` (emissive colour and intensity, no recompile) and both restore exactly in either order. Scaling sets the mesh's matrix by hand while it moves and restores its own transform after.
 - Lines under the canvas (bottom left in the environment) say "Illustrative, not a physiological simulation." (while the heart chambers beat, "Illustrative simulation, not a physiological model." instead, with a line on the chamber regions and one on where the beat times come from) and which value drives what, that it is the last reading and how old it is, and from whom, only while something moves or glows. They sit beside the 3D view, not inside its `role="application"`. Below 640 px in the environment they stack above a bottom-docked pick card instead of overlapping it.
-- **When:** on by default inside the environment; off in the inline viewer, where the toolbar's "Live vitals" toggle turns it on; always off with reduced motion. The toggle shows only when the subject has a rate or the HRV state. The heart and lungs are in the organ layer, so nothing moves before the organ stop.
+- **When:** on by default inside the environment; off in the inline viewer until HR is selected in "Live vitals"; always off with reduced motion. Without a recorded heart rate, HR uses an illustrative 70 bpm by default. The heart and lungs are in the organ layer, so nothing moves before the organ stop.
 - **Frames:** `frameloop="demand"` stays. While a moving part is drawn, a timer asks for about 30 fps (the auto-rotate pacing), and about 60 fps while the heart chambers beat, since an atrial contraction lasts about 0.1 s; off screen, in a hidden tab, or once nothing moving is drawn, it stops asking. Measured on the demo body (HRA female, organs, dev build, headless Chrome on an RTX 2080 Ti, 2026-10-30): 60.0 draws a second over 10 s, frame interval p50 16.7 ms and p99 16.8 ms, about 1 ms of main-thread work per frame. Integrated graphics will differ; the deformation itself is one pass over about 22,000 vertices.
 
 ## Performance

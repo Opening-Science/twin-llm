@@ -27,14 +27,17 @@ export const PopoverContent = ({
   className,
   align = "start",
   sideOffset = 8,
+  container,
   ...rest
-}: ComponentProps<typeof RadixPopover.Content>) => {
+}: ComponentProps<typeof RadixPopover.Content> & {
+  container?: ComponentProps<typeof RadixPopover.Portal>["container"];
+}) => {
   const panelClasses = cn(
     "z-50 w-72 rounded-xl border border-border bg-popover text-popover-foreground outline-hidden",
     className,
   );
   return (
-    <RadixPopover.Portal>
+    <RadixPopover.Portal container={container}>
       <RadixPopover.Content
         align={align}
         sideOffset={sideOffset}

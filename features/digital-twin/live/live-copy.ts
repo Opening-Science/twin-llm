@@ -29,10 +29,16 @@ export const CHAMBERS_ILLUSTRATIVE =
 export const CHAMBERS_LINE = `Anatomical beat: a subtle atrial contraction, then the ventricles' region ${Math.round(AV_DELAY_S * 1000)} ms later, with a quick contraction and slower relaxation. Timing and motion are illustrative; the atlas heart is one mesh, so the regions are approximate.`;
 
 /** Where the beat times come from, and for AF what the atria are doing now. */
-export const chambersTimingLine = (timing: HeartTiming, now: "sinus" | "af"): string => {
+export const chambersTimingLine = (
+  timing: HeartTiming,
+  now: "sinus" | "af",
+  illustrativeRate = false,
+): string => {
   switch (timing) {
     case "regular":
-      return "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.";
+      return illustrativeRate
+        ? "Beat timing: regular, at the animation rate above."
+        : "Beat timing: regular, at the heart rate above. The wearable gives a rate, not the time of each beat.";
     case "sinus":
       return "Beat timing: a simulated sinus rhythm with beat-to-beat variation from the rhythm simulator, paced to the heart rate above.";
     case "paroxysmal_af":
@@ -83,6 +89,12 @@ const lastReading = (day: string, today: string): string =>
 
 export const pulseLine = (rate: LiveRate, today: string): string =>
   `Pulse at ${formatMeasure("heartRate", rate.perMinute)} · ${lastReading(rate.day, today)} · ${rate.source} ${RATE_NAME[rate.vital]}`;
+
+export const recordedHeartLine = (rate: LiveRate, today: string): string =>
+  `Recorded ${RATE_NAME[rate.vital]}: ${formatMeasure("heartRate", rate.perMinute)} · ${lastReading(rate.day, today)} · ${rate.source}`;
+
+export const animationHeartLine = (bpm: number): string =>
+  `Illustrative heart animation at ${formatMeasure("heartRate", bpm)}; not a reading.`;
 
 export const breathingLine = (rate: LiveRate, today: string): string =>
   `Breathing at ${formatNumber(rate.perMinute, 0)} per minute · ${lastReading(rate.day, today)} · ${rate.source} ${RATE_NAME[rate.vital]}`;
