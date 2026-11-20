@@ -13,7 +13,7 @@ import { ATLASES } from "@/packages/anatomy/manifest";
 
 import { layerFadeUniforms } from "./layer-material";
 import { prepareAtlas } from "./prepare-atlas";
-import { collectScanMaterials, readScanFrame } from "./scan-frame";
+import { collectScanMaterials, readScanFrame, readSkeletonScanFrame } from "./scan-frame";
 
 /** A triangle without normals, like the meshopt atlases, with optional AO colours. */
 const triangle = (withColour: boolean): BufferGeometry => {
@@ -269,6 +269,30 @@ describe("readScanFrame", () => {
 
   test("drops an implausible hip height", () => {
     expect(readScanFrame(rig(1.5)).hipMidpoint).toBeNull();
+  });
+
+  test("ANNY's hip joints place the CT skeleton, never the atlas", () => {
+    const anny = () => {
+      const root = new Group();
+      const body = new Mesh(new BoxGeometry(1, 0.4, 1.8), new MeshStandardMaterial());
+      body.position.set(0, 0, 0.9);
+      // GLTFLoader turns ANNY's `upperleg01.L` into `upperleg01L`.
+      const left = new Bone();
+      left.name = "upperleg01L";
+      left.position.set(0.09, 0.03, 0.97);
+      const right = new Bone();
+      right.name = "upperleg01R";
+      right.position.set(-0.09, 0.03, 0.97);
+      root.add(body, left, right);
+      return root;
+    };
+    expect(
+      readSkeletonScanFrame(anny())
+        .hipMidpoint?.toArray()
+        .map((n) => Math.round(n * 1000) / 1000),
+    ).toEqual([0, 0.03, 0.97]);
+    expect(readScanFrame(anny()).hipMidpoint).toBeNull();
+    expect(readSkeletonScanFrame(rig(0.95)).hipMidpoint).not.toBeNull();
   });
 
   test("collectScanMaterials lists each material once", () => {

@@ -10,6 +10,8 @@ import {
   BODY_CARD_NOTE,
   BODY_CARD_TITLE,
   CARD_ATLAS_NOTE,
+  CARD_CT_NOTE,
+  CARD_MODELLED,
   NO_LINKED_BIOMARKERS,
   pickedLabel,
 } from "./environment-copy";
@@ -142,5 +144,46 @@ describe("card anchor", () => {
   test("behind the camera at the bottom left; before the first frame at the top left", () => {
     expect(cardPlacement(at(0, 0, 1280, 800, true), 300)).toEqual({ left: 12, top: 488 });
     expect(cardPlacement(null, 300)).toEqual({ left: 12, top: 12 });
+  });
+});
+
+describe("PickCard for a CT skeleton bone", () => {
+  const CARTILAGES: Picked = {
+    target: {
+      kind: "part",
+      label: "Set of costal cartilages",
+      layer: "skeleton",
+      system: "musculoskeletal",
+      group: "fma_85213",
+      ontologyId: "FMA:85213",
+      ct: true,
+      modelled: true,
+    },
+    point: [0, -0.1, 1.3],
+  };
+
+  test("names the bone, says it is modelled and that it is not this body's", () => {
+    const html = render({ picked: CARTILAGES });
+    expect(texts(html, "h3")).toEqual(["Set of costal cartilages"]);
+    expect(cardFacts(CARTILAGES)).toEqual([
+      "Musculoskeletal",
+      "Skeleton",
+      "FMA:85213",
+      CARD_MODELLED,
+    ]);
+    expect(html).toContain(CARD_CT_NOTE);
+    expect(html).not.toContain(CARD_ATLAS_NOTE);
+  });
+
+  test("a segmented bone has no modelled line", () => {
+    const rib: Picked = {
+      ...CARTILAGES,
+      target: {
+        ...CARTILAGES.target,
+        label: "Left first rib",
+        modelled: false,
+      } as Picked["target"],
+    };
+    expect(cardFacts(rib)).not.toContain(CARD_MODELLED);
   });
 });

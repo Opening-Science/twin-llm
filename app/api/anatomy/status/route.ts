@@ -5,10 +5,12 @@ import {
   statFittedAtlas,
   statRiggedBody,
 } from "@/packages/anatomy/atlas-store";
+import { readSkeletonStatus } from "@/packages/anatomy/skeleton-store";
 
 export const GET = createAnatomyStatusHandler({
   statAtlas,
   statRiggedBody,
   statFittedAtlas,
   fittedAtlasOn: () => anatomyEnv().fittedAtlasOn,
+  readSkeleton: readSkeletonStatus,
 });
