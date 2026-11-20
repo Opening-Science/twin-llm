@@ -17,7 +17,7 @@ import {
   type PointerSample,
 } from "./pick-part";
 import { WALK_SURFACE_ATTR } from "./walk-controls";
-import { heartWorldBox, isHeartHit } from "../anatomy/heart-geometry";
+import { heartGroupWorldBox, heartWorldBox, isHeartHit } from "../anatomy/heart-geometry";
 
 const isMesh = (object: Object3D): object is Mesh => (object as Mesh).isMesh === true;
 
@@ -119,7 +119,8 @@ export const PickSurface = ({
         point: hit.point,
         face: hit.face,
       }));
-      const index = choosePick(mapped, now.getDepth(), now.layers, now.hiddenSystems);
+      const depth = now.getDepth();
+      const index = choosePick(mapped, depth, now.layers, now.hiddenSystems);
       const chosen = index === null ? null : mapped[index]!;
       const heart = chosen?.part ? isHeartHit(chosen.part, chosen.face) : false;
       const target = chosen ? pickTarget(chosen.part, now.groups) : null;
@@ -128,12 +129,16 @@ export const PickSurface = ({
           ? {
               target:
                 heart && target.kind === "part" ? { ...target, label: "Heart" } : target,
+              heart,
               point: [chosen.point.x, chosen.point.y, chosen.point.z],
             }
           : null,
       );
       if (heart && chosen?.part && now.onHeartFocus) {
-        const box = heartWorldBox(chosen.part.mesh, chosen.part.group === null);
+        const box =
+          chosen.part.group === "heart"
+            ? heartGroupWorldBox(now.parts, depth, now.layers, now.hiddenSystems)
+            : heartWorldBox(chosen.part.mesh, true);
         if (box) now.onHeartFocus(box);
       }
     };
