@@ -121,6 +121,27 @@ with the text on its standard input, never linked.
 With none set the sidecar only listens; with some set it stops and names what is missing.
 Kokoro is not wired in.
 
+## Timings
+
+`bun run voice:time` times the sidecar on this machine for the kiosk trial (#615). It needs
+a sidecar with a local voice of your own (above); one that only listens has nothing to
+speak, so `voice:time` says so and stops. In the app, each spoken question and each answer
+read aloud shows its own timings. For two fixed sentences per language it asks the sidecar
+to speak the sentence, turns the voice's WAV into the 16 kHz input shape and asks the
+sidecar to write it down again, so it needs no microphone and keeps no recording. It prints
+one line per sentence and appends the same to `timings.jsonl` in the setup's folder
+(`--out` to change it):
+
+```text
+de  speak 410 ms  heard 1650 ms of audio in 720 ms  total 1190 ms  "Zeig mir mein Herz."
+```
+
+`speak` and `heard … in` are the sidecar's own times, `total` the whole round trip, and
+the quoted text is what speech to text heard of the spoken sentence, a quick check of both
+engines and the voice. It talks only to a sidecar on loopback (`--url`, default
+`http://127.0.0.1:8095`). The numbers above are an example of the format, not a
+measurement.
+
 ## The app's routes
 
 The browser never talks to the sidecar. It calls the app, which checks the request and

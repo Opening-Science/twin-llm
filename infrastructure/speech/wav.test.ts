@@ -23,6 +23,7 @@ describe("encodeWav", () => {
       sampleRate: 16_000,
       bitsPerSample: 16,
       dataBytes: 10,
+      dataOffset: 44,
       durationMs: 0,
     });
   });
@@ -48,6 +49,7 @@ describe("wavInfo", () => {
     ]);
     const withList = new Uint8Array([...plain.slice(0, 36), ...list, ...plain.slice(36)]);
     expect(wavInfo(withList)?.dataBytes).toBe(320);
+    expect(wavInfo(withList)?.dataOffset).toBe(44 + 12);
   });
 
   test("cuts a data size larger than the file to what is there", () => {
