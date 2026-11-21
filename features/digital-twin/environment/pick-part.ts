@@ -93,9 +93,20 @@ export type PickTarget =
 
 export type Picked = Readonly<{
   target: PickTarget;
+  /** BodyParts3D heart and vessel hits can share the same target. */
+  heart: boolean;
   /** Where the ray met it, in world space, for the card to sit beside. */
   point: readonly [number, number, number];
 }>;
+
+export const heartPickDismissal = (
+  picked: Picked | null,
+  pickLit: boolean,
+  walk: boolean,
+) => ({
+  clearHighlight: picked?.heart === true && pickLit,
+  resetView: picked?.heart === true && !walk,
+});
 
 /** HRA parts read as their organ group ("Liver"); BodyParts3D parts as their system. */
 export const pickTarget = (

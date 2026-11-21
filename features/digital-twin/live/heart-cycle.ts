@@ -15,7 +15,7 @@ export const ATRIAL_S = 0.11;
 /** Ventricular contraction and relaxation at a 1 s beat interval, seconds (illustrative). */
 export const VENTRICULAR_S = 0.32;
 /** Share of the ventricular curve spent contracting; the rest relaxes. */
-export const VENTRICULAR_PEAK = 0.4;
+export const VENTRICULAR_PEAK = 0.3;
 /** In atrial fibrillation the atria quiver instead of contracting: this share of a contraction, at this rate. */
 export const AF_QUIVER = 0.2;
 export const AF_QUIVER_HZ = 6;

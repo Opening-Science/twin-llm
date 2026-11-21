@@ -8,6 +8,7 @@
  *   bun run anatomy:fetch --demo anny-adult-f     # one synthetic demo body
  *   bun run anatomy:fetch --rigged anny-adult-f   # one rigged demo body
  *   bun run anatomy:fetch --skip-rigged           # everything but the rigged bodies
+ *   bun run anatomy:fetch --effect glucose-particles  # one anatomy effect
  *   bun run anatomy:fetch --check                 # report, download nothing
  *
  * Each file is read with a size cap, checked against its pinned SHA-256, and
@@ -16,7 +17,8 @@
  * Atlases and demo bodies come from fixed URLs and must not redirect. The
  * rigged bodies are assets of this repository's anatomy-rigged-v1 release,
  * which GitHub serves through a redirect; only redirects to GitHub's own hosts
- * are followed. When a rigged body cannot be downloaded, `bun run
+ * are followed. Anatomy effects come the same way from the anatomy-effects-v1
+ * release. When a rigged body cannot be downloaded, `bun run
  * anatomy:bake-rigged` bakes it locally (needs uv).
  */
 import { createHash } from "node:crypto";
@@ -38,6 +40,15 @@ import {
   type AtlasEntry,
   type AtlasId,
 } from "../../packages/anatomy/manifest";
+import {
+  EFFECT_IDS,
+  EFFECTS,
+  EFFECTS_RELEASE_HOSTS,
+  EFFECTS_RELEASE_TAG,
+  isEffectId,
+  type EffectEntry,
+  type EffectId,
+} from "../../packages/anatomy/effects";
 import { resolveAnatomyDir } from "../../packages/anatomy/paths";
 import {
   RIGGED_ATTRIBUTION,
@@ -70,6 +81,7 @@ export type FetchDeps = Readonly<{
   atlases?: Readonly<Record<AtlasId, AtlasEntry>>;
   demoBodies?: Readonly<Record<DemoBodyId, DemoBodyEntry>>;
   riggedBodies?: Readonly<Record<DemoBodyId, RiggedBodyEntry>>;
+  effects?: Readonly<Record<EffectId, EffectEntry>>;
 }>;
 
 /** What fetching needs from an atlas or a demo body pin. */
@@ -96,6 +108,12 @@ const riggedPin = (entry: RiggedBodyEntry): PinnedFile => ({
   fallback: RIGGED_FALLBACK,
 });
 
+const effectPin = (entry: EffectEntry): PinnedFile => ({
+  ...entry,
+  redirectHosts: EFFECTS_RELEASE_HOSTS,
+  fallback: `It comes from release ${EFFECTS_RELEASE_TAG}.`,
+});
+
 const BODYPARTS3D_NOTE =
   "BodyParts3D: DBCLS relicensed it to CC BY 4.0 on 2025-02-27; written confirmation is still pending (docs/anatomy.md).";
 
@@ -105,6 +123,7 @@ type Args = Readonly<{
   ids: readonly string[];
   demoIds: readonly string[];
   riggedIds: readonly string[];
+  effectIds: readonly string[];
   check: boolean;
   skipRigged: boolean;
 }>;
@@ -113,6 +132,7 @@ const parseArgs = (argv: readonly string[]): Args => {
   const ids: string[] = [];
   const demoIds: string[] = [];
   const riggedIds: string[] = [];
+  const effectIds: string[] = [];
   let check = false;
   let skipRigged = false;
   for (let i = 0; i < argv.length; i += 1) {
@@ -127,9 +147,12 @@ const parseArgs = (argv: readonly string[]): Args => {
     } else if (argv[i] === "--rigged") {
       riggedIds.push(argv[i + 1] ?? "");
       i += 1;
+    } else if (argv[i] === "--effect") {
+      effectIds.push(argv[i + 1] ?? "");
+      i += 1;
     }
   }
-  return { ids, demoIds, riggedIds, check, skipRigged };
+  return { ids, demoIds, riggedIds, effectIds, check, skipRigged };
 };
 
 type Outcome = "installed" | "present" | "missing" | "failed";
@@ -187,7 +210,7 @@ const fetchOne = async (
   }
 
   try {
-    await deps.mkdir(deps.dir);
+    await deps.mkdir(dirname(path));
     await deps.writeFileAtomic(path, bytes);
   } catch {
     io.stderr.write(`Could not write ${entry.name} to ${deps.dir}.\n`);
@@ -205,7 +228,8 @@ export const runAnatomyFetch = async (
   const atlases = deps.atlases ?? ATLASES;
   const demoBodies = deps.demoBodies ?? DEMO_BODIES;
   const riggedBodies = deps.riggedBodies ?? RIGGED_BODIES;
-  const { ids, demoIds, riggedIds, check, skipRigged } = parseArgs(argv);
+  const effects = deps.effects ?? EFFECTS;
+  const { ids, demoIds, riggedIds, effectIds, check, skipRigged } = parseArgs(argv);
   const unknown = ids.find((id) => !isAtlasId(id));
   if (unknown !== undefined) {
     io.stderr.write(`Unknown atlas "${unknown}". Known: ${ATLAS_IDS.join(", ")}.\n`);
@@ -218,8 +242,19 @@ export const runAnatomyFetch = async (
     );
     return 2;
   }
+  const unknownEffect = effectIds.find((id) => !isEffectId(id));
+  if (unknownEffect !== undefined) {
+    io.stderr.write(
+      `Unknown effect "${unknownEffect}". Known: ${EFFECT_IDS.join(", ")}.\n`,
+    );
+    return 2;
+  }
   // No selection means everything; naming only atlases (or only demo bodies) fetches just those.
-  const everything = ids.length === 0 && demoIds.length === 0 && riggedIds.length === 0;
+  const everything =
+    ids.length === 0 &&
+    demoIds.length === 0 &&
+    riggedIds.length === 0 &&
+    effectIds.length === 0;
   const rigged = everything ? (skipRigged ? [] : DEMO_BODY_IDS) : riggedIds;
   const selected: readonly PinnedFile[] = [
     ...(everything ? ATLAS_IDS : ids.filter(isAtlasId)).map((id) => atlases[id]),
@@ -227,6 +262,9 @@ export const runAnatomyFetch = async (
       (id) => demoBodies[id],
     ),
     ...rigged.filter(isDemoBodyId).map((id) => riggedPin(riggedBodies[id])),
+    ...(everything ? EFFECT_IDS : effectIds.filter(isEffectId)).map((id) =>
+      effectPin(effects[id]),
+    ),
   ];
 
   const outcomes: Outcome[] = [];
@@ -242,7 +280,12 @@ export const runAnatomyFetch = async (
     for (const attribution of new Set(ready.map((entry) => entry.attribution))) {
       io.stdout.write(`  ${attribution}\n`);
     }
-    if (ready.some((entry) => entry.id === "bodyparts3d")) {
+    // The particle effect is a BodyParts3D derivative and carries the same note.
+    if (
+      ready.some(
+        (entry) => entry.id === "bodyparts3d" || entry.id === "glucose-particles",
+      )
+    ) {
       io.stdout.write(`${BODYPARTS3D_NOTE}\n`);
     }
   }

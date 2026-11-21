@@ -57,11 +57,11 @@ describe("createHeartDeformer", () => {
   test("each region pulls towards its own centre, by its weight", () => {
     const deformer = createHeartDeformer(COLUMN, weights, centres);
     const out = deformer.apply(1, 0);
-    // Atria only: the 0.75 point moves up by 8 % of 0.25; the apex stays.
+    // Atria only: the 0.75 point moves up by 3 % of 0.25; the apex stays.
     expect(out[4]).toBeCloseTo(0.75 + 0.25 * CONTRACTION.atria, 6);
     expect(out[13]).toBe(0);
     const both = deformer.apply(0, 1);
-    // Ventricles only: the 0.25 point moves 10 % towards y = 0; the base stays.
+    // Ventricles only: the 0.25 point moves 5 % towards y = 0; the base stays.
     expect(both[10]).toBeCloseTo(0.25 * (1 - CONTRACTION.ventricles), 6);
     expect(both[1]).toBe(1);
     // The blended middle point moves half as far with each.
@@ -70,5 +70,21 @@ describe("createHeartDeformer", () => {
       6,
     );
     expect(deformer.apply(1, 1)).toBe(deformer.positions);
+  });
+
+  test("the subtle beat contracts by 3% and 5% without accumulating deformation", () => {
+    expect(CONTRACTION).toEqual({ atria: 0.03, ventricles: 0.05 });
+    const rest = new Float32Array([-1, 1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0]);
+    const regions = new Float32Array([1, 1, 0, 0]);
+    const deformer = createHeartDeformer(rest, regions, regionCentres(rest, regions));
+    for (let beat = 0; beat < 100; beat += 1) {
+      const contracted = deformer.apply(1, 1);
+      expect(contracted[0]).toBeCloseTo(-0.97, 6);
+      expect(contracted[3]).toBeCloseTo(0.97, 6);
+      expect(contracted[6]).toBeCloseTo(-0.95, 6);
+      expect(contracted[9]).toBeCloseTo(0.95, 6);
+      expect([...deformer.apply(0, 0)]).toEqual([...rest]);
+    }
+    expect([...rest]).toEqual([-1, 1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0]);
   });
 });

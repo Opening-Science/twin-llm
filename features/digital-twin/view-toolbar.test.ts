@@ -142,7 +142,7 @@ describe("ViewToolbar", () => {
     ]);
   });
 
-  test("heart chambers: a pressed-state toggle after Live vitals, only when offered", () => {
+  test("anatomical beat: a pressed-state toggle after Live vitals, only when offered", () => {
     const live = { on: true, onToggle: noop };
     expect(
       buttons({
@@ -152,7 +152,7 @@ describe("ViewToolbar", () => {
       }).slice(4),
     ).toEqual([
       ["Live vitals", null, "true"],
-      ["Heart chambers", null, "true"],
+      ["Anatomical beat", null, "true"],
     ]);
     expect(
       buttons({
@@ -160,9 +160,9 @@ describe("ViewToolbar", () => {
         liveVitals: live,
         heartChambers: { on: false, onToggle: noop },
       })[5],
-    ).toEqual(["Heart chambers", null, "false"]);
+    ).toEqual(["Anatomical beat", null, "false"]);
     expect(buttons({ ...BASE, liveVitals: live }).map(([text]) => text)).not.toContain(
-      "Heart chambers",
+      "Anatomical beat",
     );
   });
 
