@@ -7,6 +7,7 @@ import {
   focusHighlights,
   focusOfPick,
   isTwinFocusId,
+  ORGAN_GROUPS,
   TWIN_FOCUS_IDS,
   TWIN_FOCUS_ORGANS,
   twinFocus,
@@ -66,6 +67,23 @@ describe("focusHighlights", () => {
     });
   });
 
+  test("the brain lights the whole brain (allenbrain) and the optic chiasm (brain) on HRA", () => {
+    expect(focusHighlights("brain")).toEqual({
+      hra: { kind: "groups", ids: ["allenbrain", "brain"] },
+      bodyparts3d: { kind: "system", ids: ["nervous"] },
+    });
+  });
+
+  test("every group an organ lights is one the group table files under its system", () => {
+    expect(
+      TWIN_FOCUS_ORGANS.filter((organ) =>
+        ORGAN_GROUPS[organ].some(
+          (group) => systemForGroup(group) !== twinFocus(organ).system,
+        ),
+      ),
+    ).toEqual([]);
+  });
+
   test("a system lights the whole system on both", () => {
     expect(focusHighlights("nervous")).toEqual({
       hra: { kind: "system", ids: ["nervous"] },
@@ -77,6 +95,11 @@ describe("focusHighlights", () => {
 describe("focusOfPick", () => {
   test("a focus organ wins over its system", () => {
     expect(focusOfPick("liver", "metabolic")).toBe("liver");
+  });
+
+  test("a click on the whole brain or the optic chiasm names the brain", () => {
+    expect(focusOfPick("allenbrain", "nervous")).toBe("brain");
+    expect(focusOfPick("brain", "nervous")).toBe("brain");
   });
 
   test("another group falls back to its system", () => {

@@ -26,7 +26,8 @@ describe("vitals table", () => {
       strain: "cardiovascular",
       steps: "musculoskeletal",
     });
-    expect(VITAL_ANATOMY.hrv.hraGroups).toEqual(["brain"]);
+    expect(VITAL_ANATOMY.hrv.hraGroups).toEqual(["allenbrain", "brain"]);
+    expect(VITAL_ANATOMY.sleep.hraGroups).toEqual(["allenbrain", "brain"]);
     expect(VITAL_ANATOMY.hrv.secondaryHraGroups).toEqual(["heart"]);
   });
 
