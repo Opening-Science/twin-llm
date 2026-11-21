@@ -7,6 +7,7 @@ import {
   type DemoBodyEntry,
   type DemoBodyId,
 } from "../../packages/anatomy/demo-bodies";
+import { EFFECTS, type EffectEntry, type EffectId } from "../../packages/anatomy/effects";
 import { ATLASES, type AtlasEntry, type AtlasId } from "../../packages/anatomy/manifest";
 import {
   RIGGED_ATTRIBUTION,
@@ -68,6 +69,18 @@ const SYNTHETIC_RIGGED: Record<DemoBodyId, RiggedBodyEntry> = {
   },
 };
 
+const EFFECT_BYTES = new Uint8Array([30, 31, 32]);
+
+const SYNTHETIC_EFFECTS: Record<EffectId, EffectEntry> = {
+  "glucose-particles": {
+    ...EFFECTS["glucose-particles"],
+    bytes: 3,
+    sha256: sha256(EFFECT_BYTES),
+  },
+};
+
+const EFFECT_ASSET = "glucose-particles";
+
 const ASSET_HOST =
   "https://release-assets.githubusercontent.com/github-production-release-asset/1/";
 
@@ -88,7 +101,10 @@ const harness = (
     fetch: async (url, init) => {
       requested.push(url);
       // Only the release downloads may see a redirect, and they follow it by hand.
-      const release = riggedIdFor(url) !== undefined || url.startsWith(ASSET_HOST);
+      const release =
+        riggedIdFor(url) !== undefined ||
+        url === SYNTHETIC_EFFECTS["glucose-particles"].url ||
+        url.startsWith(ASSET_HOST);
       expect(init.redirect).toBe(release ? "manual" : "error");
       return serve(url);
     },
@@ -102,6 +118,7 @@ const harness = (
     atlases: SYNTHETIC,
     demoBodies: SYNTHETIC_DEMO,
     riggedBodies: SYNTHETIC_RIGGED,
+    effects: SYNTHETIC_EFFECTS,
   };
   const io = {
     stdout: { write: (chunk: string) => void out.push(chunk) },
@@ -126,6 +143,12 @@ const byUrl = (url: string): Response => {
       status: 302,
       headers: { location: `${ASSET_HOST}${riggedId}` },
     });
+  if (url === SYNTHETIC_EFFECTS["glucose-particles"].url)
+    return new Response(null, {
+      status: 302,
+      headers: { location: `${ASSET_HOST}${EFFECT_ASSET}` },
+    });
+  if (url === `${ASSET_HOST}${EFFECT_ASSET}`) return new Response(EFFECT_BYTES);
   const asset = (Object.keys(RIGGED_BYTES) as DemoBodyId[]).find(
     (key) => url === `${ASSET_HOST}${key}`,
   );
@@ -143,9 +166,14 @@ describe("runAnatomyFetch", () => {
       "/atlases/anny-adult-m.pose-bodyparts3d.glb",
       "/atlases/anny-adult-m.rigged.glb",
       "/atlases/bodyparts3d.ao.glb",
+      "/atlases/glucose-particles/glucose-particles.glb",
       "/atlases/hra-m.ao.glb",
       "/atlases/hra.ao.glb",
     ]);
+    expect(h.out.join("")).toContain(
+      "Glucose particles (illustrative): installed (0.0 MB).",
+    );
+    expect(h.out.join("")).toContain(EFFECTS["glucose-particles"].attribution);
     expect(h.out.join("")).toContain("ANNY adult (male), rigged: installed (0.0 MB).");
     expect(h.out.join("")).toContain(RIGGED_ATTRIBUTION);
     expect(h.out.join("")).toContain("ANNY adult (female): installed (0.0 MB).");
@@ -156,6 +184,27 @@ describe("runAnatomyFetch", () => {
     expect(output).toContain(ATLASES["hra-f"].attribution);
     expect(output.split(ATLASES["hra-f"].attribution).length).toBe(2);
     expect(output).toContain("written confirmation is still pending");
+  });
+
+  test("--effect fetches one effect from its release, into its own folder", async () => {
+    const h = harness(byUrl);
+    expect(await runAnatomyFetch(["--effect", "glucose-particles"], h.io, h.deps)).toBe(
+      0,
+    );
+    expect(h.requested).toEqual([
+      SYNTHETIC_EFFECTS["glucose-particles"].url,
+      `${ASSET_HOST}${EFFECT_ASSET}`,
+    ]);
+    expect(Object.keys(h.written)).toEqual([
+      "/atlases/glucose-particles/glucose-particles.glb",
+    ]);
+    expect(h.out.join("")).toContain("written confirmation is still pending");
+  });
+
+  test("refuses an unknown effect", async () => {
+    const h = harness(byUrl);
+    expect(await runAnatomyFetch(["--effect", "sparkles"], h.io, h.deps)).toBe(2);
+    expect(h.err.join("")).toBe('Unknown effect "sparkles". Known: glucose-particles.\n');
   });
 
   test("writes nothing when the checksum does not match", async () => {
@@ -222,6 +271,7 @@ describe("runAnatomyFetch", () => {
     expect(Object.keys(h.written).sort()).toEqual([
       "/atlases/anny-adult-f.pose-bodyparts3d.glb",
       "/atlases/anny-adult-m.pose-bodyparts3d.glb",
+      "/atlases/glucose-particles/glucose-particles.glb",
       "/atlases/hra-m.ao.glb",
       "/atlases/hra.ao.glb",
     ]);
@@ -307,7 +357,8 @@ describe("runAnatomyFetch", () => {
     const h = harness(byUrl);
     expect(await runAnatomyFetch(["--skip-rigged"], h.io, h.deps)).toBe(0);
     expect(Object.keys(h.written).filter((path) => path.includes("rigged"))).toEqual([]);
-    expect(h.requested.length).toBe(5);
+    // Three atlases, two demo bodies, and the effect's release download and redirect.
+    expect(h.requested.length).toBe(7);
   });
 
   test("rejects an unknown demo body id", async () => {

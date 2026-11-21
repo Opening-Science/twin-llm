@@ -25,9 +25,10 @@ const LIVER: Picked = {
     group: "liver",
     ontologyId: "UBERON:0002107",
   },
+  heart: false,
   point: [0.05, -0.02, 1.1],
 };
-const BODY: Picked = { target: { kind: "body" }, point: [0, -0.1, 1.2] };
+const BODY: Picked = { target: { kind: "body" }, heart: false, point: [0, -0.1, 1.2] };
 
 const render = (props: Partial<PickCardProps> & Pick<PickCardProps, "picked">) =>
   renderToStaticMarkup(

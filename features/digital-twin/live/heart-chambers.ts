@@ -16,8 +16,8 @@ import {
 } from "./heart-deform";
 
 /**
- * Puts the two-phase heart deformation on the atlas heart mesh (#53). While it
- * beats, the geometry draws from a float copy of its positions that the
+ * Puts the two-phase deformation on the HRA heart mesh (#53).
+ * While it beats, the geometry draws from a float copy of its positions that the
  * deformer rewrites each frame; stopping puts the atlas's own (quantised)
  * attribute back, so nothing of the atlas changes for good.
  */

@@ -183,9 +183,11 @@ describe("liveTargets", () => {
 });
 
 describe("chamberGlow", () => {
-  test("full at a ventricular peak, half at an atrial one, none at rest", () => {
-    expect(chamberGlow(0, 1)).toBe(0.15);
-    expect(chamberGlow(1, 0)).toBe(0.075);
+  test("anatomical beat adds no flashing glow at any contraction phase", () => {
+    expect(chamberGlow(0, 1)).toBe(0);
+    expect(chamberGlow(1, 0)).toBe(0);
     expect(chamberGlow(0, 0)).toBe(0);
+    expect(chamberGlow(1, 1)).toBe(0);
+    expect(chamberGlow(0.25, 0.5)).toBe(0);
   });
 });
