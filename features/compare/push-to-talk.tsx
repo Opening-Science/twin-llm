@@ -50,11 +50,14 @@ export const PushToTalk = ({
   disabled,
   onLanguage,
   onHeard,
+  onListen,
 }: Readonly<{
   language: SpeechLanguage;
   disabled: boolean;
   onLanguage: (next: SpeechLanguage) => void;
   onHeard: (heard: VoiceHeard) => void;
+  /** Called as the microphone opens, so nothing the app is saying gets recorded. */
+  onListen?: () => void;
 }>) => {
   const [phase, setPhase] = useState<PushToTalkPhase>("idle");
   const [problem, setProblem] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export const PushToTalk = ({
 
   const begin = () => {
     if (disabled || recording.current !== null || phase === "writing") return;
+    onListen?.();
     setProblem(null);
     setPhase("listening");
     recording.current = startHold(startRecording, () => void finish());

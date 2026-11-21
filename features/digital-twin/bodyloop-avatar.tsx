@@ -228,6 +228,8 @@ type BodyLoopAvatarProps = {
   readonly initialPersonRef?: string;
   /** A chat `twin.body` view: what to light, and the depth to start at. Read once. */
   readonly initialFocus?: InitialFocus;
+  /** A focus asked for after the viewer opened (a spoken answer); lit once per `at`. */
+  readonly focusRequest?: FocusRequest;
   /** A tap on the body, as the HRA group and system it names; null when cleared. */
   readonly onPickPart?: (part: PickedPart | null) => void;
   /** False when the server knows BodyLoop is off: no subjects call, the demo only. */
@@ -240,6 +242,8 @@ export type InitialFocus = Readonly<{
   highlights: Readonly<Record<AtlasScheme, Highlight>>;
   depth: number;
 }>;
+
+export type FocusRequest = Readonly<{ focus: InitialFocus; at: number }>;
 
 export type PickedPart = Readonly<{ group: string | null; system: string | null }>;
 
@@ -263,6 +267,7 @@ export const BodyLoopAvatar = ({
   initialSubjectId,
   initialPersonRef,
   initialFocus,
+  focusRequest,
   onPickPart,
   bodyLoopConfigured = true,
 }: BodyLoopAvatarProps) => {
@@ -622,21 +627,27 @@ export const BodyLoopAvatar = ({
     [scheme, anatomyDispatch, pickLit, onPickPart],
   );
   // A chat view's focus is lit once, at its depth; after that the viewer is the person's.
+  const lightFocus = useCallback(
+    (focus: InitialFocus) => {
+      anatomyDispatch({ type: "depth", depth: focus.depth });
+      anatomyDispatch({
+        type: "highlight",
+        highlight: focus.highlights[scheme],
+        from: {
+          id: `chat:${focus.id}`,
+          label: `From chat: ${focus.label}`,
+          highlights: focus.highlights,
+        },
+      });
+    },
+    [scheme, anatomyDispatch],
+  );
   const focusApplied = useRef(false);
   useEffect(() => {
     if (initialFocus === undefined || focusApplied.current) return;
     focusApplied.current = true;
-    anatomyDispatch({ type: "depth", depth: initialFocus.depth });
-    anatomyDispatch({
-      type: "highlight",
-      highlight: initialFocus.highlights[scheme],
-      from: {
-        id: `chat:${initialFocus.id}`,
-        label: `From chat: ${initialFocus.label}`,
-        highlights: initialFocus.highlights,
-      },
-    });
-  }, [initialFocus, scheme, anatomyDispatch]);
+    lightFocus(initialFocus);
+  }, [initialFocus, lightFocus]);
   // A pressed beat turns the twin to its organ at its layer; letting go clears
   // only a beat's glow, never a pick or a Biomarkers row.
   const dayFocus = myDay.focus;
@@ -662,6 +673,13 @@ export const BodyLoopAvatar = ({
       },
     });
   }, [dayFocus, dayLit, scheme, anatomyDispatch, letBeatGo]);
+  // A later request is lit once each; the person's own changes stay until the next.
+  const requestApplied = useRef<number | null>(null);
+  useEffect(() => {
+    if (focusRequest === undefined || requestApplied.current === focusRequest.at) return;
+    requestApplied.current = focusRequest.at;
+    lightFocus(focusRequest.focus);
+  }, [focusRequest, lightFocus]);
   const viewRef = useRef<HTMLDivElement | null>(null);
   const [viewNode, setViewNode] = useState<HTMLDivElement | null>(null);
   const setView = useCallback((node: HTMLDivElement | null) => {

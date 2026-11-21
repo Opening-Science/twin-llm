@@ -9,6 +9,7 @@ import {
 import type { EvidenceAttribution, OuraSummary } from "@/infrastructure/oura-types";
 import { splitThinking } from "@/infrastructure/think-block";
 import { withoutGuidanceEcho } from "@/infrastructure/twin-section-guidance";
+import { cellsOf, statedFrom } from "@/infrastructure/wearable-cell";
 import { metricDay } from "@/infrastructure/wearable-provenance";
 import { looksLikeId, UNSUPPORTED_MARK } from "@/infrastructure/source-ids";
 import { sectionLines } from "@/infrastructure/twin-section-lines";
@@ -268,10 +269,13 @@ export const resolveAttribution = (
 /**
  * Each cited value with the check of the number the reply states for it
  * against its stored reading (#545). A value that is not a number keeps no check.
+ * A number that does not match also says which other offered reading it is,
+ * when it is exactly one of them (#508, `statedFrom`).
  */
 export const withValueChecks = (
   attribution: readonly EvidenceAttribution[],
   reply: string,
+  offered: readonly OfferedMetric[] = [],
 ): EvidenceAttribution[] => {
   const checks = checkCitedValues(
     reply,
@@ -282,9 +286,28 @@ export const withValueChecks = (
       ...(item.unit === undefined ? {} : { unit: item.unit }),
     })),
   );
+  const cells = cellsOf(offered);
   return attribution.map((item, index) => {
     const valueCheck = checks[index];
-    return valueCheck == null ? item : { ...item, valueCheck };
+    if (valueCheck == null) return item;
+    const from =
+      valueCheck.status === "not_matched" && valueCheck.stated !== undefined
+        ? statedFrom(
+            {
+              key: item.metricKey,
+              label: item.label,
+              value: item.value,
+              ...(item.unit === undefined ? {} : { unit: item.unit }),
+              ...(item.day === undefined ? {} : { date: item.day }),
+              ...(item.source === undefined ? {} : { source: item.source }),
+            },
+            valueCheck.stated,
+            cells,
+          )
+        : null;
+    return from === null
+      ? { ...item, valueCheck }
+      : { ...item, valueCheck, statedFrom: from };
   });
 };
 
@@ -353,6 +376,7 @@ export const parseTwinAnswer = (
     attribution: withValueChecks(
       resolveAttribution(citedKeys, offered, evidenceSection),
       text,
+      offered,
     ),
     declined: classifyCompletion(text) === "REFUSE",
     offeredKeyCount: offered.length,

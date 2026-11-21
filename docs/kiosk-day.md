@@ -67,6 +67,9 @@ the threshold. Thresholds and every sentence are listed for review in
 - Show `notice` with the day, and "placeholder" while `thresholds.status` says so.
 - Show `line` and `body.text` as given; never shorten a number or add a judgement.
 - A narrated beat shows no number, by design.
+- On the illustrative mock day (`subject_ref` `synthetic-mock-day`) the values are made up, so a
+  `measured` beat's line ends "illustrative, not measured". `source` stays `measured`: the beat
+  still stands for one reading.
 - Blood and sensor glucose are different measures. Show which one a value is (the
   `line` already says it), and never draw them as one series or compare one with the
   other: a sensor window can open at another time than a blood window, or not at all.

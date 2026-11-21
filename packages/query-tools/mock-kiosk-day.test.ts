@@ -22,6 +22,16 @@ describe("mockKioskDay", () => {
     expect(MOCK_DAY_REF).toBe("synthetic-mock-day");
   });
 
+  test("never calls a made-up value measured", () => {
+    const lines = (["blood", "sensor", "both"] as const).flatMap((glucose) =>
+      mockKioskDay("without_diabetes", glucose).beats.map((beat) => beat.line),
+    );
+    expect(lines.filter((line) => line.endsWith("· measured"))).toEqual([]);
+    expect(lines).toContain(
+      "Heart rate steady · about 52 /min · illustrative, not measured",
+    );
+  });
+
   test("reads blood glucose only unless asked for the sensor too", () => {
     const sensorLines = (glucose?: "both") =>
       mockKioskDay("without_diabetes", glucose)

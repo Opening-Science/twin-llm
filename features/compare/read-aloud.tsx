@@ -1,12 +1,14 @@
 "use client";
 
+import { firstWordsLine } from "./push-to-talk-model";
 import { useVoice } from "./voice-context";
 
 /**
  * "Read aloud" under a finished answer (#616), when voice is set up. It reads
  * the answer in the voice language picked on the prompt bar; pressed again,
  * or while another answer is being read, it stops. The text it reads is the
- * answer's own words (`infrastructure/speech/spoken-text.ts`).
+ * answer's own words (`infrastructure/speech/spoken-text.ts`). Once it has
+ * played, how long the first words took stays beside the button.
  */
 
 export const READ_ALOUD = "Read aloud";
@@ -45,6 +47,11 @@ export const ReadAloud = ({ id, text }: Readonly<{ id: string; text: string }>) 
         <SpeakerIcon />
         {reading ? STOP_READING : READ_ALOUD}
       </button>
+      {voice.player.lastTimings?.id === id ? (
+        <span className="text-muted-foreground text-xs">
+          {firstWordsLine(voice.player.lastTimings.firstSoundMs)}
+        </span>
+      ) : null}
       {voice.player.problem?.id === id && !reading ? (
         <span role="status" className="text-muted-foreground text-xs">
           {voice.player.problem.message}

@@ -1,9 +1,11 @@
 # Voice
 
 Ask by speaking and hear the answer, with no network: speech to text in, text to speech
-out, in English and German (#615, #616). The speech runs in a separate process on this
+out, in English and German (#615, #616). Listening runs in a separate process on this
 machine, the speech sidecar. The app talks to it over HTTP on loopback and never imports
-it, so the engines behind it can change without touching the app.
+it, so the engines behind it can change without touching the app. Speaking uses the
+browser's own voices by default, so nothing is downloaded for it
+([Reading answers aloud](#reading-answers-aloud)).
 
 Voice is off until `VOICE_SIDECAR_URL` is set. The address must be on this machine
 (`localhost`, `127.0.0.1` or `[::1]`); anything else stops the app at startup, and the
@@ -28,12 +30,12 @@ The types and limits live in `infrastructure/speech/contract.ts` and
 {
   "status": "ok",
   "stt": { "engine": "whisper.cpp", "model": "ggml-small-q5_1.bin" },
-  "tts": {
-    "engine": "piper",
-    "voices": { "en": "en_GB-alba-medium", "de": "de_DE-thorsten-medium" }
-  }
+  "tts": null
 }
 ```
+
+`tts` is null when the sidecar only listens, which is the default. With a local voice set
+up (below) it names the engine and the voice per language.
 
 ### `POST /v1/transcribe?language=en|de`
 
@@ -51,7 +53,8 @@ each question records its own timings.
 ### `POST /v1/speak`
 
 The body is `{ "text": "…", "language": "en" }`, at most 2,000 characters. The answer is
-`audio/wav`, with the time spent in the `x-speech-elapsed-ms` header.
+`audio/wav`, with the time spent in the `x-speech-elapsed-ms` header. Only a sidecar with
+a local voice answers it; one that only listens answers 404 (`no_voice`).
 
 ### Errors
 
@@ -69,6 +72,75 @@ per code:
 | `SPEECH_FAILED`        | The voice service could not handle that. Try again.                |
 | `SPEECH_BAD_AUDIO`     | That recording could not be read. Try again.                       |
 | `SPEECH_NOTHING_HEARD` | Nothing was heard. Hold the button while you speak.                |
+
+## Set up and start the sidecar
+
+The sidecar is `scripts/voice/serve.ts` over [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+(MIT) for speech to text, run as a child process on the CPU. Nothing is downloaded until
+you run the setup yourself:
+
+```sh
+bun run voice:setup  # asks before it downloads about 200 MB
+bun run voice:serve  # http://127.0.0.1:8095
+```
+
+Then set `VOICE_SIDECAR_URL=http://127.0.0.1:8095` in `.env.local` and restart the app.
+
+`voice:setup` writes into `~/.local/share/twinllm-voice` (`--home` or `VOICE_HOME` to
+change it) and needs git, cmake, a C++ compiler, curl and sha256sum. Everything it fetches
+is pinned, and a file that does not match is deleted and the setup stops:
+
+| Part         | Pin                                                                         | Licence |
+| ------------ | --------------------------------------------------------------------------- | ------- |
+| whisper.cpp  | v1.9.5, commit `d1be6fde`, built with `GGML_CUDA=OFF`                       | MIT     |
+| Speech model | `ggml-small-q5_1.bin` (190 MB), SHA-256; `--model base` for the 60 MB model | MIT     |
+
+The small model is the default because the base model's German is noticeably weaker. The
+threads are the machine's cores, at most eight.
+
+`voice:serve` listens on 127.0.0.1 only; the host is fixed and only `--port` changes. Each
+request gets its own folder under the setup's `work/` for its audio, removed when the
+request ends. The log has the call, the language and the timings, never the text or the
+audio.
+
+### A local voice of your own (optional)
+
+The setup fetches nothing for speaking, and the repo never ships or downloads a speech
+engine. [Piper](https://github.com/OHF-Voice/piper1-gpl) is GPL-3.0, and
+[Kokoro](https://github.com/hexgrad/kokoro) falls back on espeak-ng, also GPL-3.0, for its
+pronunciation. If you install Piper and its voices yourself, the sidecar can speak with
+it: set all three of these before `voice:serve` and it runs `piper` as a separate program,
+with the text on its standard input, never linked.
+
+| Setting           | Meaning                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| `VOICE_PIPER_BIN` | The `piper` program, a path or a name on `PATH`              |
+| `VOICE_PIPER_EN`  | An English voice model (`.onnx`, its `.onnx.json` beside it) |
+| `VOICE_PIPER_DE`  | A German voice model                                         |
+
+With none set the sidecar only listens; with some set it stops and names what is missing.
+Kokoro is not wired in.
+
+## Timings
+
+`bun run voice:time` times the sidecar on this machine for the kiosk trial (#615). It needs
+a sidecar with a local voice of your own (above); one that only listens has nothing to
+speak, so `voice:time` says so and stops. In the app, each spoken question and each answer
+read aloud shows its own timings. For two fixed sentences per language it asks the sidecar
+to speak the sentence, turns the voice's WAV into the 16 kHz input shape and asks the
+sidecar to write it down again, so it needs no microphone and keeps no recording. It prints
+one line per sentence and appends the same to `timings.jsonl` in the setup's folder
+(`--out` to change it):
+
+```text
+de  speak 410 ms  heard 1650 ms of audio in 720 ms  total 1190 ms  "Zeig mir mein Herz."
+```
+
+`speak` and `heard … in` are the sidecar's own times, `total` the whole round trip, and
+the quoted text is what speech to text heard of the spoken sentence, a quick check of both
+engines and the voice. It talks only to a sidecar on loopback (`--url`, default
+`http://127.0.0.1:8095`). The numbers above are an example of the format, not a
+measurement.
 
 ## The app's routes
 
@@ -94,8 +166,9 @@ When the sidecar answers, the chat's prompt bar shows a microphone button and th
 language beside it (EN or DE, remembered in this browser; a German browser starts on DE).
 Nothing about voice is drawn while it is off.
 
-Hold the button, or hold Space or Enter on it, and speak; let go to send. A hold of 59
-seconds sends itself, so it stays under the sidecar's limit, and leaving the page mid-hold
+Hold the button, or hold Space or Enter on it, and speak; let go to send. Pressing it stops
+any answer being read aloud, so the microphone does not record the app's own voice. A hold of
+59 seconds sends itself, so it stays under the sidecar's limit, and leaving the page mid-hold
 lets go of the microphone. The browser records with its own encoder, then decodes, mixes
 down to one channel and resamples to 16 kHz before the upload (`infrastructure/speech/recorder.ts`), and lets go of the
 microphone. The text goes out as a typed prompt would, on the models and mode the bar
@@ -110,17 +183,44 @@ The answer to a spoken question is read back once it is finished, in the languag
 asked in: the first finished answer of that turn with words to say, once. One that failed,
 was stopped or is withheld is not read. Every other finished answer gets a Read aloud
 button while voice is on, in the language picked on the prompt bar; pressed again it
-stops. One answer plays at a time.
+stops. One answer plays at a time. Once an answer has started, "First words after 0.4s"
+stays beside its button: the time from the press, or from the answer's end, until the
+browser starts saying the first piece (the utterance's `start` event), the speaking half of
+the timings #615 asks for.
 
 What is read is the answer's Answer section as words (`infrastructure/speech/spoken-text.ts`):
 code, tables, images, web addresses and bracketed citation ids are left out, a link keeps
-its words, and a heading or list item ends as a sentence. The text goes to
-`/api/voice/speak` in pieces of whole sentences of up to 400 characters, so the first
-plays while the next is made, and nothing is kept once it has played. A spoken turn is
-known only to the open page; a reloaded thread is not read back on its own.
+its words, and a heading or list item ends as a sentence. Numbers are said as a voice
+would say them (`infrastructure/speech/spoken-units.ts`): a unit after a number becomes
+words ("58 bpm" is "58 beats per minute", "Schläge pro Minute" in German), a range such
+as 58–64 becomes "58 to 64" ("bis"), a blood pressure such as 118/76 mmHg becomes "118
+over 76" ("zu"), and German gets a decimal comma. A unit not right after a number, and a
+date such as 2026-11-18, stay as they are. It is read with the browser's own voices (the
+Web Speech API, `infrastructure/speech/browser-speech.ts`), in pieces of whole sentences
+of up to 400 characters, so nothing is downloaded and nothing goes to the sidecar. Only a
+voice on this machine is used, en-GB or de-DE first, then any English or German one: some
+browsers also offer voices that speak through their maker's servers, and those are never
+picked. A browser with no such voice says so beside the button and reads nothing. Which
+voices there are depends on the system; nothing is kept once it has played. A spoken turn
+is known only to the open page; a reloaded thread is not read back on its own.
+
+## The twin turns
+
+After a spoken answer the chat's twin (the `/twin` card) turns to the organ it is about,
+at the organs depth, lit as a click on it would be. The organ is the focus of a body twin
+the answer drew itself, else the organ its words name first, else the question's
+(`infrastructure/speech/organ-named.ts`, English and German, so "Herzfrequenz" is the
+heart and "Nierenwerte" the kidneys). Only the organs the twin can focus on count: heart,
+lungs, brain, liver, kidneys, pancreas (also for blood sugar and insulin) and blood
+vessels (also for blood pressure). A closed card opens for it, unless the answer drew its
+own body twin; an answer that names no organ leaves the twin as it is. After that the twin
+is the person's again until the next spoken answer.
 
 ## Tests
 
 `infrastructure/speech/fake-speech-sidecar.ts` serves the same contract on `127.0.0.1`
 with fixed sentences ("Show me my heart." and "Zeig mir mein Herz.") and a short tone, and
-records what it received. Tests and screenshots use it; nothing in them needs a model.
+records what it received; `listenOnly` makes it answer as a sidecar without a voice. Tests
+and screenshots use it; nothing in them needs a model. The sidecar itself is tested with
+stand-in engines (`scripts/voice/speech-sidecar.test.ts`) and with shell scripts in place
+of `whisper-cli` and `piper` (`scripts/voice/engines.test.ts`).
