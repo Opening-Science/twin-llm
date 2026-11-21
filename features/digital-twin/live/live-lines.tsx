@@ -9,6 +9,8 @@ import { type AtlasScheme } from "@/packages/anatomy/manifest";
 
 import { type LiveStatus } from "./live-conditioning";
 import {
+  BODYPARTS3D_BEAT_NOTE,
+  BODYPARTS3D_BEAT_UNAVAILABLE,
   BODYPARTS3D_BREATH_NOTE,
   BODYPARTS3D_HEART_NOTE,
   breathingLine,
@@ -43,8 +45,19 @@ export const liveLines = (
         ? [ILLUSTRATIVE]
         : []),
     ...(status.pulsing && vitals.heart ? [pulseLine(vitals.heart, today)] : []),
-    ...(chambers !== null ? [CHAMBERS_LINE, chambersTimingLine(timing, chambers)] : []),
-    ...(status.pulsing && bodyParts3d ? [BODYPARTS3D_HEART_NOTE] : []),
+    ...(chambers !== null
+      ? [
+          bodyParts3d
+            ? status.vascularUnavailable
+              ? BODYPARTS3D_BEAT_UNAVAILABLE
+              : BODYPARTS3D_BEAT_NOTE
+            : CHAMBERS_LINE,
+          chambersTimingLine(timing, chambers),
+        ]
+      : []),
+    ...(status.pulsing && bodyParts3d && chambers === null
+      ? [BODYPARTS3D_HEART_NOTE]
+      : []),
     ...(status.breathing && vitals.breath ? [breathingLine(vitals.breath, today)] : []),
     ...(status.breathing && bodyParts3d ? [BODYPARTS3D_BREATH_NOTE] : []),
     ...(status.glowing && vitals.hrvBelow

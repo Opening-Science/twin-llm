@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { markerRows } from "../biomarkers/biomarker-rows";
 import {
   choosePick,
+  heartPickDismissal,
   isTap,
   linkedRows,
   pickHighlight,
@@ -10,6 +11,7 @@ import {
   pickTarget,
   pickVisible,
   type PickablePart,
+  type Picked,
 } from "./pick-part";
 
 const LAYERS = { muscle: true, skeleton: true, organs: true } as const;
@@ -24,6 +26,42 @@ const LIVER = part("organs", "digestive", "liver");
 const PELVIS = part("skeleton", "musculoskeletal");
 const BICEPS = part("muscle", "musculoskeletal");
 const OUTLINE = { part: null };
+
+describe("heart pick dismissal", () => {
+  const picked = (part: PickablePart | null, heart: boolean): Picked => ({
+    target: pickTarget(part, []),
+    heart,
+    point: [0, 0, 0],
+  });
+
+  test("an inline HRA heart close clears its glow and restores the body view", () => {
+    const heart = picked(part("organs", "cardiovascular", "heart"), true);
+    expect(heartPickDismissal(heart, true, false)).toEqual({
+      clearHighlight: true,
+      resetView: true,
+    });
+    expect(heartPickDismissal(heart, false, false).clearHighlight).toBe(false);
+  });
+
+  test("a tagged BodyParts3D heart closes without reframing the walk camera", () => {
+    const cardiovascular = part("organs", "cardiovascular");
+    const heart = picked(cardiovascular, true);
+    expect(heartPickDismissal(heart, true, true)).toEqual({
+      clearHighlight: true,
+      resetView: false,
+    });
+    expect(heartPickDismissal(heart, true, false).resetView).toBe(true);
+  });
+
+  test("a vessel, liver, bone, or body outline close does not reset or clear its glow", () => {
+    for (const target of [part("organs", "cardiovascular"), LIVER, PELVIS, null]) {
+      expect(heartPickDismissal(picked(target, false), true, false)).toEqual({
+        clearHighlight: false,
+        resetView: false,
+      });
+    }
+  });
+});
 
 describe("choosePick", () => {
   test("at the scan stop the body outline is what you click", () => {

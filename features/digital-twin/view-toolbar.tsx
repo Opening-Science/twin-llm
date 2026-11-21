@@ -39,7 +39,7 @@ export type ViewToolbarProps = Readonly<{
   landmarks?: Readonly<{ shown: boolean; onToggle: () => void }>;
   /** Live vitals (G4); only when the subject has a rate and motion is allowed. */
   liveVitals?: Readonly<{ on: boolean; onToggle: () => void }>;
-  /** Heart chambers (#53); only while live vitals beat an atlas heart with its own mesh. */
+  /** Anatomical beat; BodyParts3D uses a gentle heart beat and delayed vessel expansion. */
   heartChambers?: Readonly<{ on: boolean; onToggle: () => void }>;
   /** Whole-body motion (#51), once a body has loaded. */
   motion?: MotionControl;

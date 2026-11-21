@@ -31,6 +31,7 @@ import {
   rhythmNow,
   startClock,
 } from "./heart-cycle";
+import { setVascularPulse } from "./vascular-pulse";
 import { type LiveVitals } from "./live-rates";
 import {
   BREATH_GLOW_BODYPARTS3D,
@@ -57,6 +58,7 @@ export type LiveStatus = Readonly<{
   glowing: boolean;
   /** The heart chambers beat in sequence (#53), and what the atria are doing. */
   chambers: "sinus" | "af" | null;
+  vascularUnavailable?: true;
 }>;
 
 export const IDLE_STATUS: LiveStatus = {
@@ -168,8 +170,9 @@ export const LiveConditioning = ({
   /** The atlas root: its frame says which way is up, front and left on the heart. */
   root: Object3D;
   /**
-   * The heart chambers (#53): on, the HRA heart's atrial then ventricular
-   * region contracts on `pattern`'s beats; off, it swells as one.
+   * On, the HRA heart's regions contract on `pattern`'s beats; BodyParts3D
+   * uses anatomy IDs for a tiny heart contraction and delayed vessel expansion.
+   * Off, HRA swells as one and BodyParts3D only glows.
    */
   chambers: Readonly<{ on: boolean; pattern: BeatPattern }>;
   onStatus: (status: LiveStatus) => void;
@@ -199,6 +202,7 @@ export const LiveConditioning = ({
       now.pulsing === next.pulsing &&
       now.breathing === next.breathing &&
       now.glowing === next.glowing &&
+      now.vascularUnavailable === next.vascularUnavailable &&
       now.chambers === next.chambers
     ) {
       return;
@@ -242,6 +246,7 @@ export const LiveConditioning = ({
         // Scale, chambers and glow, whichever this atlas used.
         setPartScale(part.mesh, 1);
         setHeartChambers(part.mesh, root, null);
+        setVascularPulse(part.mesh, null);
         setLiveGlow(part.mesh.material as Material, 0, live.current.colours.pulse);
       }
       statusRef.current = IDLE_STATUS;
@@ -267,8 +272,7 @@ export const LiveConditioning = ({
     const dt = lastFrameRef.current === null ? 0 : (nowMs - lastFrameRef.current) / 1000;
     lastFrameRef.current = nowMs;
 
-    // BodyParts3D has no heart mesh of its own, so chambers are HRA only.
-    const beating = heart && rates.heart && scheme === "hra" && chamberSetting.on;
+    const beating = heart && rates.heart && chamberSetting.on;
     const clock =
       beating && rates.heart
         ? clockRef.current === null
@@ -282,6 +286,9 @@ export const LiveConditioning = ({
         : null;
     clockRef.current = clock;
     const contraction = clock ? chamberContraction(clock, chamberSetting.pattern) : null;
+    const vascular = contraction
+      ? Math.max(0.5 * contraction.atria, contraction.ventricles)
+      : null;
 
     const beat =
       contraction === null && heart && rates.heart
@@ -291,11 +298,22 @@ export const LiveConditioning = ({
       contraction !== null
         ? chamberGlow(contraction.atria, contraction.ventricles)
         : beat * HEART_GLOW[scheme];
+    let vascularUnavailable = false;
     for (const part of now.heart) {
-      // BodyParts3D's cardiovascular mesh is the whole system: glow only, softer.
+      // Only HRA uses whole-organ scaling; BodyParts3D keeps vessels in place.
       setPartScale(part.mesh, scheme === "hra" && beat > 0 ? 1 + HEART_SCALE * beat : 1);
-      setHeartChambers(part.mesh, atlasRoot, contraction);
-      setLiveGlow(part.mesh.material as Material, glow, tint.pulse);
+      if (scheme === "hra") {
+        setHeartChambers(part.mesh, atlasRoot, contraction);
+      } else if (!setVascularPulse(part.mesh, vascular)) {
+        vascularUnavailable = true;
+      }
+      setLiveGlow(
+        part.mesh.material as Material,
+        vascularUnavailable && rates.heart
+          ? pulseAt(t, rates.heart.perMinute) * HEART_GLOW[scheme]
+          : glow,
+        tint.pulse,
+      );
     }
     const breath = lungs && rates.breath ? breathAt(t, rates.breath.perMinute) : 0;
     for (const part of now.lungs) {
@@ -319,6 +337,7 @@ export const LiveConditioning = ({
       breathing: lungs,
       glowing,
       chambers: clock ? rhythmNow(clock, chamberSetting.pattern) : null,
+      ...(vascularUnavailable ? { vascularUnavailable: true } : {}),
     });
 
     if (!(heart || lungs)) lastFrameRef.current = null;

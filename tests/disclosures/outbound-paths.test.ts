@@ -206,6 +206,8 @@ const SCRIPTS: Readonly<Record<string, string>> = {
   "scripts/release/pinned-fetch.ts": "downloads pinned release artefacts",
   "scripts/setup/cohort-load.ts": "downloads the pinned synthetic cohort",
   "scripts/setup/detect.ts": "asks the local Ollama which models it has",
+  "scripts/setup/voice-probe.ts":
+    "asks the speech sidecar on loopback for its health; never an address elsewhere",
   "scripts/setup/prompt-size.ts":
     "counts tokens of a synthetic prompt on the local Ollama",
   "scripts/local-https-gateway.mjs": "a TLS gateway on loopback in front of the app",
