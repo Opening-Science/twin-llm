@@ -108,6 +108,12 @@ describe("readings", () => {
     expect(
       issues(replayReadingSchema.safeParse({ ...missing, missing_reason: undefined })),
     ).toContain("a missing reading says why");
+    expect(
+      replayReadingSchema.safeParse({
+        ...missing,
+        missing_reason: "HTTP 503: upstream connect error",
+      }).success,
+    ).toBe(false);
     expect(issues(replayReadingSchema.safeParse({ ...heart, value: null }))).toContain(
       "an available reading has a value",
     );

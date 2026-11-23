@@ -39,8 +39,9 @@ day before.
 | Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered, and only entered.                                                   |
 | Narration | What usually happens in a body, about heart rate, glucose, insulin or the body, with a focus on the twin.                                                                                  |
 
-A reading is `available` with a value, or `missing` with `value: null` and a reason (a
-sensor warming up, a ring off the finger). A missing value is never filled in; the gap
+A reading is `available` with a value, or `missing` with `value: null` and a reason from
+`MISSING_REASONS` (a sensor warming up, a ring off the finger). The reason is shown as it
+is, so it is one of these short lines, never a provider's error text. A missing value is never filled in; the gap
 stays a gap. `interval_min` is how much time one reading stands for, which decides what
 can be computed from it (no one-minute recovery from 15-minute samples).
 
@@ -80,3 +81,31 @@ does not have, never a stand-in.
 
 Heart rate, steps and sensor glucose come every 15 minutes; meals and "Winding down" are
 tags the demo person entered.
+
+## A value at a time, and the gaps
+
+`at-time.ts` answers what a card or the 3D view shows at the cursor. `readingAt(day,
+series, cursor)` gives one of:
+
+| State         | Means                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `available`   | The last reading at or before the cursor, with its age in minutes.                                                          |
+| `stale`       | That reading is older than 30 minutes or twice the time it stands for, whichever is longer. Show it as stale, with its age. |
+| `unavailable` | No value, and `text` says why: missing (with the source's reason), not yet, not recorded that day, or not on this day.      |
+
+A missing sample is never bridged with the value before it. Blood and sensor glucose are
+asked for separately. `chartSeries` gives the runs of values to draw as lines and the
+gaps between them (missing, or no readings), so a chart never joins across a gap.
+
+## The days `show_my_day` already reads
+
+`replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
+adding nothing. A tag becomes an event, and a meal only when it plainly names one
+("Large dinner", not "Walk after lunch" or "Skipped breakfast"); no new logging is
+needed. The only tags that arrive today are the mock day's story lines (the warehouse
+sets none), so their source reads "Written for the illustrative day's story, not entered
+by anyone". `moving` does not become an activity, since it does not say walk or run.
+
+Every such day is a synthetic demonstration with the demo notice. `show_my_day` reads
+synthetic people only, so none of their days is labelled `recorded`; that origin waits
+for real recordings.
