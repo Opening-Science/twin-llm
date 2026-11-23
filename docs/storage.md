@@ -18,6 +18,13 @@ export SHADOW_DATABASE_URL='postgresql://postgres:scratch@127.0.0.1:5434/postgre
 
 `postgres:16` does not ship pgvector. Recreate throwaway scratch/shadow containers on the pgvector image. For `twinllm-dev`, dump first, stop the container, and start `pgvector/pgvector:pg16` on the **same data volume**. Never delete that volume. See `docs/guidelines.md`.
 
+## Times
+
+The older tables keep times as `timestamp(3)` holding UTC; the chat tables (`conversations`, `exchanges`, `answers`) use `timestamptz(3)`, and the backfill converts with `AT TIME ZONE 'UTC'`.
+`@prisma/adapter-pg` writes a Date as UTC with no offset and drops the offset when it reads a `timestamptz`, so both are right only in a UTC session.
+Every client is built with `postgresAdapter` (`infrastructure/database-adapter.ts`), which opens each connection with `-c TimeZone=UTC`, after any `options` in `DATABASE_URL`, whatever the server default (a local cluster takes the machine's zone).
+`infrastructure/database-timezone.live.test.ts` checks this against a Europe/Zurich default, across both clock changes.
+
 ## Create a migration (local)
 
 Against disposable scratch + shadow databases:
@@ -187,11 +194,9 @@ Postgres:
 DATABASE_URL=<throwaway, migrated> bun run test:live-db
 ```
 
-The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
-`timestamptz` as if the session time zone were UTC, so on a server set to
-another zone a `Date` read through Prisma is shifted by the offset (the
-stored instant is right). Compare instants in SQL until the switch step
-settles this, for example by pinning `TimeZone=UTC` on the connection.
+The new time columns are `timestamptz`; every connection runs in UTC so
+Prisma reads and writes them as the instant Postgres holds (see
+[Times](#times)).
 
 Each new row keeps its old row's id, and each `*_sealed` column holds the
 old column's stored value byte for byte. A sealed value's context stays the

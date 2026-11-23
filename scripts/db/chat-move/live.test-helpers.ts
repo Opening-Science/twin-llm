@@ -1,6 +1,5 @@
-import { PrismaPg } from "@prisma/adapter-pg";
-
 import { PrismaClient } from "@/generated/prisma/client";
+import { postgresAdapter } from "@/infrastructure/database-adapter";
 
 /**
  * A client for the chat-move live tests, which run against a throwaway,
@@ -12,9 +11,7 @@ export const runLive = Reflect.get(process.env, "RUN_LIVE") === "1";
 
 export const liveDatabase = (): PrismaClient =>
   new PrismaClient({
-    adapter: new PrismaPg({
-      connectionString: String(Reflect.get(process.env, "DATABASE_URL") ?? ""),
-    }),
+    adapter: postgresAdapter(String(Reflect.get(process.env, "DATABASE_URL") ?? "")),
   });
 
 export type ColumnShape = Readonly<{
