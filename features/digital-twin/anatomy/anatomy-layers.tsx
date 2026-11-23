@@ -465,10 +465,21 @@ export const AnatomyLayers = ({
     ],
     [ready, prepared, bonesReady, bones],
   );
+  // The layer drawn alone, once it is showing; picks and the heart focus follow it.
+  const shownIsolate = drawnIsolate(
+    isolate,
+    (layer) => layers[layer] && (ready || (layer === "skeleton" && bonesReady)),
+  );
   useEffect(() => {
     if (!ready || !onHeartFocus || !focusesHeartHighlight(highlight, highlightFromPick))
       return;
-    const box = heartGroupWorldBox(prepared.parts, targetDepth, layers, hiddenSystems);
+    const box = heartGroupWorldBox(
+      prepared.parts,
+      targetDepth,
+      layers,
+      hiddenSystems,
+      shownIsolate,
+    );
     if (box) onHeartFocus(box);
   }, [
     ready,
@@ -479,6 +490,7 @@ export const AnatomyLayers = ({
     layers,
     hiddenSystems,
     targetDepth,
+    shownIsolate,
   ]);
   const pick = (
     <PickSurface
@@ -489,10 +501,7 @@ export const AnatomyLayers = ({
       getDepth={readDepth}
       layers={layers}
       hiddenSystems={hiddenSystems}
-      isolate={drawnIsolate(
-        isolate,
-        (layer) => layers[layer] && (ready || (layer === "skeleton" && bonesReady)),
-      )}
+      isolate={shownIsolate}
       onPick={onPick ?? ignorePick}
       onHeartFocus={onHeartFocus}
     />

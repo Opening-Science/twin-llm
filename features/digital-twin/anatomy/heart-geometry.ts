@@ -2,7 +2,7 @@ import { Box3, type Mesh, type Object3D, Vector3 } from "three";
 import { z } from "zod";
 
 import { type Highlight } from "@/packages/anatomy/highlight";
-import { layerMix, partShown, type AtlasLayerId } from "@/packages/anatomy/layers";
+import { partShown, viewMix, type AtlasLayerId } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
 // Cardiac walls, cavities, myocardium and valves in the pinned BodyParts3D metadata.
@@ -107,7 +107,11 @@ export const focusesHeartHighlight = (highlight: Highlight | null, fromPick: boo
   highlight.ids.length === 1 &&
   highlight.ids[0] === "heart";
 
-/** Frame the whole visible HRA heart, not just the mesh the ray hit. */
+/**
+ * Frame the whole visible HRA heart, not just the mesh the ray hit. With a
+ * layer isolated ("Only the skeleton"), the organs are hidden, so there is no
+ * heart to frame and the camera stays where it is.
+ */
 export const heartGroupWorldBox = (
   parts: readonly Readonly<{
     mesh: Mesh;
@@ -118,13 +122,14 @@ export const heartGroupWorldBox = (
   depth: number,
   layers: Readonly<Record<AtlasLayerId, boolean>>,
   hiddenSystems: readonly OrganSystem[],
+  isolate: AtlasLayerId | null = null,
 ): Box3 | null => {
   const box = new Box3();
   for (const part of parts) {
     if (
       part.group !== "heart" ||
       !partShown(part, layers, hiddenSystems) ||
-      !layerMix(part.layer, depth).visible
+      !viewMix(part.layer, depth, isolate).visible
     )
       continue;
     const bounds = heartWorldBox(part.mesh, false);

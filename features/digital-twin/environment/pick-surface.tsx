@@ -142,7 +142,13 @@ export const PickSurface = ({
       if (heart && chosen?.part && now.onHeartFocus) {
         const box =
           chosen.part.group === "heart"
-            ? heartGroupWorldBox(now.parts, depth, now.layers, now.hiddenSystems)
+            ? heartGroupWorldBox(
+                now.parts,
+                depth,
+                now.layers,
+                now.hiddenSystems,
+                now.isolate,
+              )
             : heartWorldBox(chosen.part.mesh, true);
         if (box) now.onHeartFocus(box);
       }
