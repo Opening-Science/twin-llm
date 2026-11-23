@@ -157,6 +157,8 @@ model Turn {
   @@map("turns")
 }
 
+/// Add each new value to AnswerState too, lower-cased: while the chat tables
+/// move, the mirror trigger casts every status to it inside the write.
 enum ModelResponseStatus {
   STREAMING
   COMPLETE

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
+import { AnswerState, ModelResponseStatus } from "@/generated/prisma/client";
+
 import { DROP_MIRROR_SQL, MIRROR_SQL } from "./mirror-sql";
 
 const MIGRATION = join(
@@ -34,5 +36,13 @@ describe("mirror trigger SQL", () => {
       expect(MIRROR_SQL).toContain(`NEW."${from}"`);
       expect(MIRROR_SQL).toContain(`"${to}" = EXCLUDED."${to}"`);
     }
+  });
+
+  test("every old status has its state, so the answers trigger never refuses a write", () => {
+    // The trigger casts lower(status) to answer_state inside the app's own
+    // write: a status with no state would fail every answer, not only its copy.
+    expect(
+      Object.values(ModelResponseStatus).map((status) => status.toLowerCase()),
+    ).toEqual(Object.values(AnswerState));
   });
 });
