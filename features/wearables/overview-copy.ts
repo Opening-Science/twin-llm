@@ -6,6 +6,9 @@ import { SOURCE_LABEL, type WearableSource } from "./dashboard-headings";
  * how to get more, never what a number means for a person.
  */
 
+/** The page's name, held together so a line never breaks after the dot. */
+const CONNECTORS_PAGE = "Customize\u00a0·\u00a0Connectors";
+
 export const OVERVIEW_LINK = {
   href: "/customize/connectors",
   label: "Link a wearable",
@@ -19,8 +22,8 @@ export const overviewEmptyText = ({
   anyConfigured,
 }: Readonly<{ anyConfigured: boolean }>): string =>
   anyConfigured
-    ? "No wearable is linked yet. Link Oura, WHOOP or Google Health under Customize · Connectors, and its daily, weekly and monthly cards show here."
-    : "No wearable is linked yet. Each one needs its app keys on this server first; Customize · Connectors lists which are missing, then links Oura, WHOOP or Google Health.";
+    ? `No wearable is linked yet. Link Oura, WHOOP or Google Health under ${CONNECTORS_PAGE}, and its daily, weekly and monthly cards show here.`
+    : `No wearable is linked yet. Each one needs its app keys on this server first; ${CONNECTORS_PAGE} lists which are missing, then links Oura, WHOOP or Google Health.`;
 
 export const overviewNoSnapshotText = (source: WearableSource): string =>
-  `${SOURCE_LABEL[source]} is linked, but nothing is synced yet. Refresh it under Customize · Connectors.`;
+  `${SOURCE_LABEL[source]} is linked, but nothing is synced yet. Refresh it under ${CONNECTORS_PAGE}.`;

@@ -10,19 +10,19 @@ import {
 describe("wearables overview copy", () => {
   test("with no wearable linked, it says how to link one", () => {
     expect(overviewEmptyText({ anyConfigured: true })).toBe(
-      "No wearable is linked yet. Link Oura, WHOOP or Google Health under Customize · Connectors, and its daily, weekly and monthly cards show here.",
+      "No wearable is linked yet. Link Oura, WHOOP or Google Health under Customize\u00a0·\u00a0Connectors, and its daily, weekly and monthly cards show here.",
     );
   });
 
   test("with no app keys on this server, it says the keys come first", () => {
     expect(overviewEmptyText({ anyConfigured: false })).toBe(
-      "No wearable is linked yet. Each one needs its app keys on this server first; Customize · Connectors lists which are missing, then links Oura, WHOOP or Google Health.",
+      "No wearable is linked yet. Each one needs its app keys on this server first; Customize\u00a0·\u00a0Connectors lists which are missing, then links Oura, WHOOP or Google Health.",
     );
   });
 
   test("a linked wearable with nothing synced says so, by name", () => {
     expect(overviewNoSnapshotText("whoop")).toBe(
-      "Whoop is linked, but nothing is synced yet. Refresh it under Customize · Connectors.",
+      "Whoop is linked, but nothing is synced yet. Refresh it under Customize\u00a0·\u00a0Connectors.",
     );
   });
 
