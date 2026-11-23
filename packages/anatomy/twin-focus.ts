@@ -23,6 +23,24 @@ export const TWIN_FOCUS_ORGANS = [
 
 export type TwinFocusOrgan = (typeof TWIN_FOCUS_ORGANS)[number];
 
+/**
+ * The HRA groups the brain lights. On both HRA atlases the `brain` group is
+ * the optic chiasm alone; the whole brain is the `allenbrain` group. The
+ * chiasm is part of the brain, so both are lit.
+ */
+export const BRAIN_GROUPS = ["allenbrain", "brain"] as const;
+
+/** The HRA groups each focus organ lights: its own group, except the brain. */
+export const ORGAN_GROUPS: Readonly<Record<TwinFocusOrgan, readonly string[]>> = {
+  heart: ["heart"],
+  lung: ["lung"],
+  brain: BRAIN_GROUPS,
+  liver: ["liver"],
+  kidney: ["kidney"],
+  pancreas: ["pancreas"],
+  bloodvasculature: ["bloodvasculature"],
+};
+
 export const TWIN_FOCUS_IDS = [...SYSTEM_IDS, ...TWIN_FOCUS_ORGANS] as const;
 
 export type TwinFocusId = (typeof TWIN_FOCUS_IDS)[number];
@@ -70,8 +88,8 @@ export const twinFocus = (id: TwinFocusId): TwinFocus =>
     : { id, kind: "organ", label: ORGAN_LABELS[id], system: organSystem(id) };
 
 /**
- * What the focus lights on each atlas kind. HRA lights the organ group or the
- * whole system; BodyParts3D is one mesh per system, so an organ lights its system.
+ * What the focus lights on each atlas kind. HRA lights the organ's groups or
+ * the whole system; BodyParts3D is one mesh per system, so an organ lights its system.
  */
 export const focusHighlights = (
   id: TwinFocusId,
@@ -79,20 +97,25 @@ export const focusHighlights = (
   const focus = twinFocus(id);
   const system: Highlight = { kind: "system", ids: [focus.system] };
   return {
-    hra: focus.kind === "organ" ? { kind: "groups", ids: [focus.id] } : system,
+    hra: isSystemId(id) ? system : { kind: "groups", ids: [...ORGAN_GROUPS[id]] },
     bodyparts3d: system,
   };
 };
 
 /**
- * The focus a click on the twin names: an HRA group that is a focus organ, or
- * else the part's system. Null when neither is known.
+ * The focus a click on the twin names: the focus organ whose groups hold the
+ * part's HRA group (a click on `allenbrain` names the brain), or else the
+ * part's system. Null when neither is known.
  */
 export const focusOfPick = (
   group: string | null,
   system: string | null,
 ): TwinFocusId | null => {
-  if (group !== null && isTwinFocusId(group) && !isSystemId(group)) return group;
+  const organ =
+    group === null
+      ? undefined
+      : TWIN_FOCUS_ORGANS.find((candidate) => ORGAN_GROUPS[candidate].includes(group));
+  if (organ !== undefined) return organ;
   return system !== null && isSystemId(system) ? system : null;
 };
 

@@ -164,11 +164,20 @@ describe("liveTargets", () => {
     const heart = part("heart", "cardiovascular");
     const lung = part("lung", "respiratory");
     const trachea = part("trachea", "respiratory");
-    const brain = part("brain", "nervous");
-    const targets = liveTargets("hra", [heart, lung, trachea, brain]);
+    const wholeBrain = part("allenbrain", "nervous");
+    const opticChiasm = part("brain", "nervous");
+    const spinalCord = part("spinalcord", "nervous");
+    const targets = liveTargets("hra", [
+      heart,
+      lung,
+      trachea,
+      wholeBrain,
+      opticChiasm,
+      spinalCord,
+    ]);
     expect(targets.heart).toEqual([heart]);
     expect(targets.lungs).toEqual([lung]);
-    expect(targets.hrv).toEqual([brain]);
+    expect(targets.hrv).toEqual([wholeBrain, opticChiasm]);
   });
 
   test("BodyParts3D: whole systems, since it has no organ groups", () => {

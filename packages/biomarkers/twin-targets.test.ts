@@ -77,6 +77,17 @@ describe("twinTargetRows", () => {
     ]);
   });
 
+  test("HRV and sleep light the whole brain and the optic chiasm on both donors", () => {
+    expect(
+      ["google-health:heart-rate-variability", "total-sleep-time"].map(
+        (key) => row(key)?.target3d,
+      ),
+    ).toEqual([
+      { male: ["#VHMBrain", "#VHMAllenBrain"], female: ["#VHFBrain", "#VHFAllenBrain"] },
+      { male: ["#VHMBrain", "#VHMAllenBrain"], female: ["#VHFBrain", "#VHFAllenBrain"] },
+    ]);
+  });
+
   test("every measurement key is in open-twin's catalogue at the current pin", () => {
     const catalogue = createMeasurementCatalogue([
       OURA_MEASUREMENTS,

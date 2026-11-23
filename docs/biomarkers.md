@@ -247,16 +247,16 @@ view says the position in words.
 Vitals are not Anchor biomarkers, so Anchor has no system for them. The sources
 are the stored metric stems from `infrastructure/format-measure.ts`.
 
-| Vital              | Sources                                                                       | System          | HRA groups                            |
-| ------------------ | ----------------------------------------------------------------------------- | --------------- | ------------------------------------- |
-| heart rate         | sleep.hr, whoop.cycle.avg_hr, google.heart-rate                               | cardiovascular  | heart                                 |
-| resting heart rate | whoop.recovery.rhr, google.daily-resting-heart-rate                           | cardiovascular  | heart                                 |
-| HRV                | sleep.hrv, whoop.recovery.hrv, google.daily-heart-rate-variability            | nervous         | brain, with heart as a secondary link |
-| SpO2               | whoop.recovery.spo2, google.oxygen-saturation, google.daily-oxygen-saturation | respiratory     | lung                                  |
-| respiration        | google.daily-respiratory-rate                                                 | respiratory     | lung, trachea                         |
-| sleep              | sleep.score, sleep.duration, sleep.efficiency, whoop.sleep.*                  | nervous         | brain                                 |
-| strain             | whoop.cycle.strain                                                            | cardiovascular  | whole system                          |
-| steps              | activity.steps, google.steps                                                  | musculoskeletal | whole system                          |
+| Vital              | Sources                                                                       | System          | HRA groups                                           |
+| ------------------ | ----------------------------------------------------------------------------- | --------------- | ---------------------------------------------------- |
+| heart rate         | sleep.hr, whoop.cycle.avg_hr, google.heart-rate                               | cardiovascular  | heart                                                |
+| resting heart rate | whoop.recovery.rhr, google.daily-resting-heart-rate                           | cardiovascular  | heart                                                |
+| HRV                | sleep.hrv, whoop.recovery.hrv, google.daily-heart-rate-variability            | nervous         | allenbrain and brain, with heart as a secondary link |
+| SpO2               | whoop.recovery.spo2, google.oxygen-saturation, google.daily-oxygen-saturation | respiratory     | lung                                                 |
+| respiration        | google.daily-respiratory-rate                                                 | respiratory     | lung, trachea                                        |
+| sleep              | sleep.score, sleep.duration, sleep.efficiency, whoop.sleep.*                  | nervous         | allenbrain and brain                                 |
+| strain             | whoop.cycle.strain                                                            | cardiovascular  | whole system                                         |
+| steps              | activity.steps, google.steps                                                  | musculoskeletal | whole system                                         |
 
 Decisions and open points:
 
@@ -291,9 +291,10 @@ the current pin).
 
 26 of the 67 markers have a target on at least one donor.
 
-Open point: the `brain` group on both atlases is the optic chiasm only; the whole
-brain is the separate `allenbrain` group. HRV and sleep therefore point at the optic
-chiasm, as the twin lights them today.
+The brain is two groups. On both HRA atlases the `brain` group is the optic chiasm
+only; the whole brain is the separate `allenbrain` group (`#VHMAllenBrain`,
+`#VHFAllenBrain`). A brain focus, HRV and sleep light both (`BRAIN_GROUPS` in
+`packages/anatomy/twin-focus.ts`), and a click on either names the brain (#701).
 
 ## open-twin decisions this follows
 
