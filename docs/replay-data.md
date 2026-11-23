@@ -97,6 +97,32 @@ A missing sample is never bridged with the value before it. Blood and sensor glu
 asked for separately. `chartSeries` gives the runs of values to draw as lines and the
 gaps between them (missing, or no readings), so a chart never joins across a gap.
 
+## Shared playback transport
+
+Mount [`ReplayProvider`](../features/digital-twin/replay/replay-provider.tsx) around the
+Your Day replay surfaces, and unmount it when leaving Your Day. Pass the selected
+`ReplayKey` (person, local date, time zone), including for missing or partial days.
+The selection is independent of loading state: changing it replaces the clock at
+local midnight, paused, and cancels the old clock before paint. Pass optional keyed
+`story: { selection, phases }` from `storyPhases`; late phases for the current day
+do not reset the cursor, and phases for another selection do not schedule holds.
+Keep loading, stream availability and rendering errors in the consuming surfaces.
+
+Read `useReplaySnapshot()` for the shared cursor (`cursorMs`, UTC epoch milliseconds),
+local-day bounds, playback status, speed and hold state. Use this same cursor for
+clock labels, recorded events, `readingAt`, charts and anatomy targets. The end
+bound is exclusive; the terminal cursor stays in the selected day. The separate
+`useReplayActions()` hook exposes play, pause, replay from midnight, set speed,
+seek to an instant, and step 15 elapsed minutes in either direction. Event jumps
+use seek, which publishes immediately without starting or stopping playback and
+discards the current hold. Scrubber snapping, keyboard bindings and date navigation
+belong to the controls or shell, not the transport.
+
+Default replay budgets five minutes for the reference fixture, including a
+three-second hold per distinct story start reached during playback. Fast demo
+uses 45 seconds without holds. Speed only affects the historical cursor: the
+anatomy should use the reading at that cursor, not the playback rate.
+
 ## The days `show_my_day` already reads
 
 `replayDayFromDayReadings` turns the readings `show_my_day` builds into a replay day,
