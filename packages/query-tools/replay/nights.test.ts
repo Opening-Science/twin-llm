@@ -9,7 +9,7 @@ import {
 } from "./demo-days";
 import { localClock, localInstant } from "./local-time";
 import { type NightSummary, nightSummaries } from "./nights";
-import { replayDaySchema } from "./replay-day";
+import { DEMO_NOTICE, replayDaySchema } from "./replay-day";
 
 const A = {
   subject_ref: DEMO_PERSON_A,
@@ -37,6 +37,15 @@ describe("ten nights of person A", () => {
     expect(NIGHTS.map((night) => night.day)).toEqual([...DEMO_TEN_DAYS]);
     expect(NIGHTS.every((night) => night.subject_ref === DEMO_PERSON_A)).toBe(true);
     expect(NIGHTS.every((night) => night.time_zone === DEMO_TIME_ZONE)).toBe(true);
+  });
+
+  test("every demo night carries the demo notice, a date with no data too", () => {
+    expect(NIGHTS.map((night) => night.notice)).toEqual(
+      DEMO_TEN_DAYS.map(() => DEMO_NOTICE),
+    );
+    const [unknown] = nightSummaries(HISTORY, A, ["2026-12-01"]);
+    expect(unknown?.availability).toBe("none");
+    expect(unknown?.notice).toBe(DEMO_NOTICE);
   });
 
   test("resting heart rate and HRV are the device's own values, labelled measured", () => {
@@ -248,6 +257,7 @@ describe("baselines need history; people stay apart", () => {
       "2026-10-27",
     ]);
     expect(night?.availability).toBe("complete");
+    expect(night?.notice).toBeNull();
     expect(value(night?.resting_heart_rate ?? { state: "unavailable" })).toBe(62);
     expect(night?.baselines.resting_heart_rate.state).toBe("available");
     expect(night?.status.status).toBe("not_classified");

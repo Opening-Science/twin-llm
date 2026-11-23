@@ -208,7 +208,9 @@ day person A's run is intense.
 
 `nightSummaries(history, person, dates)` in `nights.ts` gives one summary per date, in
 order, from that person's days of that origin only. A date the history does not hold is
-"nothing recorded" and shows no value; it never borrows a neighbour's.
+"nothing recorded" and shows no value; it never borrows a neighbour's. Every summary
+carries `notice`: `DEMO_NOTICE` on a demonstration, a date with no data included, and
+null on a recording.
 
 | Field                                           | Provenance | Notes                                                                                          |
 | ----------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |

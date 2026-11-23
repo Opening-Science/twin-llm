@@ -3,7 +3,7 @@ import { seriesOf, type SeriesSelector } from "./at-time";
 import { type Baseline, evidenceRef, personalBaseline } from "./baseline";
 import { type AvailableReading, isAvailable, type Origin } from "./items";
 import { dayBefore, localDayBounds, localInstant, minutesBetween } from "./local-time";
-import { type ReplayDay, type ReplayKey } from "./replay-day";
+import { DEMO_NOTICE, type ReplayDay, type ReplayKey } from "./replay-day";
 import { decide, type StatusResult, type StatusRule } from "./status-rules";
 
 /**
@@ -66,6 +66,8 @@ export type NightSummary = Readonly<{
   day: string;
   time_zone: string;
   origin: Origin;
+  /** `DEMO_NOTICE` on a synthetic demonstration, word for word; null on a recording. */
+  notice: string | null;
   availability: "complete" | "partial" | "none";
   /** Says what is there and what is not. */
   availability_text: string;
@@ -102,6 +104,10 @@ export type NightSummary = Readonly<{
   sentence: string;
   sources: readonly string[];
 }>;
+
+/** The notice a summary carries: the same rule the day parser holds, so a date with no data keeps it too. */
+const noticeFor = (origin: Origin): string | null =>
+  origin === "synthetic_demo" ? DEMO_NOTICE : null;
 
 const unavailable = (text: string): Unavailable => ({ state: "unavailable", text });
 
@@ -358,6 +364,7 @@ const summaryOf = (
     day: day.day,
     time_zone: day.time_zone,
     origin: day.origin,
+    notice: noticeFor(day.origin),
     ...availabilityOf(day, coverage),
     coverage,
     resting_heart_rate: resting,
@@ -434,15 +441,12 @@ const summaryOf = (
   };
 };
 
-const emptyDay = (
-  key: ReplayKey & Readonly<{ origin: Origin }>,
-  notice: string | null,
-): ReplayDay => ({
+const emptyDay = (key: ReplayKey & Readonly<{ origin: Origin }>): ReplayDay => ({
   subject_ref: key.subject_ref,
   day: key.day,
   time_zone: key.time_zone,
   origin: key.origin,
-  notice,
+  notice: noticeFor(key.origin),
   readings: [],
   events: [],
   narrations: [],
@@ -460,9 +464,8 @@ export const nightSummaries = (
   const own = history.filter(
     (day) => day.subject_ref === person.subject_ref && day.origin === person.origin,
   );
-  const notice = own[0]?.notice ?? null;
   const dayOf = (date: string): ReplayDay =>
-    own.find((day) => day.day === date) ?? emptyDay({ ...person, day: date }, notice);
+    own.find((day) => day.day === date) ?? emptyDay({ ...person, day: date });
   return dates.map((date) => {
     const now = contextOf(own, dayOf(date));
     const before = contextOf(own, dayOf(dayBefore(date)));
