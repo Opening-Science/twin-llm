@@ -9,6 +9,7 @@ import {
   DASHBOARD_TITLE,
   type DashboardSection,
   type DashboardSectionId,
+  REPLAY_MY_DAY,
 } from "./dashboard-sections";
 
 /**
@@ -20,6 +21,20 @@ import {
  */
 
 export type DashboardSlots = Readonly<Partial<Record<DashboardSectionId, ReactNode>>>;
+
+/** Where "Replay my day" will open; no link until the replay exists. */
+const ReplaySpot = () => (
+  <div
+    id={REPLAY_MY_DAY.id}
+    className="border-border flex flex-col gap-1 rounded-xl border border-dashed px-4 py-4"
+  >
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-medium">{REPLAY_MY_DAY.title}</p>
+      <p className="text-eyebrow">{REPLAY_MY_DAY.status}</p>
+    </div>
+    <p className="text-muted-foreground text-xs leading-relaxed">{REPLAY_MY_DAY.line}</p>
+  </div>
+);
 
 const Section = ({
   section,
@@ -46,6 +61,7 @@ const Section = ({
       </Link>
     </header>
     {children}
+    {section.id === "twin" ? <ReplaySpot /> : null}
   </section>
 );
 

@@ -1,6 +1,9 @@
 import { readConnectorSummaries } from "@/features/connectors/connector-summaries";
 import { connectorSetupViews } from "@/features/connectors/connector-setup";
+import { threadsForViewer } from "@/features/app-shell/load-threads";
 import { DashboardScreen } from "@/features/dashboard/dashboard-screen";
+import { RecentChats } from "@/features/dashboard/recent-chats";
+import { DayGlanceCard } from "@/features/digital-twin/day/day-glance-card";
 import {
   getGoogleHealthConnectionStatus,
   getLatestGoogleHealthSummary,
@@ -46,18 +49,13 @@ const notLinked = (configured: boolean) => ({
 });
 
 /** The wearables section: what Connectors reads, under the Dashboard's own audit row. */
-const loadWearables = async () => {
+const loadWearables = async (clerkId: string | null, appUserId: string | null) => {
   const setups = connectorSetupViews(serverEnv(), envLooksEmpty);
   const wearableSetups = {
     oura: setups.oura,
     whoop: setups.whoop,
     "google-health": setups["google-health"],
   };
-  const clerkId = await resolveActorId();
-  let appUserId = clerkId ? await findAppUserId(clerkId) : null;
-  if (clerkId && !appUserId && isAuthDisabled()) {
-    appUserId = (await ensureAppUser(clerkId)).id;
-  }
   if (!clerkId || !appUserId) {
     return {
       statuses: {
@@ -94,6 +92,23 @@ const loadWearables = async () => {
 export default async function DashboardPage() {
   const locked = await lockedScreen();
   if (locked) return locked;
-  const wearables = await loadWearables();
-  return <DashboardScreen slots={{ wearables: <WearablesOverview {...wearables} /> }} />;
+  const clerkId = await resolveActorId();
+  let appUserId = clerkId ? await findAppUserId(clerkId) : null;
+  if (clerkId && !appUserId && isAuthDisabled()) {
+    appUserId = (await ensureAppUser(clerkId)).id;
+  }
+  // The gate above has passed, so thread titles may be opened, as the sidebar does.
+  const [wearables, threads] = await Promise.all([
+    loadWearables(clerkId, appUserId),
+    threadsForViewer(appUserId),
+  ]);
+  return (
+    <DashboardScreen
+      slots={{
+        wearables: <WearablesOverview {...wearables} />,
+        twin: <DayGlanceCard />,
+        chat: <RecentChats threads={threads} />,
+      }}
+    />
+  );
 }
