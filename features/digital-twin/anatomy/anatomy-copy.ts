@@ -25,9 +25,9 @@ export const ANATOMY_NOT_INSTALLED = "Reference anatomy is not available here.";
 export const ANATOMY_LOAD_ERROR = "Could not load the reference anatomy.";
 export const ANATOMY_RETRY = "Try again";
 export const ANATOMY_FIT_FAILED = "Reference anatomy could not be fitted to this scan.";
-/** The segment fit read the body but would stretch a part too far, so the one-scale fit shows. */
+/** The segment fit read the body but would scale a part too far, along or across, so the one-scale fit shows. */
 export const SEGMENT_FIT_REFUSED =
-  "Not fitted part by part: a limb or the trunk would have to be stretched too far from the atlas's proportions.";
+  "Not fitted part by part: a part of this body is too far from the atlas's proportions.";
 export const ANATOMY_TYPICAL_NOTE =
   "Body shape is measured. Organ positions and limb pose are typical, not measured.";
 export const ANATOMY_DONOR_NOTE =
