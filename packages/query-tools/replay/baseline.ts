@@ -62,16 +62,15 @@ export const personalBaseline = (
         day.day <= toDay,
     )
     .flatMap((day) =>
-      day.readings.filter(
-        (reading) =>
-          reading.stream === stream &&
-          reading.provenance === "measured" &&
-          isAvailable(reading),
-      ),
+      day.readings
+        .filter(isAvailable)
+        .filter(
+          (reading) => reading.stream === stream && reading.provenance === "measured",
+        ),
     );
   // One night per day, even if a history repeats a day.
   const byDay = [...new Map(nights.map((night) => [night.day, night])).values()];
-  const values = byDay.map((night) => night.value ?? 0);
+  const values = byDay.map((night) => night.value);
   const centre = median(values);
   const spread = mad(values);
   if (byDay.length < BASELINE_MIN_NIGHTS || centre === null || spread === null) {

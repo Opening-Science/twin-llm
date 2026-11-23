@@ -74,6 +74,38 @@ describe("personalBaseline", () => {
     });
   });
 
+  test("a missing night is left out, never counted as a value", () => {
+    const ringOff = HISTORY_B.map((one) =>
+      one.day === "2026-10-28"
+        ? {
+            ...one,
+            readings: one.readings.map((reading) =>
+              reading.stream === "resting_heart_rate"
+                ? {
+                    ...reading,
+                    availability: "missing" as const,
+                    value: null,
+                    missing_reason: "Ring off the finger" as const,
+                  }
+                : reading,
+            ),
+          }
+        : one,
+    );
+    const baseline = personalBaseline(
+      ringOff,
+      keyOf(day(DEMO_PERSON_B, "2026-10-29")),
+      "resting_heart_rate",
+    );
+    expect(baseline).toEqual({
+      state: "insufficient",
+      stream: "resting_heart_rate",
+      n: 2,
+      needed: BASELINE_MIN_NIGHTS,
+      text: "2 of the 7 nights a personal baseline needs, in the 28 days before.",
+    });
+  });
+
   test("another person's nights never fill a baseline", () => {
     const baseline = personalBaseline(
       [...HISTORY_A, ...HISTORY_B],
