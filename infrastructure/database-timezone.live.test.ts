@@ -67,7 +67,7 @@ describe.skipIf(!runLive)("timestamptz through the app's client (RUN_LIVE=1)", (
     await admin.$disconnect();
   });
 
-  test("the session is UTC although the database default is Europe/Zurich", async () => {
+  test("the session is UTC whatever the database default or the URL asks", async () => {
     const [plain] = await admin.$queryRaw<{ zone: string }[]>`
       SELECT setting AS zone FROM pg_db_role_setting s
         CROSS JOIN LATERAL unnest(s.setconfig) AS setting
@@ -76,6 +76,14 @@ describe.skipIf(!runLive)("timestamptz through the app's client (RUN_LIVE=1)", (
     const [session] = await db().$queryRaw<{ zone: string }[]>`
       SELECT current_setting('TimeZone') AS zone`;
     expect(session?.zone).toBe("UTC");
+    const join = url.includes("?") ? "&" : "?";
+    const asking = new PrismaClient({
+      adapter: postgresAdapter(`${url}${join}options=-c%20TimeZone%3DEurope%2FZurich`),
+    });
+    const [asked] = await asking.$queryRaw<{ zone: string }[]>`
+      SELECT current_setting('TimeZone') AS zone`;
+    await asking.$disconnect();
+    expect(asked?.zone).toBe("UTC");
   });
 
   test("a time the app writes is the instant Postgres holds and reads back", async () => {
