@@ -1,8 +1,8 @@
 import { type FieldCipher } from "./field-cipher";
 import { isSealedText, sealedTextKeyId } from "./field-crypto";
 import {
-  CHECKED_TABLES,
   isChatCopy,
+  PERSONAL_COPIES,
   PERSONAL_TABLES,
   type PersonalTable,
   pendingRowsSql,
@@ -146,6 +146,23 @@ export const resealOwner = async (
   return counts;
 };
 
+/**
+ * The tables the checks read: every resealed table, and each chat copy that
+ * is there. A rollback of the chat tables move drops the copies while this
+ * code stays deployed, so a copy table that is gone is skipped, not an error.
+ * Only a clear "not there" skips one.
+ */
+export const checkedTables = async (query: SqlRun): Promise<readonly PersonalTable[]> => {
+  const copies: PersonalTable[] = [];
+  for (const entry of PERSONAL_COPIES) {
+    const [row] = await query(`SELECT to_regclass($1::text) IS NOT NULL AS present`, [
+      `"${entry.table}"`,
+    ]);
+    if (row?.present !== false) copies.push(entry);
+  }
+  return [...PERSONAL_TABLES, ...copies];
+};
+
 /** How many of one owner's rows still name `keyId`; zero before that key is removed. */
 export const rowsWithKey = async (
   query: SqlRun,
@@ -153,7 +170,7 @@ export const rowsWithKey = async (
   keyId: string,
 ): Promise<number> => {
   let total = 0;
-  for (const entry of CHECKED_TABLES) {
+  for (const entry of await checkedTables(query)) {
     const [row] = await query(rowsWithKeySql(entry, keyId), [ownerId]);
     total += Number(row?.n ?? 0);
   }
@@ -170,7 +187,7 @@ export const plaintextFindings = async (
   query: SqlRun,
 ): Promise<readonly PlaintextFinding[]> => {
   const findings: PlaintextFinding[] = [];
-  for (const entry of CHECKED_TABLES) {
+  for (const entry of await checkedTables(query)) {
     const [row] = await query(plaintextCountSql(entry), []);
     for (const [column, count] of Object.entries(row ?? {})) {
       const rows = Number(count);

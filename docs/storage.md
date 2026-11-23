@@ -158,15 +158,23 @@ value does, which is why the gate needs no keys. With the vault unlocked,
 `openProblems` in `scripts/db/chat-move/parity.ts` also opens every value
 both ways and compares the text.
 
-To roll the move back before the switch, run `ROLLBACK_SQL` from
-`scripts/db/chat-move/rollback-sql.ts` in one transaction, with a fresh
-backup as for any schema change. It drops the triggers, the new tables,
-their enums and `schema_moves`, and deletes the three migrations' rows from
+To roll the move back before the switch, take a fresh backup as for any
+schema change, then:
+
+```bash
+bun run db:chat-rollback --yes   # ROLLBACK_SQL in one transaction
+```
+
+It runs `ROLLBACK_SQL` from `scripts/db/chat-move/rollback-sql.ts`, whole
+or not at all. It drops the triggers, the new tables, their enums and
+`schema_moves`, and deletes the three migrations' rows from
 `_prisma_migrations` (Prisma's `migrate resolve --rolled-back` only takes a
-failed migration). Nothing reads the new tables yet, and `threads`, `turns`
-and `model_responses` are not touched. A later `bun run db:deploy` applies
-the three migrations again, and `bun run db:chat-backfill` copies
-everything again.
+failed migration). It prints the old tables' row counts before and after;
+`threads`, `turns` and `model_responses` are not touched. The app can stay
+as it is: only the doctor, the Lab card and the vault scripts read the
+copies, and they skip copy tables that are gone. A later `bun run
+db:deploy` applies the three migrations again, and `bun run
+db:chat-backfill` copies everything again.
 
 The steps so far are rehearsed by the live tests in `scripts/db/chat-move/`
 on made-up rows: the column shapes, the triggers, the backfill stopped

@@ -2,10 +2,11 @@ import { DROP_MIRROR_SQL } from "./mirror-sql";
 
 /**
  * Undoing the expand, mirror and backfill steps of the chat tables move
- * (DATA-MODEL.md C.1, "Rollback"), in order. Nothing in the app reads the
- * new tables before the switch, so dropping them loses nothing: every row
- * in them is a copy, and threads, turns and model_responses are not
- * touched. Pure: SQL text only; docs/storage.md says how to run it.
+ * (DATA-MODEL.md C.1, "Rollback"), in order. Before the switch only the
+ * checks read the new tables, and they skip copy tables that are gone, so
+ * dropping them loses nothing: every row in them is a copy, and threads,
+ * turns and model_responses are not touched. Pure: SQL text only;
+ * `bun run db:chat-rollback --yes` (rollback.ts) runs it.
  */
 
 /** The migrations these statements undo, newest first. */
