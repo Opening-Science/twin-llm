@@ -47,5 +47,8 @@ export const DEMO_FIT_NOTE_UNPOSED =
  * rigged body at its bind pose, so the body stands unposed. The figures are
  * the measured ones in docs/anatomy.md, "Per-limb atlas fit".
  */
+/** The segment fit (`packages/anatomy/segments.ts`), made in the browser. */
+export const DEMO_SEGMENT_FIT_NOTE =
+  "Reference anatomy from a donor atlas, fitted to the demo body part by part: head, neck, trunk, each arm and each leg are placed and scaled from the body's joints and outline, and move with it. The demo body stands unposed.";
 export const DEMO_FITTED_NOTE =
   "Reference anatomy from a donor atlas, refitted to the demo body limb by limb in Blender: each thigh and shin, and each arm where the atlas has arm bones, is turned toward the body's knee and ankle, or elbow and wrist, keeping its length. Where the atlas has foot and hand bones, each foot and hand also turns to point the way the body's does, and each palm to face the same way. Ankles land within 1.2 cm; knees sit 3.5 to 7.6 cm low. The trunk and organs are only shifted to meet the hips. The demo body stands unposed.";

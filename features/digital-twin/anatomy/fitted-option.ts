@@ -9,9 +9,11 @@ import { type AtlasId } from "@/packages/anatomy/manifest";
 import { DEMO_STANCE, type DemoStance } from "@/packages/anatomy/stance";
 
 /**
- * "Fit atlas to body" (#525's per-limb Blender fit, bone lengths kept): when
- * it is offered, when it shows, and what stance the body takes. Pure, so the
- * viewer only wires it.
+ * "Fit atlas to body": when it is offered, which fit it shows, and what
+ * stance the body takes. Two fits sit behind the one switch. The segment fit
+ * is made in the browser for any body with a known skeleton, a scan
+ * included. Where #525's Blender-fitted file for a rigged demo body is made
+ * here, that file shows instead, as before. Pure, so the viewer only wires it.
  */
 export type FittedInstalled = Readonly<Record<FittedAtlasId, boolean>>;
 
@@ -24,19 +26,29 @@ export type FittedContext = Readonly<{
   atlasId: AtlasId;
   /** From the status; null until it answers. */
   installed: FittedInstalled | null;
+  /** The body has a skeleton the clips can bind to; the segment fit needs it. */
+  skeleton: boolean;
 }>;
 
-/** The toggle shows only where the fitted file for this body and atlas is made here. */
-export const fittedAvailable = (context: FittedContext): boolean =>
+/** The Blender-fitted file for this body and atlas is made here. */
+const fileMade = (context: FittedContext): boolean =>
   context.bodyId !== null &&
   context.rigged &&
   context.installed?.[fittedAtlasId(context.bodyId, context.atlasId)] === true;
 
-/** The fitted atlas shows when it is ticked and available; otherwise the usual fit. */
-export const fittedShown = (fitAtlas: boolean, context: FittedContext): boolean =>
-  fitAtlas && fittedAvailable(context);
+/** The toggle shows where either fit can be made. */
+export const fittedAvailable = (context: FittedContext): boolean =>
+  context.skeleton || fileMade(context);
 
-/** The fit was made on the unposed body, so the #518 stance is 0° while it shows. */
+/** The Blender-fitted atlas shows when the toggle is ticked and its file is made here. */
+export const fittedShown = (fitAtlas: boolean, context: FittedContext): boolean =>
+  fitAtlas && fileMade(context);
+
+/** The segment fit shows when the toggle is ticked and no fitted file takes its place. */
+export const segmentFitShown = (fitAtlas: boolean, context: FittedContext): boolean =>
+  fitAtlas && context.skeleton && !fileMade(context);
+
+/** Either fit lays the atlas on the body as it stands, so the #518 stance is 0° while one shows. */
 export const UNPOSED: DemoStance = { hipAdductionDeg: 0 };
 
 export const demoStanceFor = (
