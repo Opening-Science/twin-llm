@@ -18,14 +18,17 @@ import {
   createLayerMaterial,
   createLayerUniforms,
   HIGHLIGHT_INTENSITY,
-  HIGHLIGHT_TINT,
+  highlightTint,
   isHighlighted,
+  LAYER_COLOURS,
   LAYER_FADE_CACHE_KEY,
   patchLayerFragment,
   RIM_ONLY_FADE,
   setBlendMode,
   setHighlighted,
 } from "./layer-material";
+import { oklchOfLinear } from "@/infrastructure/ui-kit/oklch-contrast";
+
 import { BRAND_PALETTE } from "../twin-palette";
 
 /** The dark theme's ring, as the twin palette hands it to the highlight. */
@@ -221,6 +224,51 @@ describe("blend modes", () => {
   });
 });
 
+const oklch = (colour: Color) => oklchOfLinear([colour.r, colour.g, colour.b]);
+
+describe("highlightTint", () => {
+  const rings = [BRAND_PALETTE.light.ring, BRAND_PALETTE.dark.ring];
+
+  test("lights the pale cream brain a clear blue, not grey", () => {
+    for (const ring of rings) {
+      const [, chroma, hue] = oklch(
+        highlightTint(new Color(LAYER_COLOURS.nervous), new Color(ring)),
+      );
+      const [, , ringHue] = oklch(new Color(ring));
+      expect(chroma).toBeGreaterThan(0.09);
+      expect(Math.abs(hue - ringHue)).toBeLessThan(2);
+    }
+  });
+
+  test("every tissue colour takes the focus hue with clear chroma", () => {
+    for (const ring of rings) {
+      const [, , ringHue] = oklch(new Color(ring));
+      for (const base of Object.values(LAYER_COLOURS)) {
+        const [, chroma, hue] = oklch(highlightTint(new Color(base), new Color(ring)));
+        expect(chroma).toBeGreaterThan(0.09);
+        expect(Math.abs(hue - ringHue)).toBeLessThan(2);
+      }
+    }
+  });
+
+  test("keeps some of the part's own lightness, so pale parts stay lighter", () => {
+    const ring = new Color(BRAND_PALETTE.light.ring);
+    const [bone] = oklch(highlightTint(new Color(LAYER_COLOURS.skeleton), ring));
+    const [liver] = oklch(highlightTint(new Color(LAYER_COLOURS.metabolic), ring));
+    const [ringLightness] = oklch(ring);
+    expect(bone).toBeGreaterThan(liver);
+    expect(liver).toBeGreaterThan(ringLightness);
+  });
+
+  test("leaves its inputs alone", () => {
+    const base = new Color(LAYER_COLOURS.nervous);
+    const ring = new Color(BRAND_PALETTE.light.ring);
+    highlightTint(base, ring);
+    expect(base.getHexString()).toBe(LAYER_COLOURS.nervous.slice(1));
+    expect(ring.getHexString()).toBe(BRAND_PALETTE.light.ring.slice(1));
+  });
+});
+
 describe("setHighlighted", () => {
   test("glows, then restores the exact original emissive", () => {
     const uniforms = createLayerUniforms(0);
@@ -231,9 +279,7 @@ describe("setHighlighted", () => {
     });
     Object.assign(material, { emissiveIntensity: 0.2 });
     material.emissive.set("#102030");
-    const tinted = material.color
-      .clone()
-      .lerp(new Color(HIGHLIGHT_COLOUR), HIGHLIGHT_TINT);
+    const tinted = highlightTint(material.color, new Color(HIGHLIGHT_COLOUR));
     const key = material.customProgramCacheKey();
     const version = material.version;
     const { color, emissive } = material;
@@ -272,7 +318,7 @@ describe("setHighlighted", () => {
     expect(material.emissive.getHexString()).toBe("1c4e8f");
     expect(
       material.color.equals(
-        new Color("#d6a06a").lerp(new Color(BRAND_PALETTE.light.ring), HIGHLIGHT_TINT),
+        highlightTint(new Color("#d6a06a"), new Color(BRAND_PALETTE.light.ring)),
       ),
     ).toBe(true);
     setHighlighted(material, null);

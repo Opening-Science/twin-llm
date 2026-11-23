@@ -8,6 +8,11 @@ import {
   type Side,
 } from "three";
 
+import {
+  inGamut,
+  linearSrgb,
+  oklchOfLinear,
+} from "@/infrastructure/ui-kit/oklch-contrast";
 import { type LayerMix } from "@/packages/anatomy/layers";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
@@ -217,10 +222,35 @@ export const applyMixToUniforms = (uniforms: LayerUniforms, mix: LayerMix): void
  * on pale parts such as bone. Colour and emissive are uniforms, so switching
  * never recompiles the program, and the fade's alpha still applies, so a
  * highlighted part fades with its layer.
+ *
+ * The tint is worked out in OKLCH, not by mixing RGB. Mixing a pale part such
+ * as the cream brain 60% toward the blue cancels the two hues out and leaves
+ * lavender grey, which reads as dimmed. Here the lit part takes the focus
+ * colour's hue and chroma, and only its lightness is mixed, so every part
+ * lights the same clear blue while keeping some of its own lightness.
  */
-/** How far the base colour moves toward the highlight colour, 0..1. */
+/** How far the base lightness moves toward the highlight colour's, 0..1. */
 export const HIGHLIGHT_TINT = 0.6;
 export const HIGHLIGHT_INTENSITY = 0.25;
+
+/** The largest chroma at or below `chroma` that sRGB can show at this lightness and hue. */
+const fitChroma = (lightness: number, chroma: number, hue: number): number => {
+  const steps = 24;
+  const fits = Array.from({ length: steps + 1 }, (_, i) => chroma * (1 - i / steps)).find(
+    (c) => inGamut([lightness, c, hue]),
+  );
+  return fits ?? 0;
+};
+
+/** The colour a part with base colour `base` takes when lit in `focus` (both linear sRGB). */
+export const highlightTint = (base: Color, focus: Color): Color => {
+  const [baseLightness] = oklchOfLinear([base.r, base.g, base.b]);
+  const [focusLightness, chroma, hue] = oklchOfLinear([focus.r, focus.g, focus.b]);
+  const lightness = baseLightness + (focusLightness - baseLightness) * HIGHLIGHT_TINT;
+  const [r, g, b] = linearSrgb([lightness, fitChroma(lightness, chroma, hue), hue]);
+  const unit = (v: number): number => Math.min(1, Math.max(0, v));
+  return new Color().setRGB(unit(r), unit(g), unit(b));
+};
 
 type Look = Readonly<{ color: Color; emissive: Color; emissiveIntensity: number }>;
 
@@ -235,7 +265,7 @@ const lightUp = (material: MeshStandardMaterial, highlight: Color): Look => {
     emissiveIntensity: material.emissiveIntensity,
   });
   return {
-    color: material.color.clone().lerp(highlight, HIGHLIGHT_TINT),
+    color: highlightTint(material.color, highlight),
     emissive: highlight,
     emissiveIntensity: HIGHLIGHT_INTENSITY,
   };
