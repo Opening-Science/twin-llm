@@ -100,8 +100,23 @@ release:
 
 Code comments name these steps by the sections of the design note they
 came from: C.1 expand, C.2 backfill, C.3 parity, C.4 switch, C.6
-contract, and B.5 for the sealing contexts. Only the expand step is in the schema so far: the new tables
-exist, empty, with no foreign keys, and nothing reads them.
+contract, and B.5 for the sealing contexts.
+
+Only the expand step is in the schema so far: the new tables
+exist with no foreign keys, and nothing in the app reads them.
+
+Triggers named `chat_move_mirror` on `threads`, `turns` and
+`model_responses` repeat every insert, update and delete on the new tables
+in the same transaction (`scripts/db/chat-move/mirror-sql.ts`; rollback is
+`DROP_MIRROR_SQL` there). A trigger on `scheduled_tasks` sets an exchange's
+`schedule_id` when a run records its turn, and clears it when the task is
+deleted. Rows older than the triggers are copied by the backfill.
+
+The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
+`timestamptz` as if the session time zone were UTC, so on a server set to
+another zone a `Date` read through Prisma is shifted by the offset (the
+stored instant is right). Compare instants in SQL until the switch step
+settles this, for example by pinning `TimeZone=UTC` on the connection.
 
 Each new row keeps its old row's id, and each `*_sealed` column holds the
 old column's stored value byte for byte. A sealed value's context stays the
