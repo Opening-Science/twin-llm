@@ -10,9 +10,9 @@ import { clearSeed, SEED_USERS, seedOldChats } from "./seed.test-helpers";
  * The backfill while the app keeps writing (DATA-MODEL.md D.3), with
  * made-up rows only. A writer on its own connections adds turns, completes
  * and stops answers, deletes threads and releases interrupted runs, without
- * pause, while the backfill runs: first stopped halfway, then to the end.
- * After the writer stops, a third run inserts nothing and the parity gate
- * passes.
+ * pause, while the backfill runs: first stopped halfway, then to the end,
+ * then the finish step and the parity gate. After the writer stops, a third
+ * run inserts nothing and the gate passes again.
  *   RUN_LIVE=1 DATABASE_URL=<throwaway, migrated> bun test scripts/db/chat-move/backfill-load.live.test.ts
  */
 
@@ -106,26 +106,31 @@ describe.skipIf(!runLive)("chat backfill under load (RUN_LIVE=1)", () => {
     expect(stopped.complete).toBe(false);
     const full = await runBackfill(db, { batchSize: 5, log });
     expect(full.complete).toBe(true);
+    // As on the live database: the keys are added and the gate runs while
+    // people keep writing.
+    await finishBackfill(db, log);
+    const during = await checkParity(db);
     writing = false;
     await running;
     // About 200 on a laptop; enough that batches and writes interleave.
     expect(writes).toBeGreaterThan(20);
     const third = await runBackfill(db, { batchSize: 1000, log });
     expect(third.tables.map((table) => table.inserted)).toEqual([0, 0, 0]);
-    await finishBackfill(db, log);
-    const report = await checkParity(db);
-    expect(
-      report.tables.map((table) => [
-        table.table,
-        table.missing,
-        table.extra,
-        table.differing,
-      ]),
-    ).toEqual([
-      ["conversations", 0, 0, 0],
-      ["exchanges", 0, 0, 0],
-      ["answers", 0, 0, 0],
-    ]);
-    expect(report.ok).toBe(true);
+    const after = await checkParity(db);
+    for (const report of [during, after]) {
+      expect(
+        report.tables.map((table) => [
+          table.table,
+          table.missing,
+          table.extra,
+          table.differing,
+        ]),
+      ).toEqual([
+        ["conversations", 0, 0, 0],
+        ["exchanges", 0, 0, 0],
+        ["answers", 0, 0, 0],
+      ]);
+      expect(report.ok).toBe(true);
+    }
   }, 60_000);
 });

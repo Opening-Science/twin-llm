@@ -160,9 +160,9 @@ both ways and compares the text.
 
 The steps so far are rehearsed by the live tests in `scripts/db/chat-move/`
 on made-up rows: the column shapes, the triggers, the backfill stopped
-halfway and resumed, the backfill while two sessions keep writing, and the
-parity gate with a two-key test keyring. They run with the other database
-tests on a throwaway, migrated Postgres:
+halfway and resumed, the backfill, its finish step and the gate while two
+sessions keep writing, and the parity gate with a two-key test keyring.
+They run with the other database tests on a throwaway, migrated Postgres:
 
 ```bash
 DATABASE_URL=<throwaway, migrated> bun run test:live-db
