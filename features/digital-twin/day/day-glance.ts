@@ -26,7 +26,6 @@ const SHOWN = 3;
 
 export type DayGlance = Readonly<{
   heading: string;
-  label: string;
   summary: string;
   worth: readonly string[];
   more: string | null;
@@ -43,7 +42,6 @@ export const dayGlance = ({
   const rest = windows - SHOWN;
   return {
     heading: mock ? MY_DAY_MOCK_OPTION : `${personLabel} · ${formatDate(day.day)}`,
-    label: DAY_GLANCE_SYNTHETIC,
     summary: `${beats} ${beats === 1 ? "beat" : "beats"} of heart rate and blood sugar · ${
       windows === 0 ? "none" : windows
     } worth a look`,

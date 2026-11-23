@@ -63,7 +63,6 @@ describe("dayGlance", () => {
       }),
     ).toEqual({
       heading: "Synthetic person 1 · 16 Nov 2026",
-      label: DAY_GLANCE_SYNTHETIC,
       summary: "3 beats of heart rate and blood sugar · 2 worth a look",
       worth: [
         "12:30 · Blood glucose · furthest 162 mg/dL",
