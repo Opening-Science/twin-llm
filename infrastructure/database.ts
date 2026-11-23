@@ -1,9 +1,8 @@
 import "server-only";
 
-import { PrismaPg } from "@prisma/adapter-pg";
-
 import { PrismaClient } from "@/generated/prisma/client";
 
+import { postgresAdapter } from "./database-adapter";
 import { serverEnv } from "./env";
 import { processSingleton } from "./process-singleton";
 
@@ -16,7 +15,7 @@ import { processSingleton } from "./process-singleton";
  * so `next build` can load route modules without a DATABASE_URL.
  */
 const openClient = (): PrismaClient => {
-  const adapter = new PrismaPg({ connectionString: serverEnv().DATABASE_URL });
+  const adapter = postgresAdapter(serverEnv().DATABASE_URL);
   return new PrismaClient({ adapter });
 };
 

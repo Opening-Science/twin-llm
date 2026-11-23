@@ -18,6 +18,13 @@ export SHADOW_DATABASE_URL='postgresql://postgres:scratch@127.0.0.1:5434/postgre
 
 `postgres:16` does not ship pgvector. Recreate throwaway scratch/shadow containers on the pgvector image. For `twinllm-dev`, dump first, stop the container, and start `pgvector/pgvector:pg16` on the **same data volume**. Never delete that volume. See `docs/guidelines.md`.
 
+## Times
+
+The older tables keep times as `timestamp(3)` holding UTC; the chat tables (`conversations`, `exchanges`, `answers`) use `timestamptz(3)`, and the backfill converts with `AT TIME ZONE 'UTC'`.
+`@prisma/adapter-pg` writes a Date as UTC with no offset and drops the offset when it reads a `timestamptz`, so both are right only in a UTC session.
+Every client is built with `postgresAdapter` (`infrastructure/database-adapter.ts`), which opens each connection with `-c TimeZone=UTC` whatever the server default (a local cluster takes the machine's zone).
+`infrastructure/database-timezone.live.test.ts` checks this against a Europe/Zurich default, across both clock changes.
+
 ## Create a migration (local)
 
 Against disposable scratch + shadow databases:
