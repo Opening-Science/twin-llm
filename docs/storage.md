@@ -158,6 +158,16 @@ value does, which is why the gate needs no keys. With the vault unlocked,
 `openProblems` in `scripts/db/chat-move/parity.ts` also opens every value
 both ways and compares the text.
 
+The steps so far are rehearsed by the live tests in `scripts/db/chat-move/`
+on made-up rows: the column shapes, the triggers, the backfill stopped
+halfway and resumed, the backfill, its finish step and the gate while two
+sessions keep writing, and the parity gate with a two-key test keyring.
+They run with the other database tests on a throwaway, migrated Postgres:
+
+```bash
+DATABASE_URL=<throwaway, migrated> bun run test:live-db
+```
+
 The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
 `timestamptz` as if the session time zone were UTC, so on a server set to
 another zone a `Date` read through Prisma is shifted by the offset (the
