@@ -54,6 +54,15 @@ export const ChatIcon = (props: IconProps) => (
   </Line>
 );
 
+export const GridIcon = (props: IconProps) => (
+  <Line {...props}>
+    <rect x="3" y="3" width="6" height="6" rx="1.5" />
+    <rect x="11" y="3" width="6" height="6" rx="1.5" />
+    <rect x="3" y="11" width="6" height="6" rx="1.5" />
+    <rect x="11" y="11" width="6" height="6" rx="1.5" />
+  </Line>
+);
+
 export const BodyIcon = (props: IconProps) => (
   <Line {...props}>
     <circle cx="10" cy="4.25" r="1.75" />

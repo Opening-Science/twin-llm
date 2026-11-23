@@ -23,6 +23,7 @@ describe("SHELL_COPY", () => {
   test("English keeps the names the sidebar had", () => {
     expect(SECTIONS.map(({ key }) => SHELL_COPY.en.sections[key])).toEqual([
       "TwinLLM",
+      "Dashboard",
       "Digital Twin",
       "Customize",
       "Models",

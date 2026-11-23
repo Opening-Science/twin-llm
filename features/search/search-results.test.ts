@@ -31,6 +31,7 @@ describe("static items", () => {
       ),
     ).toEqual([
       "TwinLLM",
+      "Dashboard",
       "Customize",
       "Customize · Agents",
       "Customize · Connectors",

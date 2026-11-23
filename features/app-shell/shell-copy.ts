@@ -34,6 +34,7 @@ export const SHELL_COPY: Translated<ShellCopy> = {
     sectionsLabel: "Sections",
     sections: {
       home: "TwinLLM",
+      dashboard: "Dashboard",
       twin: "Digital Twin",
       customize: "Customize",
       models: "Models",
@@ -60,6 +61,7 @@ export const SHELL_COPY: Translated<ShellCopy> = {
     sectionsLabel: "Bereiche",
     sections: {
       home: "TwinLLM",
+      dashboard: "Übersicht",
       twin: "Digitaler Zwilling",
       customize: "Anpassen",
       models: "Modelle",

@@ -6,6 +6,7 @@ describe("sections", () => {
   test("are listed in the sidebar's order", () => {
     expect(SECTIONS.map(({ key, href }) => [key, href])).toEqual([
       ["home", "/"],
+      ["dashboard", "/dashboard"],
       ["twin", "/digital-twin"],
       ["customize", "/customize"],
       ["models", "/models"],
@@ -27,5 +28,7 @@ describe("sections", () => {
     expect(isCurrentSection("/models", "/modelsx")).toBe(false);
     expect(isCurrentSection("/customize", "/customize/tasks")).toBe(true);
     expect(isCurrentSection("/lab", null)).toBe(false);
+    expect(isCurrentSection("/dashboard", "/dashboard")).toBe(true);
+    expect(isCurrentSection("/", "/dashboard")).toBe(false);
   });
 });
