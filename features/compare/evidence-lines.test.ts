@@ -138,6 +138,22 @@ describe("the panel's sections (SPEC 6)", () => {
     expect(panel.chips[0]?.line).toContain("the answer says 75");
   });
 
+  test("a number that is another source's reading names that reading", () => {
+    const panel = content(DOC, {
+      attribution: [
+        {
+          ...CITED,
+          valueCheck: { status: "not_matched", stated: "75" },
+          statedFrom: { source: "whoop", day: "2026-10-15", verdict: "wrong_source" },
+        },
+      ],
+    });
+    expect(panel.chips[0]?.mismatch).toBe(true);
+    expect(panel.chips[0]?.line).toBe(
+      "Doesn't match the cited reading: the answer says 75, which is the WHOOP reading, 15 Oct 2026",
+    );
+  });
+
   test("cited keys without chips are counted; neither says none were cited", () => {
     const cited = {
       ...DOC,

@@ -3,10 +3,11 @@
  * part of the app needs. Changes nothing; `bun run setup:local` fixes what it
  * can.
  */
+import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { detectState } from "./detect";
+import { currentPlatform, detectState, effectiveEnv } from "./detect";
 import {
   checkInstalledPackages,
   describeProblems,
@@ -33,6 +34,7 @@ import {
   type EncryptionProbe,
   probeEncryption,
 } from "./encryption-probe";
+import { probeVoice, type VoiceProbe, voiceSection } from "./voice-probe";
 
 const FINDING_MARK: Readonly<Record<Finding["mark"], string>> = {
   ok: "[ok]     ",
@@ -59,6 +61,7 @@ export const formatDoctor = (
   client: PrismaClientState = "ok",
   storage: StorageProbe | null = null,
   encryption: EncryptionProbe | null = null,
+  voice: VoiceProbe | null = null,
 ): string => {
   const tools = toolChecks(state).map((check) =>
     check.status === "ok"
@@ -114,6 +117,7 @@ export const formatDoctor = (
     "",
     ...(storage === null ? [] : storageSection(storage)),
     ...(encryption === null ? [] : encryptionSection(encryption)),
+    ...(voice === null ? [] : voiceSection(voice)),
     open === 0
       ? "Everything is ready."
       : `${open} item(s) not ready. ${SETUP_COMMAND} fixes what it can and says what to install.`,
@@ -126,6 +130,7 @@ const isMain = Boolean((import.meta as { main?: boolean }).main);
 if (isMain) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
   const storage = await probeStorage(root);
+  const { env } = await effectiveEnv(root, currentPlatform());
   process.stdout.write(
     formatDoctor(
       await detectState(root),
@@ -133,6 +138,7 @@ if (isMain) {
       checkPrismaClient(root),
       storage,
       await probeEncryption(storage.settings),
+      await probeVoice(env, homedir()),
     ),
   );
 }

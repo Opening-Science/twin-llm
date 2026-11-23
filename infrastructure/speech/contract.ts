@@ -6,11 +6,13 @@ import { z } from "zod";
  * Two languages, English and German. The app talks to it over HTTP and never
  * imports it, so the engines behind it can change without touching the app.
  *
- * - `GET /health`: which engines and voices are loaded.
+ * - `GET /health`: which engines and voices are loaded; `tts` is null when
+ *   the sidecar only listens, which is the default.
  * - `POST /v1/transcribe?language=en|de`: a 16 kHz mono 16-bit WAV body
  *   (`wav.ts`) in, `{ text, language, audioMs, elapsedMs }` out.
  * - `POST /v1/speak`: `{ text, language }` in, `audio/wav` out, with the time
- *   it took in the `x-speech-elapsed-ms` header.
+ *   it took in the `x-speech-elapsed-ms` header. Only when a person set up a
+ *   local voice of their own; answers are read aloud in the browser.
  *
  * Errors are `{ error: { message, type } }` with a plain message; the cause
  * stays in the sidecar's own log. Nothing is stored on either side.
@@ -36,10 +38,12 @@ export const SPEAK_ELAPSED_HEADER = "x-speech-elapsed-ms";
 export const speechHealthSchema = z.object({
   status: z.literal("ok"),
   stt: z.object({ engine: z.string(), model: z.string() }),
-  tts: z.object({
-    engine: z.string(),
-    voices: z.object({ en: z.string(), de: z.string() }),
-  }),
+  tts: z
+    .object({
+      engine: z.string(),
+      voices: z.object({ en: z.string(), de: z.string() }),
+    })
+    .nullable(),
 });
 
 export type SpeechHealth = z.infer<typeof speechHealthSchema>;

@@ -206,9 +206,15 @@ const SCRIPTS: Readonly<Record<string, string>> = {
   "scripts/release/pinned-fetch.ts": "downloads pinned release artefacts",
   "scripts/setup/cohort-load.ts": "downloads the pinned synthetic cohort",
   "scripts/setup/detect.ts": "asks the local Ollama which models it has",
+  "scripts/setup/voice-probe.ts":
+    "asks the speech sidecar on loopback for its health; never an address elsewhere",
   "scripts/setup/prompt-size.ts":
     "counts tokens of a synthetic prompt on the local Ollama",
   "scripts/local-https-gateway.mjs": "a TLS gateway on loopback in front of the app",
+  "scripts/voice/serve.ts":
+    "the speech sidecar on loopback; whisper.cpp, and a local voice only if the person set one up, run on this machine",
+  "scripts/voice/round-trip.ts":
+    "times the speech sidecar on loopback with fixed sentences; refuses any other address",
   "scripts/oura-oauth-proxy.mjs": "a redirect proxy on localhost for the OAuth return",
   "scripts/whoop-oauth-proxy.mjs": "a redirect proxy on localhost for the OAuth return",
 };

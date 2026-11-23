@@ -519,3 +519,78 @@ describe("cited value check (#545)", () => {
     expect(parsed.attribution[0]?.valueCheck).toEqual({ status: "unstated" });
   });
 });
+
+describe("which reading a mismatched number is (#508)", () => {
+  const day = "2026-01-02";
+  const window = { startDate: "2026-01-01", endDate: day };
+  const summaries = {
+    oura: {
+      window,
+      narrative: "",
+      metrics: [
+        {
+          key: `sleep.hrv.long_sleep.${day}`,
+          label: `Average HRV during sleep (${day})`,
+          value: 45,
+          unit: "ms",
+          date: day,
+        },
+        {
+          key: "sleep.hrv.long_sleep.2026-01-01",
+          label: "Average HRV during sleep (2026-01-01)",
+          value: 39,
+          unit: "ms",
+          date: "2026-01-01",
+        },
+      ],
+    },
+    whoop: {
+      window,
+      narrative: "",
+      metrics: [
+        {
+          key: `whoop.recovery.hrv.${day}`,
+          label: `Whoop HRV RMSSD (${day})`,
+          value: 52.1,
+          unit: "ms",
+          date: day,
+        },
+      ],
+    },
+    googleHealth: null,
+    vitronic: null,
+  };
+  const reply = (answer: string) =>
+    [
+      "## Reasoning",
+      "Synthetic reasoning.",
+      "## Evidence Used",
+      `- [sleep.hrv.long_sleep.${day}]`,
+      "## Answer",
+      answer,
+    ].join("\n");
+  const cited = (answer: string) =>
+    parseTwinAnswer(reply(answer), summaries).attribution[0];
+
+  test("another source's reading that day", () => {
+    expect(cited("Your HRV was 52 ms.")?.statedFrom).toEqual({
+      source: "whoop",
+      day,
+      verdict: "wrong_source",
+    });
+  });
+
+  test("the cited source's reading on another day", () => {
+    expect(cited("Your HRV was 39 ms.")?.statedFrom).toEqual({
+      source: "oura",
+      day: "2026-01-01",
+      verdict: "wrong_day",
+    });
+  });
+
+  test("a match, or a number no offered reading holds, says nothing more", () => {
+    expect(cited("Your HRV was 45 ms.")?.statedFrom).toBeUndefined();
+    expect(cited("Your HRV was 61 ms.")?.statedFrom).toBeUndefined();
+    expect(cited("Your HRV was 61 ms.")?.valueCheck?.status).toBe("not_matched");
+  });
+});

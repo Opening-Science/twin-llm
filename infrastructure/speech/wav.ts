@@ -23,10 +23,12 @@ export type WavInfo = Readonly<{
   sampleRate: number;
   bitsPerSample: number;
   dataBytes: number;
+  /** Where the samples start: other chunks may come before or after `data`. */
+  dataOffset: number;
   durationMs: number;
 }>;
 
-type WavFormat = Omit<WavInfo, "dataBytes" | "durationMs">;
+type WavFormat = Omit<WavInfo, "dataBytes" | "dataOffset" | "durationMs">;
 
 const ascii = (view: DataView, offset: number, length: number): string =>
   String.fromCharCode(
@@ -100,7 +102,7 @@ export const wavInfo = (bytes: Uint8Array): WavInfo | null => {
       frameBytes > 0 && fmt.sampleRate > 0
         ? Math.round((dataBytes / frameBytes / fmt.sampleRate) * 1000)
         : 0;
-    return { ...fmt, dataBytes, durationMs };
+    return { ...fmt, dataBytes, dataOffset: body, durationMs };
   };
   return walk(12, null);
 };
