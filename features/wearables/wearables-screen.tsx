@@ -32,6 +32,7 @@ import { SegmentedControl } from "@/infrastructure/ui-kit/segmented-control";
 
 import { SOURCE_LABEL, type WearableSource } from "./dashboard-headings";
 import { DateRangeBar, defaultDateRange, type DateRangeValue } from "./date-range-bar";
+import { firstLinkedSource } from "./linked-source";
 import { WearablesDashboard } from "./wearables-dashboard";
 
 export type { WearableSource } from "./dashboard-headings";
@@ -232,16 +233,16 @@ export const WearablesScreen = ({
   const [googleHealthStatus, setGoogleHealthStatus] = useState(initialGoogleHealth);
   const [range, setRange] = useState<DateRangeValue>(defaultDateRange);
   const [view, setView] = useState<ViewMode>("single");
-  const [source, setSource] = useState<WearableSource>(() => {
-    if (initialSource === "whoop" && initialWhoop.connected) return "whoop";
-    if (initialSource === "google-health" && initialGoogleHealth.connected) {
-      return "google-health";
-    }
-    if (initialOura.connected) return "oura";
-    if (initialWhoop.connected) return "whoop";
-    if (initialGoogleHealth.connected) return "google-health";
-    return "oura";
-  });
+  const [source, setSource] = useState<WearableSource>(() =>
+    firstLinkedSource(
+      {
+        oura: initialOura.connected,
+        whoop: initialWhoop.connected,
+        "google-health": initialGoogleHealth.connected,
+      },
+      initialSource,
+    ),
+  );
 
   useEffect(() => {
     setMounted(true);
