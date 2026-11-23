@@ -6,7 +6,8 @@
  *   seed   Imports the made-up fixtures in tests/fixtures/personal-import/
  *          for LOCAL_USER_ID through the import store, with DATA_MODE=synthetic,
  *          so every personal column is written plain, as an install from
- *          before #141 holds it. Refuses unless the person has no rows yet.
+ *          before #141 holds it, and adds one made-up chat. Refuses unless
+ *          the person has no rows yet.
  *   state  Prints, per personal table, its row count, its plain values left
  *          and an MD5 of every row as stored, as one JSON line. No value.
  *
@@ -19,10 +20,7 @@ import { fileURLToPath } from "node:url";
 import { ensureAppUser } from "../../infrastructure/current-user";
 import { database } from "../../infrastructure/database";
 import { serverEnv, storageEnv } from "../../infrastructure/env";
-import {
-  PERSONAL_TABLES,
-  plaintextCountSql,
-} from "../../infrastructure/personal-columns";
+import { CHECKED_TABLES, plaintextCountSql } from "../../infrastructure/personal-columns";
 import { personalDataStore } from "../../infrastructure/personal-data-store";
 import { parseImport } from "../../packages/personal-data/parse-import";
 import { savePlan } from "../../packages/personal-data/save-plan";
@@ -80,11 +78,38 @@ const seed = async (): Promise<void> => {
     if (!saved.ok) throw new Error(`${path}: not saved`);
     console.log(`  ${kind} ${fileName}: ${plan.dataset.rowCount} row(s)`);
   }
+  // One made-up chat, plain like the rest. While the chat tables move, the
+  // mirror triggers copy it, and a reseal of the old tables must reach the
+  // copies too.
+  const db = database();
+  await db.thread.create({
+    data: {
+      userId,
+      title: "Made-up title",
+      turns: {
+        create: {
+          prompt: "Made-up question",
+          label: "Made-up bubble",
+          responses: {
+            create: {
+              modelId: "made-up:model",
+              modelName: "Made-up model",
+              status: "COMPLETE",
+              text: "Made-up answer",
+              reasoningText: "Made-up reasoning",
+              completedAt: new Date(),
+            },
+          },
+        },
+      },
+    },
+  });
+  console.log("  chat: 1 thread, 1 turn, 1 answer");
 };
 
 const state = async (): Promise<DatabaseState> => {
   const entries = await Promise.all(
-    PERSONAL_TABLES.map(async (entry) => {
+    CHECKED_TABLES.map(async (entry) => {
       const [plain] = await rows(plaintextCountSql(entry));
       const [digest] = await rows(
         `SELECT count(*)::int AS n, coalesce(md5(string_agg(md5(t::text), '' ORDER BY md5(t::text))), '') AS d FROM ${quote(entry.table)} t`,

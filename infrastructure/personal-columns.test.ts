@@ -6,6 +6,8 @@ import {
   keyPrefix,
   observationLookupValue,
   observationSeriesValue,
+  CHECKED_TABLES,
+  PERSONAL_COPIES,
   PERSONAL_TABLES,
   pendingRowsSql,
   personalTable,
@@ -56,6 +58,33 @@ describe("personal columns registry (#141)", () => {
       ]) {
         expect(columns?.has(column), `${entry.table}.${column}`).toBe(true);
       }
+    }
+  });
+
+  test("the chat copies list every sealed column of the new chat tables", () => {
+    const tables = schemaColumns();
+    for (const entry of PERSONAL_COPIES) {
+      const columns = [...(tables.get(entry.table) ?? [])];
+      expect(entry.sealed.slice().sort(), entry.table).toEqual(
+        columns.filter((column) => column.endsWith("_sealed")).sort(),
+      );
+    }
+    expect(PERSONAL_COPIES.map((entry) => entry.table)).toEqual([
+      "conversations",
+      "exchanges",
+      "answers",
+    ]);
+  });
+
+  test("checks cover the copies; the reseal list does not", () => {
+    expect(CHECKED_TABLES.map((entry) => entry.table)).toEqual([
+      ...PERSONAL_TABLES.map((entry) => entry.table),
+      "conversations",
+      "exchanges",
+      "answers",
+    ]);
+    for (const copy of PERSONAL_COPIES) {
+      expect(PERSONAL_TABLES.map((entry) => entry.table)).not.toContain(copy.table);
     }
   });
 

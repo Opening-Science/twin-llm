@@ -237,6 +237,55 @@ export const PERSONAL_TABLES: readonly PersonalTable[] = [
   })),
 ];
 
+// ─── Copies of the chat tables while they move (DATA-MODEL.md) ──────────────
+
+const OWNER_OF_EXCHANGE = `(SELECT c."owner_id" FROM "conversations" c WHERE c."id" = "exchanges"."conversation_id")`;
+const OWNER_OF_ANSWER = `(SELECT c."owner_id" FROM "exchanges" e JOIN "conversations" c ON c."id" = e."conversation_id" WHERE e."id" = "answers"."exchange_id")`;
+
+/**
+ * conversations, exchanges and answers hold copies of the chat tables'
+ * sealed values while the chat tables move. They are checked, never
+ * resealed: a reseal rewrites threads, turns and model_responses, and the
+ * mirror triggers copy each new value across byte for byte. The checks make
+ * sure no plain value and no retired key is left behind in a copy.
+ */
+export const PERSONAL_COPIES: readonly PersonalTable[] = [
+  {
+    table: "conversations",
+    idColumn: "id",
+    owner: ownerByUserId("owner_id"),
+    sealed: ["title_sealed"],
+  },
+  {
+    table: "exchanges",
+    idColumn: "id",
+    owner: OWNER_OF_EXCHANGE,
+    sealed: ["question_sealed", "bubble_text_sealed"],
+  },
+  {
+    table: "answers",
+    idColumn: "id",
+    owner: OWNER_OF_ANSWER,
+    sealed: [
+      "body_sealed",
+      "reasoning_sealed",
+      "evidence_sealed",
+      "document_sealed",
+      "tool_trace_sealed",
+    ],
+  },
+];
+
+/** True for a copy table: a reseal never writes it, so its fix is a fresh copy. */
+export const isChatCopy = (table: string): boolean =>
+  PERSONAL_COPIES.some((entry) => entry.table === table);
+
+/** Every table whose sealed values the checks look at: the resealed ones and the copies. */
+export const CHECKED_TABLES: readonly PersonalTable[] = [
+  ...PERSONAL_TABLES,
+  ...PERSONAL_COPIES,
+];
+
 export const personalTable = (table: string): PersonalTable => {
   const found = PERSONAL_TABLES.find((entry) => entry.table === table);
   if (found === undefined) throw new Error(`not a personal table: ${table}`);
