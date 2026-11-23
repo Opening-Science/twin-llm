@@ -56,7 +56,8 @@ Some SQL is invisible to that diff, so the script also checks it on the
 deployed database: pgvector and its HNSW indexes
 (`scripts/db/verify-pgvector.sh`), and the chat tables move's mirror
 triggers, partial indexes and marker, with a rolled-back probe that a new
-thread is copied and its delete removes the copies
+thread is copied, an update of its answer and of the thread follows, and
+its delete removes the copies
 (`scripts/db/verify-chat-move.sh`).
 
 ## Baseline migration

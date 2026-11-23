@@ -3,7 +3,8 @@
 # migrate deploy (docs/storage.md, "Chat tables move"): the mirror triggers,
 # the two partial indexes, the move marker and its phase check. Then one
 # made-up thread, turn and answer in a rolled-back transaction must reach the
-# new tables, and their delete must remove the copies.
+# new tables, an update of the answer and the thread must follow, and their
+# delete must remove the copies.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -11,6 +12,10 @@ cd "$ROOT"
 
 if [[ -z "${DATABASE_URL:-}" ]]; then
   echo "verify-chat-move FAIL: DATABASE_URL is required" >&2
+  exit 1
+fi
+if ! command -v psql >/dev/null 2>&1; then
+  echo "verify-chat-move FAIL: psql is required (CI installs postgresql-client)" >&2
   exit 1
 fi
 
@@ -54,6 +59,10 @@ INSERT INTO "model_responses" ("id", "turnId", "modelId", "modelName") VALUES ('
 SELECT 'copied ' || (SELECT count(*) FROM "conversations" WHERE "id" = 'verify-chat-thread')
   || (SELECT count(*) FROM "exchanges" WHERE "id" = 'verify-chat-turn')
   || (SELECT count(*) FROM "answers" WHERE "id" = 'verify-chat-answer' AND "state" = 'streaming');
+UPDATE "model_responses" SET "status" = 'COMPLETE', "text" = 'made-up answer', "completedAt" = now() WHERE "id" = 'verify-chat-answer';
+UPDATE "threads" SET "updatedAt" = '2001-02-03 04:05:06.789' WHERE "id" = 'verify-chat-thread';
+SELECT 'updated ' || (SELECT count(*) FROM "answers" WHERE "id" = 'verify-chat-answer' AND "state" = 'complete' AND "body_sealed" = 'made-up answer' AND "closed_at" IS NOT NULL)
+  || (SELECT count(*) FROM "conversations" WHERE "id" = 'verify-chat-thread' AND "last_activity_at" = TIMESTAMPTZ '2001-02-03 04:05:06.789+00');
 DELETE FROM "threads" WHERE "id" = 'verify-chat-thread';
 SELECT 'left ' || (SELECT count(*) FROM "conversations" WHERE "id" = 'verify-chat-thread')
   || (SELECT count(*) FROM "exchanges" WHERE "id" = 'verify-chat-turn')
@@ -63,6 +72,7 @@ SQL
 )"
 printf '%s\n' "${probe}"
 grep -q "^copied 111$" <<<"${probe}" || fail "a new thread, turn and answer were not copied"
+grep -q "^updated 11$" <<<"${probe}" || fail "completing the answer or bumping the thread did not reach the copies"
 grep -q "^left 000$" <<<"${probe}" || fail "deleting the thread left copies behind"
 
 echo "verify-chat-move OK: triggers, partial indexes, marker and the mirror probe hold"
