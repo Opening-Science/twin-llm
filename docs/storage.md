@@ -194,11 +194,9 @@ Postgres:
 DATABASE_URL=<throwaway, migrated> bun run test:live-db
 ```
 
-The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
-`timestamptz` as if the session time zone were UTC, so on a server set to
-another zone a `Date` read through Prisma is shifted by the offset (the
-stored instant is right). Compare instants in SQL until the switch step
-settles this, for example by pinning `TimeZone=UTC` on the connection.
+The new time columns are `timestamptz`; every connection runs in UTC so
+Prisma reads and writes them as the instant Postgres holds (see
+[Times](#times)).
 
 Each new row keeps its old row's id, and each `*_sealed` column holds the
 old column's stored value byte for byte. A sealed value's context stays the
