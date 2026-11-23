@@ -74,7 +74,7 @@ does not have, never a stand-in.
 |                      | 27 Oct, the reference day     | Evidence for all sixteen phases of #860; sensor glucose missing 10:00–10:45; a blood value the person entered; heart rate every minute 18:30–19:14.    |
 |                      | 22 Oct                        | Nothing recorded.                                                                                                                                      |
 |                      | 23 Oct                        | The ring stops syncing at 20:00: later heart rate is stale.                                                                                            |
-|                      | 28 Oct                        | No glucose sensor worn and no activity recorded.                                                                                                       |
+|                      | 28 Oct                        | No glucose sensor worn, no steps or activity recorded: heart rate, nightly values, sleep and tags only.                                                |
 |                      | 29 Sep–19 Oct                 | Nightly values only: history for a personal baseline.                                                                                                  |
 | `synthetic-replay-b` | 26–29 Oct 2026                | No history: no baseline can be formed.                                                                                                                 |
 

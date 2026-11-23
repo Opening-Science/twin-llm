@@ -24,7 +24,7 @@ import { DEMO_NOTICE, type ReplayDay, replayDaySchema } from "./replay-day";
  *   end of the run (every 15 minutes elsewhere);
  * - 22 October has nothing recorded; on 23 October the ring stops syncing at
  *   20:00, so later heart rate is stale; on 28 October no glucose sensor is
- *   worn and no activity is recorded;
+ *   worn and no steps or activity are recorded;
  * - 21 nights before the ten days with nightly values only, enough history
  *   for a personal baseline.
  *
@@ -49,7 +49,7 @@ type DayKind =
   | "nothing"
   /** The ring stops syncing at 20:00: heart rate and steps end there. */
   | "stale"
-  /** No glucose sensor worn, no activity recorded: heart rate and tags only. */
+  /** No glucose sensor worn, no steps or activity recorded: heart rate, nightly values, sleep and tags. */
   | "partial"
   /** Only the night's resting heart rate and HRV: history for a baseline. */
   | "nightly";

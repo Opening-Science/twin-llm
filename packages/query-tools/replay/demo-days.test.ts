@@ -231,11 +231,16 @@ describe("missing, stale and partial days", () => {
     expect(clock(stream(stale, "glucose").at(-1)!)).toBe("23:45");
   });
 
-  test("28 October: no glucose and no activity, heart rate and tags only", () => {
+  test("28 October: no glucose, steps or activity; heart rate, nightly values, sleep and tags", () => {
     const partial = day(DEMO_PERSON_A, "2026-10-28");
     expect(stream(partial, "glucose")).toEqual([]);
     expect(stream(partial, "steps")).toEqual([]);
     expect(partial.events.some((event) => event.kind === "activity")).toBe(false);
     expect(stream(partial, "heart_rate")).toHaveLength(96);
+    expect(stream(partial, "resting_heart_rate").map((one) => one.value)).toEqual([57]);
+    expect(stream(partial, "hrv_rmssd").map((one) => one.value)).toEqual([55]);
+    expect(
+      partial.events.filter((event) => event.kind === "sleep").map((event) => event.id),
+    ).toEqual(["sleep-night-before", "sleep-night-after"]);
   });
 });
