@@ -226,6 +226,8 @@ type BodyLoopAvatarProps = {
   readonly initialSubjectId?: string;
   /** The Demo's synthetic person to start on instead of the first one. */
   readonly initialPersonRef?: string;
+  readonly onSubjectChange?: (id: string) => void;
+  readonly onDemoPersonChange?: (ref: string) => void;
   /** A chat `twin.body` view: what to light, and the depth to start at. Read once. */
   readonly initialFocus?: InitialFocus;
   /** A focus asked for after the viewer opened (a spoken answer); lit once per `at`. */
@@ -266,6 +268,8 @@ export const BodyLoopAvatar = ({
   onContext,
   initialSubjectId,
   initialPersonRef,
+  onSubjectChange,
+  onDemoPersonChange,
   initialFocus,
   focusRequest,
   onPickPart,
@@ -285,7 +289,10 @@ export const BodyLoopAvatar = ({
   const [subjectsReady, setSubjectsReady] = useState(preview !== undefined);
   const [demoSexPick, setDemoSexPick] = useState<DemoSexPick | null>(null);
   const [demoFailedUrl, setDemoFailedUrl] = useState<string | null>(null);
-  const subjectId = chosenSubjectId || (subjectsReady ? defaultSubjectId(subjects) : "");
+  const subjectId =
+    subjectsReady || isDemoSubject(chosenSubjectId)
+      ? chosenSubjectId || defaultSubjectId(subjects)
+      : "";
   const isDemo = isDemoSubject(subjectId);
   const [viatarId, setViatarId] = useState(
     preview?.selectedViatarId !== undefined ? String(preview.selectedViatarId) : "",
@@ -366,7 +373,11 @@ export const BodyLoopAvatar = ({
         if (cancelled) return;
         // No BodyLoop connection or no subjects: the demo subject still works.
         setSubjects(rows);
-        setSubjectId(defaultSubjectId(rows));
+        setSubjectId((current) =>
+          isDemoSubject(current) || rows.some(({ id }) => id === current)
+            ? current
+            : defaultSubjectId(rows),
+        );
         setSubjectsReady(true);
       })
       .catch(() => {
@@ -559,6 +570,7 @@ export const BodyLoopAvatar = ({
     anatomy: anatomy.state,
     dispatch: anatomy.dispatch,
     initialPersonRef,
+    onPersonChange: onDemoPersonChange,
   });
   // #52: the twin can follow a wearable day; a toolbar clip stops following.
   const dayMotion = useDayMotion({
@@ -1177,6 +1189,7 @@ export const BodyLoopAvatar = ({
           onChange={(event) => {
             setSubjectId(event.target.value);
             setViatarId("");
+            onSubjectChange?.(event.target.value);
           }}
         >
           {subjectOptions(subjects).map((row) => (
