@@ -10,6 +10,7 @@ import {
   variantSiteValue,
 } from "./personal-columns";
 import {
+  checkedTables,
   formatPlaintextFindings,
   plaintextFindings,
   ResealCheckError,
@@ -378,5 +379,24 @@ describe("the chat copies are checked, never resealed", () => {
     const table = memoryTable(ANSWERS, [copy("a1", old)]);
     expect(await rowsWithKey(table.ports.query, OWNER, OLD.keyId)).toBe(1);
     expect(await rowsWithKey(table.ports.query, OWNER, NEW.keyId)).toBe(0);
+  });
+});
+
+describe("the checks after a rollback of the chat tables move", () => {
+  /** A database where the copy tables are gone and every other table is empty. */
+  const rolledBack = async (sql: string): Promise<readonly SqlRow[]> => {
+    if (sql.includes("to_regclass")) return [{ present: false }];
+    if (/FROM "(conversations|exchanges|answers)"/.test(sql)) {
+      throw new Error("relation does not exist");
+    }
+    return sql.startsWith("SELECT count(*)::int AS n") ? [{ n: 0 }] : [{}];
+  };
+
+  test("skip the copy tables that are gone, and still read the rest", async () => {
+    const tables = await checkedTables(rolledBack);
+    expect(tables.map((entry) => entry.table)).not.toContain("answers");
+    expect(tables.map((entry) => entry.table)).toContain("model_responses");
+    expect(await plaintextFindings(rolledBack)).toEqual([]);
+    expect(await rowsWithKey(rolledBack, OWNER, OLD.keyId)).toBe(0);
   });
 });

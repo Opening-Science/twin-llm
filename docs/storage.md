@@ -158,11 +158,30 @@ value does, which is why the gate needs no keys. With the vault unlocked,
 `openProblems` in `scripts/db/chat-move/parity.ts` also opens every value
 both ways and compares the text.
 
+To roll the move back before the switch, take a fresh backup as for any
+schema change, then:
+
+```bash
+bun run db:chat-rollback --yes   # ROLLBACK_SQL in one transaction
+```
+
+It runs `ROLLBACK_SQL` from `scripts/db/chat-move/rollback-sql.ts`, whole
+or not at all. It drops the triggers, the new tables, their enums and
+`schema_moves`, and deletes the three migrations' rows from
+`_prisma_migrations` (Prisma's `migrate resolve --rolled-back` only takes a
+failed migration). It prints the old tables' row counts before and after;
+`threads`, `turns` and `model_responses` are not touched. The app can stay
+as it is: only the doctor, the Lab card and the vault scripts read the
+copies, and they skip copy tables that are gone. A later `bun run
+db:deploy` applies the three migrations again, and `bun run
+db:chat-backfill` copies everything again.
+
 The steps so far are rehearsed by the live tests in `scripts/db/chat-move/`
 on made-up rows: the column shapes, the triggers, the backfill stopped
 halfway and resumed, the backfill, its finish step and the gate while two
-sessions keep writing, and the parity gate with a two-key test keyring.
-They run with the other database tests on a throwaway, migrated Postgres:
+sessions keep writing, the parity gate with a two-key test keyring, and the
+rollback. They run with the other database tests on a throwaway, migrated
+Postgres:
 
 ```bash
 DATABASE_URL=<throwaway, migrated> bun run test:live-db

@@ -27,12 +27,8 @@ import { dirname, join } from "node:path";
 
 import { storageEnv } from "../../infrastructure/env";
 import { resealMeshFiles } from "../../infrastructure/mesh-files";
-import {
-  CHECKED_TABLES,
-  isChatCopy,
-  pendingRowsSql,
-} from "../../infrastructure/personal-columns";
-import { resealOwner } from "../../infrastructure/reseal";
+import { isChatCopy, pendingRowsSql } from "../../infrastructure/personal-columns";
+import { checkedTables, resealOwner } from "../../infrastructure/reseal";
 import { backupFileName, parseVaultArgs, pgEnvFor } from "./cli-args";
 import { openTerminal } from "./terminal";
 import {
@@ -171,7 +167,7 @@ const main = async (): Promise<void> => {
   const meshes = await resealMeshFiles(meshDirOf(userId), userId, cipher);
 
   // 6. Check: nothing of this person is left unsealed, in the chat copies too.
-  for (const entry of CHECKED_TABLES) {
+  for (const entry of await checkedTables(query)) {
     const left = await query(pendingRowsSql(entry, cipher.activeKeyId ?? ""), [
       userId,
       "",
