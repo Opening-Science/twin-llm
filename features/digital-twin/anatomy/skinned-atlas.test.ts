@@ -30,21 +30,57 @@ import {
   FittedMesh,
   followBody,
   followMatrix,
+  followWith,
   skinAtlas,
-  type FitSkeleton,
+  type FitSkeletons,
 } from "./skinned-atlas";
 
 /**
  * A synthetic atlas in the atlas frame: the average figure's skin as the
- * hull, and a "bone" mesh with one small triangle at chosen places.
+ * hull, a "bone" mesh with one small triangle at chosen places, and a
+ * "liver" mesh with one triangle in the abdomen.
  */
 const atlasFigure = syntheticFigure(AVERAGE_FIGURE);
+const { joints } = atlasFigure;
+const crownOf = (shape: typeof AVERAGE_FIGURE): Vector3 =>
+  new Vector3(0, shape.trunk + shape.head.top, 0);
 const MARKS = {
-  kneeL: atlasFigure.joints.knee.L,
-  wristR: atlasFigure.joints.wrist.R,
-  midShinL: atlasFigure.joints.knee.L.clone().lerp(atlasFigure.joints.ankle.L, 0.5),
-  liver: new Vector3(-0.06, 0.3 * AVERAGE_FIGURE.trunk, 0.02),
+  kneeL: joints.knee.L,
+  wristL: joints.wrist.L,
+  wristR: joints.wrist.R,
+  ankleL: joints.ankle.L,
+  ankleR: joints.ankle.R,
+  toeL: atlasFigure.toe.L,
+  toeR: atlasFigure.toe.R,
+  fingerL: atlasFigure.finger.L,
+  fingerR: atlasFigure.finger.R,
+  crown: crownOf(AVERAGE_FIGURE),
+  midShinL: joints.knee.L.clone().lerp(joints.ankle.L, 0.5),
+  midThighL: joints.hip.L.clone().lerp(joints.knee.L, 0.5),
+  midUpperArmR: joints.shoulder.R.clone().lerp(joints.elbow.R, 0.5),
 } as const;
+const MARK_NAMES = Object.keys(MARKS) as (keyof typeof MARKS)[];
+const LIVER = new Vector3(-0.06, 0.3 * AVERAGE_FIGURE.trunk, 0.02);
+/** A mark's triangle: the mark, and a corner this far along x and along y. */
+const EDGE = 0.004;
+
+const triangles = (points: readonly Vector3[]): BufferAttribute =>
+  new BufferAttribute(
+    Float32Array.from(
+      points.flatMap((mark) => [
+        ...mark.toArray(),
+        ...mark
+          .clone()
+          .add(new Vector3(EDGE, 0, 0))
+          .toArray(),
+        ...mark
+          .clone()
+          .add(new Vector3(0, EDGE, 0))
+          .toArray(),
+      ]),
+    ),
+    3,
+  );
 
 const syntheticAtlas = () => {
   const root = new Group();
@@ -63,43 +99,40 @@ const syntheticAtlas = () => {
   const hull = new Mesh(skin, new MeshStandardMaterial());
   hull.userData = { system: "integumentary", layer: "organ" };
   const bones = new BufferGeometry();
-  bones.setAttribute(
-    "position",
-    new BufferAttribute(
-      Float32Array.from(
-        Object.values(MARKS).flatMap((mark) => [
-          ...mark.toArray(),
-          ...mark
-            .clone()
-            .add(new Vector3(0.004, 0, 0))
-            .toArray(),
-          ...mark
-            .clone()
-            .add(new Vector3(0, 0.004, 0))
-            .toArray(),
-        ]),
-      ),
-      3,
-    ),
-  );
+  bones.setAttribute("position", triangles(Object.values(MARKS)));
   const bone = new Mesh(bones, new MeshStandardMaterial());
   bone.name = "bones";
   bone.userData = { system: "musculoskeletal", layer: "bone" };
-  root.add(hull, bone);
+  const organs = new BufferGeometry();
+  organs.setAttribute("position", triangles([LIVER]));
+  const liver = new Mesh(organs, new MeshStandardMaterial());
+  liver.name = "liver";
+  liver.userData = { system: "digestive", layer: "organ" };
+  root.add(hull, bone, liver);
   const prepared = prepareAtlas(root, ATLASES.bodyparts3d);
-  const segments = segmentsFromSkin(prepared.hull, atlasFigure.joints);
+  const segments = segmentsFromSkin(prepared.hull, joints);
   if (!segments) throw new Error("synthetic atlas not measured");
-  return { ...skinAtlas(prepared, segments), segments };
+  const skinned = skinAtlas(prepared, segments);
+  const part = (name: string): FittedMesh =>
+    skinned.atlas.parts.find((item) => item.mesh.name === name)!.mesh as FittedMesh;
+  return { ...skinned, bones: part("bones"), liver: part("liver") };
 };
 
-/** Where the skeleton puts the first vertex of mark `index`, as the GPU would. */
-const shown = (mesh: FittedMesh, index: number): Vector3 =>
-  mesh.getVertexPosition(3 * index, new Vector3()).applyMatrix4(mesh.matrixWorld);
+/** Where the skeleton puts corner `corner` of the triangle `index` of a mesh, as the GPU would. */
+const shown = (mesh: FittedMesh, index: number, corner = 0): Vector3 =>
+  mesh
+    .getVertexPosition(3 * index + corner, new Vector3())
+    .applyMatrix4(mesh.matrixWorld);
 
-const settle = (root: Object3D, mesh: FittedMesh, skeleton: FitSkeleton): void => {
+const settle = (
+  root: Object3D,
+  meshes: readonly FittedMesh[],
+  skeletons: FitSkeletons,
+): void => {
   root.updateMatrixWorld(true);
-  mesh.updateMatrixWorld(true);
-  skeleton.update();
+  for (const mesh of meshes) mesh.updateMatrixWorld(true);
+  skeletons.soft.update();
+  skeletons.bone.update();
 };
 
 /** A scan off centre and turned a quarter of the way round. */
@@ -108,8 +141,9 @@ const FRAMING = new Matrix4()
   .multiply(new Matrix4().makeRotationZ(0.8));
 
 describe("the segment fit on a synthetic scan", () => {
-  const { atlas, skeleton, held, segments } = syntheticAtlas();
-  const mesh = atlas.parts[0]!.mesh as FittedMesh;
+  const { skeletons, fit, bones, liver } = syntheticAtlas();
+  const { held, segments } = fit;
+  const meshes = [bones, liver];
   const scan = syntheticScan(HEAVY_FIGURE, FRAMING);
   const binding = bindRig(scan.root)!;
   const body = readBody(scan.root, binding)!;
@@ -117,12 +151,20 @@ describe("the segment fit on a synthetic scan", () => {
     point.clone().applyMatrix4(scan.root.matrixWorld);
   const boneAt = (name: string): Vector3 =>
     scan.root.getObjectByName(`mixamorig${name}`)!.getWorldPosition(new Vector3());
+  const mark = (name: keyof typeof MARKS, corner = 0): Vector3 =>
+    shown(bones, MARK_NAMES.indexOf(name), corner);
+  const lay = (): void => {
+    followWith(skeletons, followBody(fit, body)!);
+    settle(scan.root, meshes, skeletons);
+  };
 
   test("skins every part and its depth pre-pass, and says which segments hold anatomy", () => {
-    expect(mesh).toBeInstanceOf(FittedMesh);
-    expect(mesh.name).toBe("bones");
-    expect(depthPrepassOf(mesh)).toBeInstanceOf(FittedMesh);
-    expect(mesh.frustumCulled).toBe(false);
+    expect(bones).toBeInstanceOf(FittedMesh);
+    expect(depthPrepassOf(bones)).toBeInstanceOf(FittedMesh);
+    expect(bones.frustumCulled).toBe(false);
+    // Bones on a skeleton of their own, soft tissue on the other.
+    expect(bones.skeleton).toBe(skeletons.bone);
+    expect(liver.skeleton).toBe(skeletons.soft);
     expect([...held].map((index) => SEGMENT_IDS[index]).sort()).toContain("abdomen");
     expect(held.has(SEGMENT_IDS.indexOf("upperArmL"))).toBe(false);
   });
@@ -139,57 +181,78 @@ describe("the segment fit on a synthetic scan", () => {
     );
   });
 
-  test("lays the atlas on the scan: joints on joints, organs inside the trunk", () => {
-    const following = followBody(segments, body, held)!;
-    skeleton.follow(following);
-    settle(scan.root, mesh, skeleton);
-    const marks = Object.keys(MARKS);
+  test("lays the atlas on the scan: every end under 1 cm from the body's", () => {
+    lay();
+    const ends: readonly (readonly [keyof typeof MARKS, Vector3])[] = [
+      ["kneeL", boneAt("LeftLeg")],
+      ["wristL", boneAt("LeftHand")],
+      ["wristR", boneAt("RightHand")],
+      ["ankleL", boneAt("LeftFoot")],
+      ["ankleR", boneAt("RightFoot")],
+      ["toeL", toWorld(scan.figure.toe.L)],
+      ["toeR", toWorld(scan.figure.toe.R)],
+      ["fingerL", toWorld(scan.figure.finger.L)],
+      ["fingerR", toWorld(scan.figure.finger.R)],
+      ["crown", toWorld(crownOf(HEAVY_FIGURE))],
+    ];
+    for (const [name, target] of ends) {
+      expect({ name, off: mark(name).distanceTo(target) < 0.01 }).toEqual({
+        name,
+        off: true,
+      });
+    }
+  });
+
+  test("bones keep their proportions: a femur and a humerus as wide as long", () => {
+    lay();
+    const width = (name: keyof typeof MARKS): number =>
+      mark(name, 1).distanceTo(mark(name, 0)) / EDGE;
+    const ratio = (measured: number, wanted: number): number => measured / wanted;
+    // The heavy figure's thighs are a third thicker but 12 % shorter.
     expect(
-      shown(mesh, marks.indexOf("kneeL")).distanceTo(boneAt("LeftLeg")),
-    ).toBeLessThan(0.01);
+      Math.abs(ratio(width("midThighL"), HEAVY_FIGURE.thigh / AVERAGE_FIGURE.thigh) - 1),
+    ).toBeLessThan(0.02);
     expect(
-      shown(mesh, marks.indexOf("wristR")).distanceTo(boneAt("RightHand")),
-    ).toBeLessThan(0.015);
-    // The liver lands in the heavy figure's abdomen, further from the midline than in the atlas.
-    const liver = shown(mesh, marks.indexOf("liver")).applyMatrix4(
-      scan.root.matrixWorld.clone().invert(),
-    );
-    expect(liver.x).toBeLessThan(MARKS.liver.x);
-    expect(Math.abs(liver.x)).toBeLessThan(HEAVY_FIGURE.abdomen[0]);
-    expect(liver.z).toBeGreaterThan(MARKS.liver.z);
-    expect(liver.z).toBeLessThan(HEAVY_FIGURE.belly + HEAVY_FIGURE.abdomen[1]);
+      Math.abs(
+        ratio(width("midUpperArmR"), HEAVY_FIGURE.upperArm / AVERAGE_FIGURE.upperArm) - 1,
+      ),
+    ).toBeLessThan(0.02);
+  });
+
+  test("organs follow the skin: the liver lands inside the heavy figure's abdomen", () => {
+    lay();
+    // Further from the midline and further forward than in the atlas.
+    const placed = shown(liver, 0).applyMatrix4(scan.root.matrixWorld.clone().invert());
+    expect(placed.x).toBeLessThan(LIVER.x);
+    expect(Math.abs(placed.x)).toBeLessThan(HEAVY_FIGURE.abdomen[0]);
+    expect(placed.z).toBeGreaterThan(LIVER.z);
+    expect(placed.z).toBeLessThan(HEAVY_FIGURE.belly + HEAVY_FIGURE.abdomen[1]);
   });
 
   test("follows the scan's bones through walk, run and sleep", () => {
-    skeleton.follow(followBody(segments, body, held)!);
-    const marks = Object.keys(MARKS);
+    followWith(skeletons, followBody(fit, body)!);
     for (const [clip, t] of [
       ["walk", 0.4],
       ["run", 0.2],
       ["sleep", 1],
     ] as const) {
       applyPose(binding, clipPose(clip, t));
-      settle(scan.root, mesh, skeleton);
-      expect(
-        shown(mesh, marks.indexOf("kneeL")).distanceTo(boneAt("LeftLeg")),
-      ).toBeLessThan(0.02);
+      settle(scan.root, meshes, skeletons);
+      expect(mark("kneeL").distanceTo(boneAt("LeftLeg"))).toBeLessThan(0.02);
       // The middle of the shin stays on the line from the knee to the ankle.
-      const shin = shown(mesh, marks.indexOf("midShinL"));
       const middle = boneAt("LeftLeg").lerp(boneAt("LeftFoot"), 0.5);
-      expect(shin.distanceTo(middle)).toBeLessThan(0.02);
+      expect(mark("midShinL").distanceTo(middle)).toBeLessThan(0.02);
     }
     applyPose(binding, clipPose("idle", 0));
   });
 
   test("a pick hits the atlas where the bones put it", () => {
-    skeleton.follow(followBody(segments, body, held)!);
-    settle(scan.root, mesh, skeleton);
-    const first = 3 * Object.keys(MARKS).indexOf("liver");
-    const [a, b, c] = [0, 1, 2].map((corner) =>
-      mesh
-        .getVertexPosition(first + corner, new Vector3())
-        .applyMatrix4(mesh.matrixWorld),
-    ) as [Vector3, Vector3, Vector3];
+    lay();
+    const [a, b, c] = [0, 1, 2].map((corner) => shown(liver, 0, corner)) as [
+      Vector3,
+      Vector3,
+      Vector3,
+    ];
     const target = a
       .clone()
       .add(b)
@@ -198,19 +261,22 @@ describe("the segment fit on a synthetic scan", () => {
     const normal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
     // From the triangle's front, straight at its middle.
     const hits = new Raycaster(target.clone().add(normal), normal.clone().negate())
-      .intersectObject(mesh, false)
-      .filter((hit) => hit.object === mesh);
+      .intersectObject(liver, false)
+      .filter((hit) => hit.object === liver);
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0]!.point.distanceTo(target)).toBeLessThan(1e-4);
   });
 
-  test("the one-scale fit shows through the same skeleton when the body cannot be read", () => {
+  test("the one-scale fit shows through the same skeletons when the body cannot be read", () => {
     const matrix = new Matrix4().makeTranslation(1, 2, 3);
-    skeleton.follow(followMatrix(matrix));
-    settle(scan.root, mesh, skeleton);
+    followWith(skeletons, followMatrix(matrix));
+    settle(scan.root, meshes, skeletons);
     expect(
-      shown(mesh, 0).distanceTo(MARKS.kneeL.clone().applyMatrix4(matrix)),
+      mark("kneeL").distanceTo(MARKS.kneeL.clone().applyMatrix4(matrix)),
     ).toBeLessThan(1e-5);
+    expect(shown(liver, 0).distanceTo(LIVER.clone().applyMatrix4(matrix))).toBeLessThan(
+      1e-5,
+    );
   });
 
   test("reads a scan whose forearm points straight forward", () => {

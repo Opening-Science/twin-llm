@@ -37,6 +37,8 @@ export type AnatomyLoad =
       parts: readonly PartView[];
       anchor: AtlasAnchor;
       fitOk: boolean;
+      /** The segment fit read the body but refused it, so the one-scale fit shows. */
+      segmentsRefused: boolean;
     }>
   | Readonly<{ kind: "error" }>;
 

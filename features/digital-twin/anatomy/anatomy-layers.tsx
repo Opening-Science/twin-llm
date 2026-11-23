@@ -27,7 +27,7 @@ import {
   type AtlasLayerId,
 } from "@/packages/anatomy/layers";
 import { ATLASES, atlasApiUrl, type AtlasId } from "@/packages/anatomy/manifest";
-import { segmentsFromSkin, type Segments } from "@/packages/anatomy/segments";
+import { segmentsFromSkin } from "@/packages/anatomy/segments";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
 import { disposeObject3D } from "../dispose-object";
@@ -57,9 +57,11 @@ import { collectScanMaterials, readScanFrame } from "./scan-frame";
 import {
   followBody,
   followMatrix,
+  followWith,
   skinAtlas,
-  type FitSkeleton,
-  type Following,
+  type AtlasSegments,
+  type FitSkeletons,
+  type Followings,
 } from "./skinned-atlas";
 
 /** Dev-only nudge when a layer combination gets heavy for a low-power GPU. */
@@ -70,11 +72,7 @@ type ScanSurface = Readonly<{ material: Material; uniforms: LayerUniforms }>;
 /** A loaded atlas, and its fit skeleton when it was skinned for the segment fit. */
 type Loaded = Readonly<{
   atlas: PreparedAtlas;
-  skin: Readonly<{
-    skeleton: FitSkeleton;
-    segments: Segments;
-    held: ReadonlySet<number>;
-  }> | null;
+  skin: Readonly<{ skeletons: FitSkeletons; fit: AtlasSegments }> | null;
 }>;
 
 const IN_PLACE = new Matrix4();
@@ -187,9 +185,7 @@ export const AnatomyLayers = ({
             ? segmentsFromSkin(plain.hull, atlasJoints(atlasId))
             : null;
           ready = segments
-            ? (({ atlas, ...skin }) => ({ atlas, skin: { ...skin, segments } }))(
-                skinAtlas(plain, segments),
-              )
+            ? (({ atlas, ...skin }) => ({ atlas, skin }))(skinAtlas(plain, segments))
             : { atlas: plain, skin: null };
         } catch {
           disposeObject3D(gltf.scene);
@@ -215,7 +211,8 @@ export const AnatomyLayers = ({
         shown.atlas.root.removeFromParent();
         disposeObject3D(shown.atlas.root);
         // The skeleton's bone texture is not part of any mesh.
-        shown.skin?.skeleton.dispose();
+        shown.skin?.skeletons.soft.dispose();
+        shown.skin?.skeletons.bone.dispose();
       }
     };
   }, [requested, atlasId, url, retry, segmentFit, onLoad]);
@@ -253,13 +250,18 @@ export const AnatomyLayers = ({
     );
   }, [prepared, scanRoot, statureM, atlasId, fittedBody]);
 
-  // A skinned atlas is placed by its skeleton: on the body's segments where
+  // A skinned atlas is placed by its skeletons: on the body's segments where
   // they can be read, else by the one-scale fit's matrix on every bone.
+  // `refused`: the body was read, but a segment would be scaled too far.
   const skin = loaded?.skin ?? null;
-  const following = useMemo((): Following | null => {
-    if (!skin || !scanRoot || !binding) return null;
+  const { following, refused } = useMemo((): Readonly<{
+    following: Followings | null;
+    refused: boolean;
+  }> => {
+    if (!skin || !scanRoot || !binding) return { following: null, refused: false };
     const body = readBody(scanRoot, binding);
-    return body && followBody(skin.segments, body, skin.held);
+    const fitted = body && followBody(skin.fit, body);
+    return { following: fitted, refused: body !== null && fitted === null };
   }, [skin, scanRoot, binding]);
   const placed = useMemo(
     (): AtlasFit | null =>
@@ -269,7 +271,7 @@ export const AnatomyLayers = ({
     [skin, following, fit],
   );
   useEffect(() => {
-    if (skin && fit) skin.skeleton.follow(following ?? followMatrix(fit.matrix));
+    if (skin && fit) followWith(skin.skeletons, following ?? followMatrix(fit.matrix));
   }, [skin, following, fit]);
 
   const transform = useMemo(() => {
@@ -295,6 +297,7 @@ export const AnatomyLayers = ({
       parts: prepared.views,
       anchor: fit.anchor,
       fitOk: fit.ok,
+      segmentsRefused: refused,
     });
     if (process.env.NODE_ENV === "development" && prepared.triangles > TRIANGLE_WARNING) {
       console.warn(
@@ -302,7 +305,7 @@ export const AnatomyLayers = ({
       );
     }
     invalidate();
-  }, [prepared, placed, onLoad, invalidate]);
+  }, [prepared, placed, refused, onLoad, invalidate]);
 
   // The glow is per material and set only when the highlight or the atlas
   // changes; the frame loop never touches it.

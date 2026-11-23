@@ -9,6 +9,7 @@ import {
   type PerSide,
   type SegmentId,
   type Segments,
+  type SkinMeasure,
 } from "@/packages/anatomy/segments";
 
 import { type JointId } from "../motion/gait";
@@ -26,6 +27,9 @@ import { type RigBinding } from "../motion/rig-map";
  */
 export type BodyReading = Readonly<{
   segments: Segments;
+  /** What the segments were built from: the skeleton's joints and the skin's outline. */
+  joints: Joints;
+  skin: SkinMeasure;
   /** Per segment, in `SEGMENT_IDS` order: the bone it follows. */
   drive: readonly Object3D[];
 }>;
@@ -111,5 +115,5 @@ export const readBody = (root: Object3D, binding: RigBinding): BodyReading | nul
     }
   }
   const skin = measureSkin(Float32Array.from(points), Uint8Array.from(labels), joints);
-  return skin && { segments: buildSegments(joints, skin), drive };
+  return skin && { segments: buildSegments(joints, skin), joints, skin, drive };
 };

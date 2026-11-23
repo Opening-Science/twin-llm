@@ -8,7 +8,9 @@ import {
   type Figure,
 } from "./fixtures/synthetic-figure";
 import {
+  boneWeights,
   buildSegments,
+  FIT_ALONG_BAND,
   fitMatrices,
   labelPoints,
   measureSkin,
@@ -120,7 +122,8 @@ describe("measureSkin", () => {
     );
     const pointing = withThumb!.finger.R.clone().sub(wrist);
     expect(pointing.angleTo(way)).toBeLessThan((3 * Math.PI) / 180);
-    expect(pointing.length()).toBeCloseTo(1.2 * way.length(), 6);
+    // As far as the hand reaches that way: the fingertip, not the thumb.
+    expect(Math.abs(pointing.length() / way.length() - 1)).toBeLessThan(0.02);
   });
 
   test("is null when a part has no skin", () => {
@@ -279,6 +282,90 @@ describe("fitMatrices", () => {
     }
   });
 
+  test("scales bones evenly: a femur and a humerus as much across as along", () => {
+    const body = segmentsOf(heavy);
+    const { bones } = fitMatrices(atlas, body);
+    const across = (id: "thighL" | "upperArmR", from: Vector3, to: Vector3) => {
+      const shaft = from.clone().lerp(to, 0.5);
+      const side = atlas[id].left.clone().multiplyScalar(0.012);
+      const matrix = bones[SEGMENT_IDS.indexOf(id)]!;
+      const ends = [shaft.clone().add(side), shaft.clone().sub(side)].map((point) =>
+        point.applyMatrix4(matrix),
+      );
+      return ends[0]!.distanceTo(ends[1]!) / 0.024;
+    };
+    const { hip, knee, shoulder, elbow } = average.joints;
+    const thigh = HEAVY_FIGURE.thigh / AVERAGE_FIGURE.thigh;
+    const upperArm = HEAVY_FIGURE.upperArm / AVERAGE_FIGURE.upperArm;
+    expect(Math.abs(across("thighL", hip.L, knee.L) / thigh - 1)).toBeLessThan(0.02);
+    expect(
+      Math.abs(across("upperArmR", shoulder.R, elbow.R) / upperArm - 1),
+    ).toBeLessThan(0.02);
+    // The shaft's middle stays on the body's centre line, as the soft map puts it.
+    const mid = hip.L.clone().lerp(knee.L, 0.5);
+    const thighIndex = SEGMENT_IDS.indexOf("thighL");
+    expect(
+      mid
+        .clone()
+        .applyMatrix4(bones[thighIndex]!)
+        .distanceTo(
+          mid.clone().applyMatrix4(fitMatrices(atlas, body).matrices[thighIndex]!),
+        ),
+    ).toBeLessThan(1e-6);
+  });
+
+  test("a figure much shorter or taller than the atlas falls back", () => {
+    const scaled = (height: number): Segments => {
+      // The average figure is 1.742 m from crown to toe.
+      const k = height / 1.742;
+      const { radius, head } = AVERAGE_FIGURE;
+      const times = ([a, b]: readonly [number, number]) => [k * a, k * b] as const;
+      return segmentsOf(
+        syntheticFigure({
+          ...AVERAGE_FIGURE,
+          ...Object.fromEntries(
+            (
+              [
+                "trunk",
+                "hipSpan",
+                "shoulderSpan",
+                "thigh",
+                "shin",
+                "foot",
+                "upperArm",
+                "forearm",
+                "hand",
+                "belly",
+              ] as const
+            ).map((key) => [key, k * AVERAGE_FIGURE[key]]),
+          ),
+          radius: {
+            thigh: k * radius.thigh,
+            shin: k * radius.shin,
+            upperArm: k * radius.upperArm,
+            forearm: k * radius.forearm,
+          },
+          pelvis: times(AVERAGE_FIGURE.pelvis),
+          abdomen: times(AVERAGE_FIGURE.abdomen),
+          chest: times(AVERAGE_FIGURE.chest),
+          neck: times(AVERAGE_FIGURE.neck),
+          head: {
+            halfWidth: k * head.halfWidth,
+            halfDepth: k * head.halfDepth,
+            top: k * head.top,
+          },
+        }),
+      );
+    };
+    // An even figure scales every segment by its height ratio, so it falls
+    // back just outside the band: 0.75 × 1.742 = 1.31 m, 1.35 × 1.742 = 2.35 m.
+    expect(FIT_ALONG_BAND).toEqual([0.75, 1.35]);
+    expect(fitMatrices(atlas, scaled(1.3)).ok).toBe(false);
+    expect(fitMatrices(atlas, scaled(2.4)).ok).toBe(false);
+    expect(fitMatrices(atlas, scaled(1.4)).ok).toBe(true);
+    expect(fitMatrices(atlas, scaled(2.2)).ok).toBe(true);
+  });
+
   test("refuses a segment scaled out of all proportion, unless it holds no anatomy", () => {
     const body = segmentsOf(heavy);
     const giant = { ...body, shinL: { ...body.shinL, length: 3 * body.shinL.length } };
@@ -312,5 +399,101 @@ describe("skinWeights", () => {
   test("an organ in the trunk follows the trunk, not the arm beside it", () => {
     const liver = new Vector3(-0.08, 0.35 * AVERAGE_FIGURE.trunk, 0.03);
     expect(weigh(liver).first).toBe("abdomen");
+  });
+});
+
+describe("boneWeights", () => {
+  const segments = segmentsOf(average);
+  /** A small closed box of 8 corners and 12 triangles round `centre`, indexed from `first`. */
+  const box = (centre: Vector3, half: Vector3, first: number) => {
+    const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((n) =>
+      centre
+        .clone()
+        .add(
+          new Vector3(
+            (n & 1 ? 1 : -1) * half.x,
+            (n & 2 ? 1 : -1) * half.y,
+            (n & 4 ? 1 : -1) * half.z,
+          ),
+        ),
+    );
+    const faces = [
+      [0, 1, 3],
+      [0, 3, 2],
+      [4, 6, 7],
+      [4, 7, 5],
+      [0, 4, 5],
+      [0, 5, 1],
+      [2, 3, 7],
+      [2, 7, 6],
+      [0, 2, 6],
+      [0, 6, 4],
+      [1, 5, 7],
+      [1, 7, 3],
+    ].flat();
+    return { corners, faces: faces.map((corner) => first + corner) };
+  };
+  const { wrist, ankle, elbow, hip, knee } = average.joints;
+  const pieces = [
+    // A carpal and a tarsal straddling their joints, a femur from hip to knee.
+    box(wrist.L.clone().lerp(elbow.L, -0.04), new Vector3(0.012, 0.012, 0.01), 0),
+    box(
+      ankle.R.clone().add(new Vector3(0, -0.01, 0.01)),
+      new Vector3(0.015, 0.02, 0.02),
+      8,
+    ),
+    box(hip.L.clone().lerp(knee.L, 0.5), new Vector3(0.015, 0.22, 0.015), 16),
+  ];
+  const points = Float32Array.from(
+    pieces.flatMap((piece) => piece.corners.flatMap((corner) => corner.toArray())),
+  );
+  const faces = pieces.flatMap((piece) => piece.faces);
+  const segmentsOfPiece = (index: Uint8Array, piece: number): readonly string[] => [
+    ...new Set(
+      Array.from(
+        { length: 8 },
+        (_, corner) => SEGMENT_IDS[index[4 * (8 * piece + corner)]!]!,
+      ),
+    ),
+  ];
+
+  test("every vertex of a carpal, a tarsal and a femur follows one segment, at 255", () => {
+    const { index, weight } = boneWeights(points, segments, faces);
+    // Which one a bone at a joint follows is the vote of its vertices; that it is one is the point.
+    expect(segmentsOfPiece(index, 0).length).toBe(1);
+    expect(segmentsOfPiece(index, 1).length).toBe(1);
+    expect(segmentsOfPiece(index, 2)).toEqual(["thighL"]);
+    for (let i = 0; i < points.length / 3; i += 1) {
+      expect([...weight.slice(4 * i, 4 * i + 4)]).toEqual([255, 0, 0, 0]);
+    }
+  });
+
+  test("blended weights would have split those pieces between segments", () => {
+    const { index, weight } = skinWeights(points, segments);
+    expect(
+      segmentsOfPiece(index, 0).length + segmentsOfPiece(index, 1).length,
+    ).toBeGreaterThan(2);
+    expect([...weight].some((value) => value !== 0 && value !== 255)).toBe(true);
+  });
+
+  test("an unindexed mesh is joined where its triangles share a corner", () => {
+    const corners = faces.flatMap((corner) => [
+      points[3 * corner]!,
+      points[3 * corner + 1]!,
+      points[3 * corner + 2]!,
+    ]);
+    const { index } = boneWeights(Float32Array.from(corners), segments, null);
+    const pieceOf = (piece: number): readonly string[] => [
+      ...new Set(
+        Array.from({ length: 36 }, (_, i) => SEGMENT_IDS[index[4 * (36 * piece + i)]!]!),
+      ),
+    ];
+    expect(pieceOf(0)).toEqual(
+      segmentsOfPiece(boneWeights(points, segments, faces).index, 0),
+    );
+    expect(pieceOf(1)).toEqual(
+      segmentsOfPiece(boneWeights(points, segments, faces).index, 1),
+    );
+    expect(pieceOf(2)).toEqual(["thighL"]);
   });
 });

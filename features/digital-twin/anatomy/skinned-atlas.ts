@@ -14,6 +14,7 @@ import {
 } from "three";
 
 import {
+  boneWeights,
   fitMatrices,
   SEGMENT_IDS,
   skinWeights,
@@ -27,7 +28,9 @@ import { type BodyReading } from "./read-body";
 /**
  * The atlas as a skinned mesh: one bone per body segment, so the GPU lays
  * every vertex on the body segment by segment and carries it along when the
- * body's own bones move. Nothing of the atlas's geometry is rewritten.
+ * body's own bones move. Bone and cartilage are on a second skeleton of
+ * their own, whose maps keep their proportions (`fitMatrices`). Nothing of
+ * the atlas's geometry is rewritten.
  */
 
 /** Per segment: the bone it follows, and the atlas-to-bone map; no bone means the map is to the world. */
@@ -144,34 +147,65 @@ const atlasPoints = (mesh: Mesh): Float32Array => {
   return points;
 };
 
+/** The two skeletons: soft tissue follows the skin's girth, the skeleton layer does not. */
+export type FitSkeletons = Readonly<{ soft: FitSkeleton; bone: FitSkeleton }>;
+
+/** What each of the two skeletons follows. */
+export type Followings = Readonly<{ soft: Following; bone: Following }>;
+
+/** What the fit needs to know of a skinned atlas. */
+export type AtlasSegments = Readonly<{
+  segments: Segments;
+  /** The segments that some vertex follows first. */
+  held: ReadonlySet<number>;
+  /** Per segment, in `SEGMENT_IDS` order: the middle of the skeleton layer's vertices in it. */
+  boneCentres: readonly (Vector3 | null)[];
+}>;
+
 /**
- * Puts every part of a prepared atlas on one fit skeleton: skin weights from
- * the atlas's own segments, and a skinned mesh in place of each plain one
- * (same geometry, material, name and transform), depth pre-pass included.
- * The atlas root must sit at the world origin; the bones do the placing.
- * `held` lists the segments that some vertex follows first.
+ * Puts every part of a prepared atlas on the fit skeletons: skin weights
+ * from the atlas's own segments, and a skinned mesh in place of each plain
+ * one (same geometry, material, name and transform), depth pre-pass
+ * included. Bone and cartilage are rigid, one segment per piece
+ * (`boneWeights`); everything else blends near a joint (`skinWeights`). The
+ * atlas root must sit at the world origin; the bones do the placing.
  */
 export const skinAtlas = (
   prepared: PreparedAtlas,
   segments: Segments,
 ): Readonly<{
   atlas: PreparedAtlas;
-  skeleton: FitSkeleton;
-  held: ReadonlySet<number>;
+  skeletons: FitSkeletons;
+  fit: AtlasSegments;
 }> => {
-  const skeleton = new FitSkeleton();
+  const skeletons = { soft: new FitSkeleton(), bone: new FitSkeleton() };
   const held = new Set<number>();
+  const sums = SEGMENT_IDS.map(() => ({ at: new Vector3(), count: 0 }));
   prepared.root.updateMatrixWorld(true);
   const parts = prepared.parts.map((part) => {
     const plain = part.mesh;
     const { geometry } = plain;
+    const rigid = part.layer === "skeleton";
+    const points = atlasPoints(plain);
     if (!geometry.getAttribute("skinIndex")) {
-      const { index, weight } = skinWeights(atlasPoints(plain), segments);
+      const { index, weight } = rigid
+        ? boneWeights(points, segments, geometry.index?.array ?? null)
+        : skinWeights(points, segments);
       geometry.setAttribute("skinIndex", new BufferAttribute(index, 4));
       geometry.setAttribute("skinWeight", new BufferAttribute(weight, 4, true));
     }
     const first = geometry.getAttribute("skinIndex");
-    for (let i = 0; i < first.count; i += 1) held.add(first.getX(i));
+    for (let i = 0; i < first.count; i += 1) {
+      const segment = first.getX(i);
+      held.add(segment);
+      if (!rigid) continue;
+      const sum = sums[segment]!;
+      sum.at.x += points[3 * i]!;
+      sum.at.y += points[3 * i + 1]!;
+      sum.at.z += points[3 * i + 2]!;
+      sum.count += 1;
+    }
+    const skeleton = rigid ? skeletons.bone : skeletons.soft;
     const mesh = new FittedMesh(geometry, plain.material, skeleton);
     mesh.name = plain.name;
     mesh.userData = plain.userData;
@@ -190,31 +224,51 @@ export const skinAtlas = (
     }
     return { ...part, mesh };
   });
-  return { atlas: { ...prepared, parts }, skeleton, held };
-};
-
-/**
- * What the skeleton follows to lay the atlas on a body, or null when a
- * segment would have to be scaled out of all proportion.
- */
-export const followBody = (
-  atlas: Segments,
-  body: BodyReading,
-  /** The segments some atlas vertex follows first (`skinAtlas`). */
-  held: ReadonlySet<number>,
-): Following | null => {
-  const { matrices, ok } = fitMatrices(atlas, body.segments, (index) => held.has(index));
-  if (!ok) return null;
+  const boneCentres = sums.map(({ at, count }) =>
+    count > 0 ? at.clone().divideScalar(count) : null,
+  );
   return {
-    drive: body.drive,
-    offsets: matrices.map((matrix, i) =>
-      body.drive[i]!.matrixWorld.clone().invert().multiply(matrix),
-    ),
+    atlas: { ...prepared, parts },
+    skeletons,
+    fit: { segments, held, boneCentres },
   };
 };
 
-/** One map for every segment: the one-scale fit, shown through the same skeleton. */
-export const followMatrix = (matrix: Matrix4): Following => ({
-  drive: SEGMENT_IDS.map(() => null),
-  offsets: SEGMENT_IDS.map(() => matrix),
-});
+/**
+ * What the skeletons follow to lay the atlas on a body, or null when a
+ * segment would have to be scaled out of all proportion.
+ */
+export const followBody = (
+  atlas: AtlasSegments,
+  body: BodyReading,
+): Followings | null => {
+  const { matrices, bones, ok } = fitMatrices(
+    atlas.segments,
+    body.segments,
+    (index) => atlas.held.has(index),
+    atlas.boneCentres,
+  );
+  if (!ok) return null;
+  const following = (maps: readonly Matrix4[]): Following => ({
+    drive: body.drive,
+    offsets: maps.map((matrix, i) =>
+      body.drive[i]!.matrixWorld.clone().invert().multiply(matrix),
+    ),
+  });
+  return { soft: following(matrices), bone: following(bones) };
+};
+
+/** One map for every segment: the one-scale fit, shown through the same skeletons. */
+export const followMatrix = (matrix: Matrix4): Followings => {
+  const following: Following = {
+    drive: SEGMENT_IDS.map(() => null),
+    offsets: SEGMENT_IDS.map(() => matrix),
+  };
+  return { soft: following, bone: following };
+};
+
+/** Sets both skeletons following. */
+export const followWith = (skeletons: FitSkeletons, followings: Followings): void => {
+  skeletons.soft.follow(followings.soft);
+  skeletons.bone.follow(followings.bone);
+};

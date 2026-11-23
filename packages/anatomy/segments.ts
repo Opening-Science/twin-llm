@@ -11,7 +11,8 @@ import { Matrix4, Vector3 } from "three";
  * the skeleton's joints are like, and a joint only has to be at the right
  * height along the limb. `buildSegments` makes a box per segment,
  * `fitMatrices` the affine map that lays each atlas box on the body's, and
- * `skinWeights` says which one or two segments each atlas vertex follows.
+ * `skinWeights` and `boneWeights` say which one or two segments each atlas
+ * vertex follows.
  *
  * Everything is plain geometry in whatever frame the joints are given in, so
  * the atlas (+Y up) and a scan (+Z up) need no special case.
@@ -424,6 +425,92 @@ export const skinWeights = (
   return { index, weight };
 };
 
+/**
+ * Which connected piece each vertex is in, as a piece number per vertex.
+ * With `triangles` the pieces are those of the index buffer; without, the
+ * points are taken three by three as triangles and joined where two share a
+ * position exactly, as an unindexed mesh's corners do.
+ */
+const pieces = (
+  points: Float32Array,
+  triangles: ArrayLike<number> | null,
+): Int32Array => {
+  const count = points.length / 3;
+  const parent = Int32Array.from({ length: count }, (_, i) => i);
+  const find = (i: number): number => {
+    let root = i;
+    while (parent[root] !== root) root = parent[root]!;
+    let node = i;
+    while (parent[node] !== root) {
+      const next = parent[node]!;
+      parent[node] = root;
+      node = next;
+    }
+    return root;
+  };
+  const join = (a: number, b: number): void => {
+    parent[find(b)] = find(a);
+  };
+  if (triangles) {
+    for (let i = 0; i + 2 < triangles.length; i += 3) {
+      join(triangles[i]!, triangles[i + 1]!);
+      join(triangles[i]!, triangles[i + 2]!);
+    }
+  } else {
+    const first = new Map<string, number>();
+    for (let i = 0; i < count; i += 1) {
+      if (i % 3 !== 0) join(i - (i % 3), i);
+      const key = `${points[3 * i]},${points[3 * i + 1]},${points[3 * i + 2]}`;
+      const seen = first.get(key);
+      if (seen === undefined) first.set(key, i);
+      else join(seen, i);
+    }
+  }
+  return Int32Array.from({ length: count }, (_, i) => find(i));
+};
+
+/**
+ * Skin weights for bone and cartilage: rigid, as in the Blender fit. Each
+ * connected piece (a femur, a carpal) follows the one segment most of its
+ * vertices are nearest to, with weight 255, so a bone is never averaged
+ * between two segments or split between them. An atlas that merges a whole
+ * system into one mesh still has one piece per bone. Same layout as
+ * `skinWeights`.
+ */
+export const boneWeights = (
+  points: Float32Array,
+  segments: Segments,
+  /** The mesh's index buffer, or null for an unindexed mesh. */
+  triangles: ArrayLike<number> | null,
+): Readonly<{ index: Uint8Array; weight: Uint8Array }> => {
+  const nearest = labelPoints(points, segments);
+  const piece = pieces(points, triangles);
+  const count = nearest.length;
+  // Votes per piece and segment, rows numbered by each piece's root vertex.
+  const row = new Int32Array(count).fill(-1);
+  let rows = 0;
+  for (let i = 0; i < count; i += 1) {
+    if (row[piece[i]!] === -1) row[piece[i]!] = rows++;
+  }
+  const votes = new Uint32Array(rows * COUNT);
+  for (let i = 0; i < count; i += 1) votes[row[piece[i]!]! * COUNT + nearest[i]!]! += 1;
+  const winner = new Uint8Array(rows);
+  for (let r = 0; r < rows; r += 1) {
+    let best = 0;
+    for (let s = 1; s < COUNT; s += 1) {
+      if (votes[r * COUNT + s]! > votes[r * COUNT + best]!) best = s;
+    }
+    winner[r] = best;
+  }
+  const index = new Uint8Array(4 * count);
+  const weight = new Uint8Array(4 * count);
+  for (let i = 0; i < count; i += 1) {
+    index[4 * i] = winner[row[piece[i]!]!]!;
+    weight[4 * i] = 255;
+  }
+  return { index, weight };
+};
+
 /** The outline of some points seen along a segment: its centre and half sizes. */
 type Outline = Readonly<{ centre: Pair; half: Pair }>;
 
@@ -494,9 +581,9 @@ export const measureSkin = (
   const toe = tip("foot");
   const reached = tip("hand");
   if (!toe || !reached || top <= 0) return null;
-  // A hand points from the wrist through its middle, as far as its farthest
-  // fingertip reaches: the farthest point alone may be the thumb or any finger,
-  // whichever a pose spreads furthest, and turns the hand with it.
+  // A hand points from the wrist through its middle, as far as it reaches
+  // that way: the farthest point alone may be the thumb or any finger,
+  // whichever a pose spreads furthest, and would turn and lengthen the hand.
   const middle = { L: new Vector3(), R: new Vector3() };
   const count = { L: 0, R: 0 };
   each((id) => {
@@ -504,11 +591,20 @@ export const measureSkin = (
     middle[sideOf(id)].add(p);
     count[sideOf(id)] += 1;
   });
-  const fingerOf = (side: Side): Vector3 => {
-    const wrist = joints.wrist[side];
-    const way = middle[side].divideScalar(count[side]).sub(wrist).normalize();
-    return wrist.clone().addScaledVector(way, reached[side].distanceTo(wrist));
-  };
+  const way = Object.fromEntries(
+    SIDES.map((side) => [
+      side,
+      middle[side].divideScalar(count[side]).sub(joints.wrist[side]).normalize(),
+    ]),
+  ) as PerSide<Vector3>;
+  const reach = { L: 0, R: 0 };
+  each((id) => {
+    if (limbOf(id) !== "hand") return;
+    const side = sideOf(id);
+    reach[side] = Math.max(reach[side], d.copy(p).sub(joints.wrist[side]).dot(way[side]));
+  });
+  const fingerOf = (side: Side): Vector3 =>
+    joints.wrist[side].clone().addScaledVector(way[side], reach[side]);
   const finger = { L: fingerOf("L"), R: fingerOf("R") };
 
   // Then the way each palm faces: across the hand, the direction it is thinnest in.
@@ -626,8 +722,13 @@ export const segmentsFromSkin = (
   return skin && buildSegments(joints, skin);
 };
 
-/** A segment may be stretched or thickened this much at most; past it the fit is refused. */
-export const FIT_SCALE_BAND: Pair = [0.4, 2.5];
+/**
+ * How far a segment may be stretched along, bones with it; past it the fit
+ * is refused. A femur at 1.35 times its length is already a long one.
+ */
+export const FIT_ALONG_BAND: Pair = [0.75, 1.35];
+/** How far soft tissue may be thickened or thinned across; bones never are. */
+export const FIT_ACROSS_BAND: Pair = [0.4, 2.5];
 
 const basis = (segment: Segment): Matrix4 =>
   new Matrix4().makeBasis(segment.left, segment.axis, segment.front);
@@ -638,9 +739,14 @@ const translation = (v: Vector3, sign: 1 | -1): Matrix4 =>
 export type SegmentFit = Readonly<{
   /** Per segment, in `SEGMENT_IDS` order: atlas coordinates to body coordinates. */
   matrices: readonly Matrix4[];
-  /** False when a segment would be scaled outside `FIT_SCALE_BAND`. */
+  /** The same for bone and cartilage, which keep their proportions (`fitMatrices`). */
+  bones: readonly Matrix4[];
+  /** False when a segment would be scaled outside `FIT_ALONG_BAND` or `FIT_ACROSS_BAND`. */
   ok: boolean;
 }>;
+
+const inside = (value: number, [low, high]: Pair): boolean =>
+  value >= low && value <= high;
 
 /**
  * The map that lays each atlas segment on the body's: its centre line onto
@@ -649,15 +755,24 @@ export type SegmentFit = Readonly<{
  * its length, so curled fingers do not flatten its bones. The head hangs
  * from the crown and scales along by the mean of across and depth, so a
  * different neck length does not stretch the skull.
+ *
+ * Bones get a map of their own that scales them evenly, across as along:
+ * a heavier body has more fat and muscle round its femur, not a thicker
+ * femur. It agrees with the soft map at one point, the bones' anchor, so
+ * the bones stay where the soft tissue round them goes: on a limb that is
+ * its centre line, so a joint lands where it does in the soft map; in a
+ * trunk slab or the head it is the middle of the atlas's bones there
+ * (`boneCentres`), so a spine behind a belly stays at the back.
  */
 export const fitMatrices = (
   atlas: Segments,
   body: Segments,
-  /** Segments that hold no atlas anatomy (HRA's arms) are not held to the band. */
+  /** Segments that hold no atlas anatomy (HRA's arms) are not held to the bands. */
   holds: (index: number) => boolean = () => true,
+  /** Per segment, in `SEGMENT_IDS` order: the middle of the atlas's bones in it, if any. */
+  boneCentres: readonly (Vector3 | null)[] = [],
 ): SegmentFit => {
-  const scales: number[] = [];
-  const matrices = SEGMENT_IDS.map((id, index) => {
+  const fits = SEGMENT_IDS.map((id, index) => {
     const a = atlas[id];
     const b = body[id];
     const head = id === "head";
@@ -668,19 +783,31 @@ export const fitMatrices = (
       limbOf(id) === "hand"
         ? new Vector3(along, along, along)
         : new Vector3(wide, along, deep);
-    if (holds(index)) scales.push(scale.x, scale.y, scale.z);
     const anchor = (segment: Segment): Vector3 =>
       head
         ? segment.origin.clone().addScaledVector(segment.axis, segment.length)
         : segment.origin;
-    return translation(anchor(b), 1)
+    const turn = basis(b).multiply(basis(a).transpose());
+    const soft = translation(anchor(b), 1)
       .multiply(basis(b))
       .multiply(new Matrix4().makeScale(scale.x, scale.y, scale.z))
       .multiply(basis(a).transpose())
       .multiply(translation(anchor(a), -1));
+    const centre = (limbOf(id) === null && boneCentres[index]) || a.origin;
+    const bone = translation(centre.clone().applyMatrix4(soft), 1)
+      .multiply(turn)
+      .multiply(new Matrix4().makeScale(along, along, along))
+      .multiply(translation(centre, -1));
+    const ok =
+      !holds(index) ||
+      (inside(along, FIT_ALONG_BAND) &&
+        inside(scale.x, FIT_ACROSS_BAND) &&
+        inside(scale.z, FIT_ACROSS_BAND));
+    return { soft, bone, ok };
   });
-  const ok = scales.every(
-    (value) => value >= FIT_SCALE_BAND[0] && value <= FIT_SCALE_BAND[1],
-  );
-  return { matrices, ok };
+  return {
+    matrices: fits.map((fit) => fit.soft),
+    bones: fits.map((fit) => fit.bone),
+    ok: fits.every((fit) => fit.ok),
+  };
 };
