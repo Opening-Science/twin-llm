@@ -24,8 +24,17 @@ export const isCalendarDay = (day: string): boolean => {
   );
 };
 
-/** An IANA time zone the runtime knows, such as "Europe/Berlin" or "UTC". */
+/**
+ * An IANA zone name, spelt as the database spells it, such as "Europe/Berlin"
+ * or "UTC". The runtime also takes "+01:00" and "europe/berlin": an offset has
+ * no clock changes, so a Berlin day would wrongly have 24 hours on 25 October,
+ * and another spelling of one zone would make a second replay key for it.
+ */
+const ZONE_NAME = /^(?:UTC|[A-Z][A-Za-z_]*(?:\/[A-Z][A-Za-z0-9_+-]*)+)$/;
+
+/** An IANA time zone the runtime knows, spelt as named, such as "Europe/Berlin" or "UTC". */
 export const isTimeZone = (timeZone: string): boolean => {
+  if (!ZONE_NAME.test(timeZone)) return false;
   try {
     new Intl.DateTimeFormat("en-GB", { timeZone });
     return true;

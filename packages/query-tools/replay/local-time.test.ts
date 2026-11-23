@@ -22,6 +22,15 @@ describe("isCalendarDay and isTimeZone", () => {
     expect(isTimeZone("Europe/Berlin")).toBe(true);
     expect(isTimeZone("UTC")).toBe(true);
     expect(isTimeZone("Europe/Berlinn")).toBe(false);
+    expect(isTimeZone("America/Argentina/Buenos_Aires")).toBe(true);
+    expect(isTimeZone("America/Port-au-Prince")).toBe(true);
+    expect(isTimeZone("Etc/GMT+1")).toBe(true);
+  });
+
+  test("an offset or another spelling of a zone is not a zone name", () => {
+    expect(isTimeZone("+01:00")).toBe(false);
+    expect(isTimeZone("europe/berlin")).toBe(false);
+    expect(isTimeZone("utc")).toBe(false);
   });
 });
 
