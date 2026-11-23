@@ -45,6 +45,7 @@ export const seededProblems = (state: DatabaseState): readonly string[] => {
   if ((state.personal_datasets?.rows ?? 0) === 0) problems.push("no dataset was seeded");
   if ((state.personal_observations?.plain ?? 0) === 0)
     problems.push("no plain observation to seal");
+  if ((state.answers?.plain ?? 0) === 0) problems.push("no plain chat copy to seal");
   if (sum(state, "plain") === 0) problems.push("no plain value to seal");
   return problems;
 };
