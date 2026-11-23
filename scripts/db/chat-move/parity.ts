@@ -44,34 +44,49 @@ type CountsRow = {
   differing: number;
 };
 
-export const checkParity = async (db: PrismaClient): Promise<ParityReport> => {
-  const tables: TableParity[] = [];
-  for (const move of CHAT_MOVES) {
-    const [row] = await db.$queryRawUnsafe<CountsRow[]>(countsSql(move));
-    tables.push({
-      table: move.to,
-      oldRows: row?.old_rows ?? -1,
-      newRows: row?.new_rows ?? -1,
-      missing: row?.missing ?? -1,
-      extra: row?.extra ?? -1,
-      differing: row?.differing ?? -1,
-    });
-  }
-  const orphans: Record<string, number> = {};
-  for (const check of ORPHAN_CHECKS) {
-    const [row] = await db.$queryRawUnsafe<{ n: number }[]>(check.sql);
-    orphans[check.name] = row?.n ?? -1;
-  }
-  const ok =
-    tables.every(
-      (table) =>
-        table.oldRows === table.newRows &&
-        table.missing === 0 &&
-        table.extra === 0 &&
-        table.differing === 0,
-    ) && Object.values(orphans).every((n) => n === 0);
-  return { tables, orphans, ok };
-};
+/** Long enough for every row of a full database; Prisma's default is 5 seconds. */
+const PARITY_TIMEOUT_MS = 30 * 60 * 1000;
+
+/**
+ * One REPEATABLE READ, READ ONLY transaction: every count describes the
+ * same moment, however much the app writes meanwhile, and the gate cannot
+ * write even by mistake.
+ */
+export const checkParity = async (db: PrismaClient): Promise<ParityReport> =>
+  db.$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe(
+        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
+      );
+      const tables: TableParity[] = [];
+      for (const move of CHAT_MOVES) {
+        const [row] = await tx.$queryRawUnsafe<CountsRow[]>(countsSql(move));
+        tables.push({
+          table: move.to,
+          oldRows: row?.old_rows ?? -1,
+          newRows: row?.new_rows ?? -1,
+          missing: row?.missing ?? -1,
+          extra: row?.extra ?? -1,
+          differing: row?.differing ?? -1,
+        });
+      }
+      const orphans: Record<string, number> = {};
+      for (const check of ORPHAN_CHECKS) {
+        const [row] = await tx.$queryRawUnsafe<{ n: number }[]>(check.sql);
+        orphans[check.name] = row?.n ?? -1;
+      }
+      const ok =
+        tables.every(
+          (table) =>
+            table.oldRows === table.newRows &&
+            table.missing === 0 &&
+            table.extra === 0 &&
+            table.differing === 0,
+        ) && Object.values(orphans).every((n) => n === 0);
+      return { tables, orphans, ok };
+    },
+    { maxWait: 60_000, timeout: PARITY_TIMEOUT_MS },
+  );
 
 export const reportLines = (report: ParityReport): readonly string[] => [
   ...report.tables.map(
