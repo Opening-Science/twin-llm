@@ -38,12 +38,14 @@ const insertValues = (move: TableMove): string =>
 
 /**
  * One batch. Parameters: $1 the last id copied (null at the start), $2 the
- * batch size. Returns the batch's last id, how many old rows it read and
+ * batch size. Ids are never empty, so '' starts before the first one, and
+ * the cursor stays an index condition on the primary key: a batch reads its
+ * own rows, not every row before them. Returns the batch's last id, how many old rows it read and
  * how many copies it inserted.
  */
 export const batchSql = (move: TableMove): string => `WITH batch AS (
   SELECT o.* FROM "${move.from}" o
-   WHERE $1::text IS NULL OR o."id" > $1::text
+   WHERE o."id" > coalesce($1::text, '')
    ORDER BY o."id"
    LIMIT $2::int
    FOR SHARE

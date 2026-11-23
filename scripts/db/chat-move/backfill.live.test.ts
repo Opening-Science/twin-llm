@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { finishBackfill, runBackfill } from "./backfill";
-import { FINISH_CONSTRAINTS, MOVE, UNDO_FINISH_SQL } from "./backfill-sql";
+import { batchSql, FINISH_CONSTRAINTS, MOVE, UNDO_FINISH_SQL } from "./backfill-sql";
 import { liveDatabase, requireNoThreads, runLive } from "./live.test-helpers";
 import { differencesSql } from "./parity-sql";
 import { clearSeed, SEED_USERS, type SeedShape, seedOldChats } from "./seed.test-helpers";
@@ -123,6 +123,28 @@ describe.skipIf(!runLive)("chat backfill (RUN_LIVE=1)", () => {
     const result = await runBackfill(db, { batchSize: 1000, log });
     expect(result.tables.map((table) => table.inserted)).toEqual([0, 0, 0]);
     expect(await counts()).toEqual(before);
+  });
+
+  test("each batch reaches its cursor through the primary key, also on a generic plan", async () => {
+    const plans = await db.$transaction(async (tx) => {
+      const found: string[] = [];
+      await tx.$executeRawUnsafe(`SET LOCAL plan_cache_mode = force_generic_plan`);
+      for (const move of CHAT_MOVES) {
+        await tx.$executeRawUnsafe(`PREPARE chat_batch(text, int) AS ${batchSql(move)}`);
+        const rows = await tx.$queryRawUnsafe<{ "QUERY PLAN": string }[]>(
+          `EXPLAIN (COSTS OFF) EXECUTE chat_batch('m', 10)`,
+        );
+        found.push(rows.map((row) => row["QUERY PLAN"]).join("\n"));
+        await tx.$executeRawUnsafe(`DEALLOCATE chat_batch`);
+      }
+      return found;
+    });
+    for (const [index, move] of CHAT_MOVES.entries()) {
+      expect(plans[index], move.from).toContain(`${move.from}_pkey`);
+      expect(plans[index], move.from).toContain(
+        `Index Cond: (id > COALESCE($1, ''::text))`,
+      );
+    }
   });
 
   test("a scheduled exchange names its task only when that can be told", async () => {

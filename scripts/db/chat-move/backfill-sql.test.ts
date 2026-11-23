@@ -15,6 +15,7 @@ describe("chat backfill SQL", () => {
       const sql = batchSql(move);
       expect(sql).toContain(`FROM "${move.from}" o`);
       expect(sql).toContain('ORDER BY o."id"');
+      expect(sql).toContain(`WHERE o."id" > coalesce($1::text, '')`);
       expect(sql).toContain("FOR SHARE");
       expect(sql).toContain(`INSERT INTO "${move.to}"`);
       expect(sql).toContain(`ON CONFLICT ("id") DO NOTHING`);
