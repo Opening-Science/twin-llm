@@ -1,7 +1,7 @@
 /**
  * How each column of threads, turns and model_responses is copied into
- * conversations, exchanges and answers (.plans/compare-rewrite/DATA-MODEL.md,
- * B.1 to B.3). One list for the mirror triggers, the backfill and the parity
+ * conversations, exchanges and answers (docs/storage.md, "Chat tables
+ * move"). One list for the mirror triggers, the backfill and the parity
  * check, so the three can never map a column differently.
  *
  * Pure: SQL names and SQL text only.

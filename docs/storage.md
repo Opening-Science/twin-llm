@@ -85,10 +85,22 @@ browser still receives only each tool's name and state.
 ## Chat tables move
 
 `threads`, `turns` and `model_responses` are being replaced by
-`conversations`, `exchanges` and `answers` (plan and column map:
-`.plans/compare-rewrite/DATA-MODEL.md`; the map in code:
-`scripts/db/chat-move/tables.ts`). The move is expand, backfill, switch,
-contract. Only the expand step is in the schema so far: the new tables
+`conversations`, `exchanges` and `answers`. The column map is
+`scripts/db/chat-move/tables.ts`. The move has four steps, each its own
+release:
+
+1. Expand: the new tables next to the old ones, and triggers that repeat
+   every write on the old tables in the new ones.
+2. Backfill and parity: copy the older rows, then prove every copy equals
+   its old row.
+3. Switch: the app reads and writes the new tables; reverse triggers keep
+   the old ones current for a rollback.
+4. Contract: after at least a week of use, drop the old tables. This is
+   the only step that cannot be undone.
+
+Code comments name these steps by the sections of the design note they
+came from: C.1 expand, C.2 backfill, C.3 parity, C.4 switch, C.6
+contract, and B.5 for the sealing contexts. Only the expand step is in the schema so far: the new tables
 exist, empty, with no foreign keys, and nothing reads them.
 
 Each new row keeps its old row's id, and each `*_sealed` column holds the

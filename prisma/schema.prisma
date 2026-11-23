@@ -216,7 +216,7 @@ model ModelResponse {
 }
 
 // The three tables that will replace threads, turns and model_responses
-// (.plans/compare-rewrite/DATA-MODEL.md, part B). Expand phase: nothing in
+// (docs/storage.md, "Chat tables move"). Expand phase: nothing in
 // the app reads or writes them yet. Each row keeps the id of the old row it
 // copies, and every *_sealed column holds the old column's stored value byte
 // for byte, sealed under the old table and column names. Foreign keys are
