@@ -19,6 +19,7 @@ export const LIVE_DB_TESTS: readonly LiveDbTest[] = [
   { file: "scripts/db/chat-move/expand.live.test.ts", tests: 4 },
   { file: "scripts/db/chat-move/mirror.live.test.ts", tests: 11 },
   { file: "scripts/db/chat-move/backfill.live.test.ts", tests: 10 },
+  { file: "scripts/db/chat-move/parity.live.test.ts", tests: 8 },
 ];
 
 export const EXPECTED_LIVE_DB_TESTS = LIVE_DB_TESTS.reduce(

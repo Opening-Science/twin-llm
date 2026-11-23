@@ -137,6 +137,27 @@ copy makes it fail and the move stays `expanded`. To undo it, run
 `UNDO_FINISH_SQL` from `scripts/db/chat-move/backfill-sql.ts`; the copies
 stay and the triggers keep them current.
 
+Then check, read-only:
+
+```bash
+bun run db:chat-parity     # exit 0 only when every copy matches
+```
+
+Per table pair it prints row counts, old rows with no copy (`missing`),
+copies with no old row (`extra`) and copies that differ in any column
+(`differing`), then orphans and schedules on a person's exchange. Every
+count must be 0 and the old and new row counts equal. Copies reported
+missing are filled by `bun run db:chat-backfill --restart`, which reads
+every old row again and still leaves existing copies alone.
+
+Sealed columns of the new tables keep the old names as their context
+(`infrastructure/chat-seal-contexts.ts`): `conversations.title_sealed` is
+sealed as `threads.title`, `answers.body_sealed` as `model_responses.text`,
+and so on. A copy equal byte for byte therefore opens exactly as the old
+value does, which is why the gate needs no keys. With the vault unlocked,
+`openProblems` in `scripts/db/chat-move/parity.ts` also opens every value
+both ways and compares the text.
+
 The new time columns are `timestamptz`. `@prisma/adapter-pg` 7.9 reads a
 `timestamptz` as if the session time zone were UTC, so on a server set to
 another zone a `Date` read through Prisma is shifted by the offset (the
