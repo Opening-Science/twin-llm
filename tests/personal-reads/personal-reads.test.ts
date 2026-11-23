@@ -147,6 +147,7 @@ const vitronicPorts = (record: Recorder): VitronicLocalReadPorts => ({
   cipher: async () => readCipher,
   database: () => ({
     vitronicSubject: {
+      findFirst: async () => ({ probandId: 7 }),
       findMany: async () => [
         {
           id: SUBJECT_ID,

@@ -22,6 +22,7 @@ import {
 import { modelNamesFromMap, parseModelsResponse, pickGlbModel } from "./models";
 import { viatarsForProbandId, type VitronicViatar } from "./viatars";
 import { GlbTooLargeError, readBoundedBytes } from "./glb";
+import { VitronicScannerHttpError } from "./sync-errors";
 
 export type { VitronicScanRef, VitronicViatar } from "./viatars";
 
@@ -89,10 +90,14 @@ const get = async (
   });
 };
 
-const getJson = async (config: VitronicBearerConfig, path: string): Promise<unknown> => {
+const getJson = async (
+  config: VitronicBearerConfig,
+  path: string,
+  allowMissing = true,
+): Promise<unknown> => {
   const response = await get(config, path, "application/json");
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error("vitronic-http-error");
+  if (allowMissing && response.status === 404) return null;
+  if (!response.ok) throw new VitronicScannerHttpError(response.status);
   return response.json() as Promise<unknown>;
 };
 
@@ -104,7 +109,7 @@ const isViatarRow = (row: unknown): row is VitronicViatar => {
 const listViatars = async (
   config: VitronicBearerConfig,
 ): Promise<readonly VitronicViatar[]> => {
-  const body = await getJson(config, viatarListPath());
+  const body = await getJson(config, viatarListPath(), false);
   if (!Array.isArray(body)) return [];
   return body.filter(isViatarRow);
 };
@@ -147,7 +152,7 @@ export const getAvatarGlb = async (
 ): Promise<Uint8Array | null> => {
   const response = await get(config, modelPath(viatarId, modelName), "model/gltf-binary");
   if (response.status === 404) return null;
-  if (!response.ok) throw new Error("vitronic-http-error");
+  if (!response.ok) throw new VitronicScannerHttpError(response.status);
   try {
     return await readBoundedBytes(response);
   } catch (error) {

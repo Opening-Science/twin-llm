@@ -63,6 +63,7 @@ const dummyAppended = {
 const fakeDatabase = () => ({
   vitronicSubject: {
     findMany: async () => [subjectRow],
+    findFirst: async () => subjectRow,
   },
   vitronicConnection: {
     findUnique: async () => connectionRow,

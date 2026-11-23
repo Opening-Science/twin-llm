@@ -53,11 +53,58 @@ export const VitronicCard = ({ setup, preview }: VitronicCardProps) => {
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
-  const onConnect = async (event: FormEvent<HTMLFormElement>) => {
+  const onSync = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const scanKey = new FormData(event.currentTarget).get("probandId");
     setBusy(true);
     setFlash(null);
-    const form = new FormData(event.currentTarget);
+    let synced = false;
+    try {
+      const response = await fetch("/api/vitronic/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(scanKey ? { probandId: Number(scanKey) } : {}),
+      });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        setFlash(
+          body &&
+            typeof body === "object" &&
+            "error" in body &&
+            typeof body.error === "string"
+            ? body.error
+            : "Could not sync BodyLoop.",
+        );
+        return;
+      }
+      synced = true;
+      const latest = await fetch("/api/vitronic/status");
+      const value: unknown = latest.ok ? await latest.json() : null;
+      if (!isVitronicStatusPayload(value) || !value.connected) {
+        setFlash(
+          "BodyLoop synced, but its status could not be refreshed. Reload the page.",
+        );
+        return;
+      }
+      setPayload(value);
+    } catch {
+      setFlash(
+        synced
+          ? "BodyLoop synced, but its status could not be refreshed. Reload the page."
+          : "Could not sync BodyLoop.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onConnect = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setBusy(true);
+    setFlash(null);
+    let saved = false;
     try {
       const response = await fetch("/api/vitronic/connect", {
         method: "POST",
@@ -74,12 +121,23 @@ export const VitronicCard = ({ setup, preview }: VitronicCardProps) => {
         setFlash("Could not store BodyLoop connection.");
         return;
       }
-      event.currentTarget.reset();
+      saved = true;
+      formElement.reset();
       const status = await fetch("/api/vitronic/status");
       const value: unknown = status.ok ? await status.json() : null;
-      if (isVitronicStatusPayload(value)) setPayload(value);
+      if (!isVitronicStatusPayload(value) || !value.connected) {
+        setFlash(
+          "BodyLoop was saved, but its status could not be refreshed. Reload the page.",
+        );
+        return;
+      }
+      setPayload(value);
     } catch {
-      setFlash("Could not store BodyLoop connection.");
+      setFlash(
+        saved
+          ? "BodyLoop was saved, but its status could not be refreshed. Reload the page."
+          : "Could not store BodyLoop connection.",
+      );
     } finally {
       setBusy(false);
     }
@@ -111,32 +169,35 @@ export const VitronicCard = ({ setup, preview }: VitronicCardProps) => {
       notice={flash ? { text: flash, tone: "warn" } : null}
       actions={
         configured && payload.connected ? (
-          <Button
-            size="sm"
-            disabled={busy}
-            onClick={() => {
-              setBusy(true);
-              setFlash(null);
-              void fetch("/api/vitronic/sync", { method: "POST" })
-                .then(async (response) => {
-                  if (!response.ok) {
-                    setFlash("Could not sync BodyLoop.");
-                    return;
-                  }
-                  const status = await fetch("/api/vitronic/status");
-                  const value: unknown = status.ok ? await status.json() : null;
-                  if (isVitronicStatusPayload(value)) setPayload(value);
-                })
-                .catch(() => {
-                  setFlash("Could not sync BodyLoop.");
-                })
-                .finally(() => {
-                  setBusy(false);
-                });
-            }}
-          >
-            Sync scan
-          </Button>
+          <div className="space-y-1">
+            <form
+              className="flex flex-wrap items-end gap-2"
+              onSubmit={(event) => void onSync(event)}
+            >
+              <Field
+                key={`${payload.probandId}:${payload.scanKeyLocked}`}
+                className="w-32"
+                label="Scan key"
+                name="probandId"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={2_147_483_647}
+                step={1}
+                defaultValue={payload.probandId ?? ""}
+                readOnly={payload.scanKeyLocked || busy}
+                required
+              />
+              <Button type="submit" size="sm" disabled={busy}>
+                Sync scan
+              </Button>
+            </form>
+            <p className="text-muted-foreground text-xs">
+              {payload.scanKeyLocked
+                ? "The scan key is locked because this subject has imported scans."
+                : "Enter the subject's proband ID. A successful sync saves the key."}
+            </p>
+          </div>
         ) : null
       }
       setup={<SetupDisclosure setup={setup} />}

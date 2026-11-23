@@ -31,6 +31,10 @@ import {
 } from "@/packages/vitronic/summary";
 import { fingerprintPrefix } from "@/packages/vitronic/tls";
 import {
+  VitronicScanKeyConflictError,
+  VitronicScanNotFoundError,
+} from "@/packages/vitronic/sync-errors";
+import {
   mergeStoredScanRefs,
   newestViatarForProbandId,
   presetNameFromViatar,
@@ -73,6 +77,7 @@ export type VitronicSummaryAuditTool =
 type LocalReadDb = () => {
   vitronicSubject: {
     findMany: (args: unknown) => Promise<readonly VitronicSubjectRow[]>;
+    findFirst: (args: unknown) => Promise<{ probandId: number | null } | null>;
   };
   vitronicConnection: {
     findUnique: (args: unknown) => Promise<{
@@ -298,6 +303,7 @@ const persistSnapshot = async (params: {
   readonly actor: string;
   readonly tool?: string;
   readonly ports?: Partial<VitronicSnapshotPorts>;
+  readonly scannerKey?: { readonly saved: number | null; readonly used: number };
 }) => {
   const ports = { ...defaultSnapshotPorts(), ...params.ports };
   const owned = await ports.database().vitronicSubject.findFirst({
@@ -387,16 +393,51 @@ const persistSnapshot = async (params: {
     ...(glbSha256 ? { glbSha256, glbModelName } : {}),
   };
 
-  await ports.database().vitronicSnapshot.upsert({
+  const write = {
     where: { subjectId_viatarId: key },
     create,
     update,
-  });
+  };
 
-  await ports.database().vitronicConnection.updateMany({
-    where: { userId: params.userId },
-    data: { lastSyncAt: new Date() },
-  });
+  const scannerKey = params.scannerKey;
+  if (scannerKey) {
+    const changed = scannerKey.saved !== scannerKey.used;
+    await database().$transaction(async (tx) => {
+      // Serialize scanner snapshot writes and key edits on the subject row.
+      const subject = await tx.vitronicSubject.updateMany({
+        where: {
+          id: key.subjectId,
+          userId: params.userId,
+          probandId: scannerKey.saved,
+          ...(changed ? { isSelf: true } : {}),
+        },
+        data: { probandId: scannerKey.used },
+      });
+      if (subject.count !== 1) throw new VitronicScanKeyConflictError();
+      if (
+        changed &&
+        (await tx.vitronicSnapshot.findFirst({
+          where: { subjectId: key.subjectId },
+          select: { id: true },
+        }))
+      )
+        throw new VitronicScanKeyConflictError();
+      await tx.vitronicSnapshot.upsert(write);
+      await tx.vitronicConnection.update({
+        where: { userId: params.userId },
+        data: {
+          lastSyncAt: syncedAt,
+          ...(changed ? { probandId: scannerKey.used } : {}),
+        },
+      });
+    });
+  } else {
+    await ports.database().vitronicSnapshot.upsert(write);
+    await ports.database().vitronicConnection.updateMany({
+      where: { userId: params.userId },
+      data: { lastSyncAt: syncedAt },
+    });
+  }
 
   await ports.append({
     actor: params.actor,
@@ -863,21 +904,39 @@ const pullScannerIntoSnapshot = async (params: {
   readonly userId: string;
   readonly actor: string;
   readonly subjectId: string;
-  readonly viatarId: number;
+  readonly scan: { readonly viatarId: number } | { readonly probandId?: number };
 }) => {
   const subject = await requireSubjectForUser(params.userId, params.subjectId);
-  if (subject.probandId == null) throw new Error("vitronic-viatar-not-found");
+  const scan = params.scan;
+  const probandId =
+    ("viatarId" in scan ? undefined : scan.probandId) ?? subject.probandId;
+  if (probandId == null) throw new VitronicScanNotFoundError();
+  if (probandId !== subject.probandId) {
+    const snapshot = await database().vitronicSnapshot.findFirst({
+      where: { subjectId: subject.id },
+      select: { id: true },
+    });
+    if (!subject.isSelf || snapshot) throw new VitronicScanKeyConflictError();
+  }
   const connection = await database().vitronicConnection.findUnique({
     where: { userId: params.userId },
   });
   if (!connection) throw new Error("Connect BodyLoop before syncing.");
 
   const config = bearerConfig(connection, await cipherForUser(params.userId));
-  const listed = await listViatarsForProbandId(config, subject.probandId);
-  const allowed = listed.find((row) => row.viatar_id === params.viatarId);
-  if (!allowed) throw new Error("vitronic-viatar-not-found");
+  const listed = await listViatarsForProbandId(config, probandId);
+  const allowed =
+    "viatarId" in scan
+      ? listed.find((row) => row.viatar_id === scan.viatarId)
+      : newestViatarForProbandId(listed, probandId);
+  if (!allowed) throw new VitronicScanNotFoundError();
 
   const viatar = (await getViatar(config, allowed.viatar_id)) ?? allowed;
+  if (
+    viatar.viatar_id !== allowed.viatar_id ||
+    (viatar.proband_id != null && viatar.proband_id !== probandId)
+  )
+    throw new VitronicScanNotFoundError();
   const sets = await getMeasurementSets(config, viatar.viatar_id);
   let glb: Uint8Array | undefined;
   let glbModelName: string | undefined;
@@ -898,6 +957,7 @@ const pullScannerIntoSnapshot = async (params: {
   return persistSnapshot({
     userId: params.userId,
     actor: params.actor,
+    scannerKey: { saved: subject.probandId, used: probandId },
     input: {
       subjectId: subject.id,
       scan_id: String(viatar.viatar_id),
@@ -935,7 +995,10 @@ export const syncVitronicSubjectScan = async (params: {
   readonly glbSha256: string | null;
   readonly viatarId: number;
 }> => {
-  const result = await pullScannerIntoSnapshot(params);
+  const result = await pullScannerIntoSnapshot({
+    ...params,
+    scan: { viatarId: params.viatarId },
+  });
   return {
     summary: result.summary,
     glbSha256: result.glbSha256,
@@ -946,28 +1009,18 @@ export const syncVitronicSubjectScan = async (params: {
 export const syncVitronicForUser = async (params: {
   readonly userId: string;
   readonly actor: string;
+  readonly probandId?: number;
 }): Promise<{
   readonly summary: VitronicSummary;
   readonly glbSha256: string | null;
 }> => {
   const self = await ensureSelfSubjectFromConnection(params.userId);
-  if (!self || self.probandId == null)
-    throw new Error("Connect BodyLoop before syncing.");
-  const connection = await database().vitronicConnection.findUnique({
-    where: { userId: params.userId },
-  });
-  if (!connection) throw new Error("Connect BodyLoop before syncing.");
-  const listed = await listViatarsForProbandId(
-    bearerConfig(connection, await cipherForUser(params.userId)),
-    self.probandId,
-  );
-  const match = newestViatarForProbandId(listed, self.probandId);
-  if (!match) throw new Error("vitronic-viatar-not-found");
+  if (!self) throw new Error("Connect BodyLoop before syncing.");
   const result = await pullScannerIntoSnapshot({
     userId: params.userId,
     actor: params.actor,
     subjectId: self.id,
-    viatarId: match.viatar_id,
+    scan: { probandId: params.probandId },
   });
   return { summary: result.summary, glbSha256: result.glbSha256 };
 };
@@ -1021,6 +1074,12 @@ export const getVitronicConnectionStatus = async (
     select: { id: true, glbSha256: true, syncedAt: true, summary: true, subjectId: true },
   });
   const connected = connection !== null;
+  const self = connected
+    ? await db().vitronicSubject.findFirst({
+        where: { userId, isSelf: true },
+        select: { probandId: true },
+      })
+    : null;
   const snapshotCount = snapshot ? 1 : 0;
   const doAppend = localReadAppend(opts);
   await doAppend({
@@ -1041,6 +1100,8 @@ export const getVitronicConnectionStatus = async (
   return {
     configured: vitronicEnv() !== null,
     connected,
+    probandId: self?.probandId ?? null,
+    scanKeyLocked: snapshot !== null,
     lastSyncAt:
       connection?.lastSyncAt?.toISOString() ?? snapshot?.syncedAt?.toISOString() ?? null,
     hasAvatar: Boolean(snapshot?.glbSha256),
