@@ -39,8 +39,9 @@ day before.
 | Event     | `sleep` or `activity` (walk, run) from a device; `meal` (breakfast, lunch, snack, dinner) or `tag` the person entered, and only entered.                                                   |
 | Narration | What usually happens in a body, about heart rate, glucose, insulin or the body, with a focus on the twin.                                                                                  |
 
-A reading is `available` with a value, or `missing` with `value: null` and a reason (a
-sensor warming up, a ring off the finger). A missing value is never filled in; the gap
+A reading is `available` with a value, or `missing` with `value: null` and a reason from
+`MISSING_REASONS` (a sensor warming up, a ring off the finger). The reason is shown as it
+is, so it is one of these short lines, never a provider's error text. A missing value is never filled in; the gap
 stays a gap. `interval_min` is how much time one reading stands for, which decides what
 can be computed from it (no one-minute recovery from 15-minute samples).
 

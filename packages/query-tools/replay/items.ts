@@ -65,6 +65,20 @@ export const EVENT_KINDS = ["sleep", "activity", "meal", "tag"] as const;
 export const ACTIVITIES = ["walk", "run"] as const;
 export const MEALS = ["breakfast", "lunch", "snack", "dinner"] as const;
 
+/**
+ * Why a reading is missing, in the words shown to the person. A closed set we
+ * wrote ourselves: a provider's error text never becomes a reason, because the
+ * replay shows the reason as it is. An adapter maps what its source reports to
+ * one of these, or to "No value from the device".
+ */
+export const MISSING_REASONS = [
+  "New sensor warming up",
+  "Ring off the finger",
+  "Watch off the wrist",
+  "No value from the device",
+] as const;
+export type MissingReason = (typeof MISSING_REASONS)[number];
+
 const instant = z.iso.datetime();
 
 /** Person, local day, zone and origin: on every item, so items cannot drift apart. */
@@ -136,7 +150,7 @@ const readingBase = {
    * warming up, a watch off the wrist): the gap stays a gap, `value` is null.
    */
   availability: z.enum(["available", "missing"]),
-  missing_reason: z.string().min(1).max(160).optional(),
+  missing_reason: z.enum(MISSING_REASONS).optional(),
 };
 
 const readingSchemaBase = z.discriminatedUnion("stream", [
