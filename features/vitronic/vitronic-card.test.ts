@@ -41,6 +41,21 @@ describe("VitronicCard", () => {
     expect(markup).not.toContain("2026-07-10T12:00:00.000Z");
     expect(markup).not.toContain('name="apiToken"');
   });
+
+  test.each([false, true])("prefills the saved scan key (locked: %s)", (locked) => {
+    const markup = html({
+      configured: true,
+      connected: true,
+      lastSyncAt: null,
+      hasAvatar: false,
+      probandId: 42,
+      scanKeyLocked: locked,
+    });
+    const input = markup.match(/<input[^>]*name="probandId"[^>]*>/)?.[0];
+    expect(input).toContain('value="42"');
+    expect(input?.includes('readOnly=""')).toBe(locked);
+    expect(markup).toMatch(/<button type="submit"[^>]*>Sync scan<\/button>/);
+  });
 });
 
 describe("VitronicCard connection form", () => {

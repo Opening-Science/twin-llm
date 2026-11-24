@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { syncVitronicSubjectScan } from "@/features/vitronic/connection";
+import { scannerSyncErrorResponse } from "@/features/vitronic/scanner-sync-error-response";
 import { resolveActorId } from "@/infrastructure/auth-actor";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { vitronicEnv } from "@/infrastructure/env";
@@ -49,13 +50,6 @@ export const POST = withUnlocked(async (request: Request, context: RouteContext)
     if (error instanceof GlbTooLargeError) {
       return NextResponse.json({ error: "BodyLoop mesh is too large." }, { status: 413 });
     }
-    console.error(
-      "[vitronic] subject sync failed",
-      error instanceof Error ? error.name : "unknown",
-    );
-    return NextResponse.json(
-      { error: "Could not sync BodyLoop data. Check the connection and try again." },
-      { status: 502 },
-    );
+    return scannerSyncErrorResponse(error, "[vitronic] subject sync failed");
   }
 });
