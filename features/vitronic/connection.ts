@@ -203,8 +203,38 @@ export type VitronicSnapshotCard = Readonly<{
   measures: unknown;
 }>;
 
+type SnapshotUpsert = (args: {
+  where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
+  create: Record<string, unknown>;
+  update: Record<string, unknown>;
+}) => Promise<unknown>;
+
+/** What a scanner sync writes inside its one transaction. */
+export type VitronicSnapshotTx = {
+  vitronicSubject: {
+    updateMany: (args: {
+      where: { id: string; userId: string; probandId: number | null; isSelf?: true };
+      data: { probandId: number };
+    }) => Promise<{ count: number }>;
+  };
+  vitronicSnapshot: {
+    findFirst: (args: {
+      where: { subjectId: string };
+      select: { id: true };
+    }) => Promise<{ id: string } | null>;
+    upsert: SnapshotUpsert;
+  };
+  vitronicConnection: {
+    update: (args: {
+      where: { userId: string };
+      data: { lastSyncAt: Date; probandId?: number };
+    }) => Promise<unknown>;
+  };
+};
+
 export type VitronicSnapshotPorts = {
   readonly database: () => {
+    $transaction: <T>(work: (tx: VitronicSnapshotTx) => Promise<T>) => Promise<T>;
     vitronicSubject: {
       findFirst: (args: {
         where: { id: string; userId: string };
@@ -216,11 +246,7 @@ export type VitronicSnapshotPorts = {
         where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
         select: { id: true };
       }) => Promise<{ id: string } | null>;
-      upsert: (args: {
-        where: { subjectId_viatarId: { subjectId: string; viatarId: number } };
-        create: Record<string, unknown>;
-        update: Record<string, unknown>;
-      }) => Promise<unknown>;
+      upsert: SnapshotUpsert;
     };
     vitronicConnection: {
       updateMany: (args: {
@@ -402,7 +428,7 @@ const persistSnapshot = async (params: {
   const scannerKey = params.scannerKey;
   if (scannerKey) {
     const changed = scannerKey.saved !== scannerKey.used;
-    await database().$transaction(async (tx) => {
+    await ports.database().$transaction(async (tx) => {
       // Serialize scanner snapshot writes and key edits on the subject row.
       const subject = await tx.vitronicSubject.updateMany({
         where: {

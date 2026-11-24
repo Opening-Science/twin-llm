@@ -43,6 +43,10 @@ const testPorts = (
   cipher: FieldCipher = plainCipher,
 ): Partial<VitronicSnapshotPorts> => ({
   database: () => ({
+    // Only a scanner sync opens a transaction; these ingests do not.
+    $transaction: async () => {
+      throw new Error("not used");
+    },
     vitronicSubject: {
       findFirst: async (args: {
         where: { id: string; userId: string };
