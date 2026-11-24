@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { GlucoseControl, type GlucoseControlModel } from "./glucose-control";
+import {
+  GLUCOSE_NOT_INSTALLED,
+  GlucoseControl,
+  type GlucoseControlModel,
+} from "./glucose-control";
 
 const render = (overrides: Partial<GlucoseControlModel> = {}) =>
   renderToStaticMarkup(
@@ -47,5 +51,14 @@ describe("glucose density slider", () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain("Could not load the particles.");
     expect(html).toContain("Try again</button>");
+  });
+
+  test("a file not fetched here is a plain state, not an error", () => {
+    const html = render({ status: "missing" });
+    expect(html).toContain(GLUCOSE_NOT_INSTALLED);
+    expect(html).not.toContain("bun run");
+    expect(html).not.toContain('role="alert"');
+    expect(html).not.toContain("Try again");
+    expect(html).toContain('disabled=""');
   });
 });

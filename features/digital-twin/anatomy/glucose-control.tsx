@@ -6,6 +6,13 @@ import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
 
 import { type GlucoseStatus } from "./glucose-flow";
 
+/**
+ * Not fetched here is a setup step, so it reads as a plain state, not an
+ * error. Like the atlas, the page names no command; the API answer and
+ * docs/anatomy.md name `bun run anatomy:fetch`.
+ */
+export const GLUCOSE_NOT_INSTALLED = "Vessel particles are not installed here.";
+
 export type GlucoseControlModel = Readonly<{
   density: number;
   status: GlucoseStatus;
@@ -38,7 +45,7 @@ export const GlucoseControl = ({
         value={control.density}
         aria-valuetext={`${count} of ${GLUCOSE_EFFECT.maxParticles} particles`}
         aria-describedby={noteId}
-        disabled={control.unavailable !== null}
+        disabled={control.unavailable !== null || control.status === "missing"}
         onChange={(event) => {
           control.onDensity(Number(event.target.value));
           onInteract?.();
@@ -52,6 +59,11 @@ export const GlucoseControl = ({
       {control.unavailable === null && control.status === "loading" ? (
         <p role="status" className="text-muted-foreground mt-1 text-xs">
           Loading particles...
+        </p>
+      ) : null}
+      {control.unavailable === null && control.status === "missing" ? (
+        <p role="status" className="text-muted-foreground mt-1 text-xs">
+          {GLUCOSE_NOT_INSTALLED}
         </p>
       ) : null}
       {control.unavailable === null && control.status === "error" ? (

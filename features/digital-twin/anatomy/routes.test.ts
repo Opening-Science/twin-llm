@@ -15,7 +15,11 @@ import {
 import { RIGGED_BODIES, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
 import { GLUCOSE_EFFECT, glucoseEffectApiUrl } from "@/packages/anatomy/effects";
 
-import { ANATOMY_NOT_INSTALLED_API, FITTED_NOT_INSTALLED_API } from "./anatomy-copy";
+import {
+  ANATOMY_NOT_INSTALLED_API,
+  EFFECT_NOT_INSTALLED_API,
+  FITTED_NOT_INSTALLED_API,
+} from "./anatomy-copy";
 import {
   createAnatomyAtlasHandler,
   createAnatomyEffectHandler,
@@ -46,8 +50,8 @@ describe("GET /api/anatomy/effects/:effectId", () => {
   test("unknown effects never open a file; missing assets return an uncached error", async () => {
     const opened: string[] = [];
     const GET = createAnatomyEffectHandler({
-      openEffect: async () => {
-        opened.push("glucose-particles");
+      openEffect: async (id) => {
+        opened.push(id);
         return null;
       },
     });
@@ -62,8 +66,7 @@ describe("GET /api/anatomy/effects/:effectId", () => {
     expect(missing.status).toBe(404);
     expect(missing.headers.get("cache-control")).toBe("no-store");
     expect(await missing.json()).toEqual({
-      error:
-        "Anatomy effect not installed. Restore the committed glucose particle asset.",
+      error: EFFECT_NOT_INSTALLED_API,
       installed: false,
     });
   });

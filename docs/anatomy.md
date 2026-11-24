@@ -28,9 +28,9 @@ The Body twin viewer can slide from the BodyLoop scan into stacked reference ana
 bun run anatomy:fetch
 ```
 
-The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas, both demo bodies and both rigged demo bodies. `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`), `--demo <id>` one demo body and `--rigged <id>` one rigged demo body (`anny-adult-m`, `anny-adult-f`); `--skip-rigged` leaves the rigged bodies out.
+The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas, both demo bodies, both rigged demo bodies and the anatomy effects (the glucose particles). `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`), `--demo <id>` one demo body and `--rigged <id>` one rigged demo body (`anny-adult-m`, `anny-adult-f`); `--skip-rigged` leaves the rigged bodies out.
 
-Without these files the Digital Twin page says "Reference anatomy is not available here." or "Could not load the demo body." and names no command; the API responses (`/api/anatomy/...`) still name `bun run anatomy:fetch`.
+Without these files the Digital Twin page says "Reference anatomy is not available here.", "Could not load the demo body." or "Vessel particles are not installed here." and names no command; the API responses (`/api/anatomy/...`) still name `bun run anatomy:fetch`.
 
 To bump a pin: download the new file, record its bytes and SHA-256 in `packages/anatomy/manifest.ts`, re-measure the frame facts below, and update this table.
 
@@ -77,13 +77,16 @@ heart mask, the entire cardiovascular system remains at 90% rather than hiding t
 heart. Leaving both modes restores the normal opacity and depth
 passes; zero density hides particles but keeps the glucose-mode anatomy appearance.
 
-- The committed particle-only companion is served separately through
-  `GET /api/anatomy/effects/glucose-particles?v=000834e73f4b008e`, using the same
-  pinned-GLB caching and missing-file rules. It is included in Next's deployment
-  tracing independently of `ANATOMY_DATA_DIR`; no second anatomy is loaded.
+- The particle-only companion is not committed. `bun run anatomy:fetch` installs it
+  in `ANATOMY_DATA_DIR` (default `data/anatomy/glucose-particles/`), checked against
+  its pin in `packages/anatomy/effects.ts`. It is served separately through
+  `GET /api/anatomy/effects/glucose-particles?v=000834e73f4b008e`, with the atlas
+  routes' caching and missing-file rules: without the file the route answers a
+  JSON 404 naming `bun run anatomy:fetch`, and the slider is disabled with a plain
+  not-installed line instead of an error. No second anatomy is loaded.
 - Its 12-second `GlucoseFlow` clip repeats at fixed 1x. Density only toggles ranked
   node visibility and does not restart or retime the clip.
-- Particles are drawn at the size in the committed GLB, the size the handoff's
+- Particles are drawn at the size in the pinned GLB, the size the handoff's
   vessel-wall clearance check was run at; the app does not rescale them.
 - The companion is a sibling of the atlas under the same fit/placement group,
   not a child of a vessel mesh. It follows depth and cardiovascular visibility,
@@ -98,7 +101,7 @@ passes; zero density hides particles but keeps the glucose-mode anatomy appearan
   when the effect is detached, retried or the viewer unmounts.
 
 Asset contract, scope, attribution and authoring limitations:
-[particle handoff](../data/anatomy/glucose-particles/HANDOFF.md).
+[particle handoff](glucose-particles.md).
 The derivative retains the BodyParts3D attribution and licence caveat above.
 
 ## Frames and fit

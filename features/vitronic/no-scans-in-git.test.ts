@@ -1,18 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
  * Scans of people never go into git (#614, docs/vitronic-reference-scans.md).
- * Meshes and point clouds are refused except for the pinned, authored glucose
- * particle asset. BodyLoop measurement exports are refused under any name
- * that says what they are.
+ * A mesh or point cloud in the tree, sealed or not, is refused outright; the synthetic mesh the
+ * tests need is built in code (`packages/vitronic/tiny-glb.ts`), so none is
+ * allowed here. BodyLoop measurement exports are refused under any name that
+ * says what they are.
  */
 const REPO = join(import.meta.dir, "../..");
-const PARTICLE_ASSET = "data/anatomy/glucose-particles/glucose-particles.glb";
-const PARTICLE_ASSET_SHA256 =
-  "000834e73f4b008eb81a753a50d924ce52a8564b1cdec10bdb3911f90429d169";
 
 const SCAN_EXTENSIONS = [
   "glb",
@@ -34,8 +30,6 @@ const SCAN_FILE = new RegExp(
   "i",
 );
 const MEASUREMENT_EXPORT = /(^|\/)(measurements|viatar[-_]?\d*|bodyloop[^/]*)\.json$/i;
-const isUnapprovedMesh = (file: string): boolean =>
-  SCAN_FILE.test(file) && file !== PARTICLE_ASSET;
 
 const tracked = (): string[] =>
   Bun.spawnSync(["git", "ls-files", "-z"], { cwd: REPO })
@@ -48,26 +42,8 @@ describe("no scans in git", () => {
     expect(tracked().length).toBeGreaterThan(100);
   });
 
-  test("no unapproved mesh or point cloud is tracked", () => {
-    expect(tracked().filter(isUnapprovedMesh)).toEqual([]);
-  });
-
-  test("the approved particle asset matches its pinned hash", () => {
-    expect(tracked()).toContain(PARTICLE_ASSET);
-    const hash = createHash("sha256")
-      .update(readFileSync(join(REPO, PARTICLE_ASSET)))
-      .digest("hex");
-    expect(hash).toBe(PARTICLE_ASSET_SHA256);
-  });
-
-  test("the exception does not allow other meshes or sealed assets", () => {
-    expect(isUnapprovedMesh(PARTICLE_ASSET)).toBe(false);
-    for (const file of [
-      `${PARTICLE_ASSET}.enc`,
-      "data/anatomy/glucose-particles/another.glb",
-      "data/vitronic/any-user/glucose-particles.glb",
-    ])
-      expect(isUnapprovedMesh(file)).toBe(true);
+  test("no mesh or point cloud is tracked", () => {
+    expect(tracked().filter((file) => SCAN_FILE.test(file))).toEqual([]);
   });
 
   test("no BodyLoop measurement export is tracked", () => {

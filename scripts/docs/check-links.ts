@@ -221,7 +221,6 @@ const markdownUnder = (listed: readonly string[], dir: string): string[] =>
 const PAGE_FOLDERS = [
   ".github",
   "apps",
-  "data",
   "evaluation",
   "features",
   "knowledge",

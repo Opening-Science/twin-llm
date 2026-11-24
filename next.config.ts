@@ -51,9 +51,6 @@ const BUILD_ENV = {
 
 const config: NextConfig = {
   transpilePackages: OPEN_TWIN_SOURCE_PACKAGES,
-  outputFileTracingIncludes: {
-    "/api/anatomy/effects/*": ["./data/anatomy/glucose-particles/glucose-particles.glb"],
-  },
   env: BUILD_ENV,
   experimental: {
     // proxy.ts runs on every API route but the GBD upload, and Next buffers a

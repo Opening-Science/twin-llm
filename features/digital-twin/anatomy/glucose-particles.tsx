@@ -12,6 +12,23 @@ import { createGlucoseFlow, type GlucoseStatus } from "./glucose-flow";
 
 type Flow = ReturnType<typeof createGlucoseFlow>;
 
+/** The parsed companion, or null when the route says it is not installed. */
+const loadGlucoseEffect = async () => {
+  const response = await fetch(glucoseEffectApiUrl());
+  if (response.status === 404) {
+    const body: unknown = await response.json().catch(() => null);
+    if (
+      typeof body === "object" &&
+      body !== null &&
+      "installed" in body &&
+      body.installed === false
+    )
+      return null;
+  }
+  if (!response.ok) throw new Error(`Glucose effect answered ${response.status}`);
+  return new GLTFLoader().parseAsync(await response.arrayBuffer(), "");
+};
+
 export type GlucoseParticlesModel = Readonly<{
   density: number;
   retry: number;
@@ -41,11 +58,14 @@ export const GlucoseParticles = ({
     let cancelled = false;
     let owned: Flow | null = null;
     onStatus("loading");
-    new GLTFLoader()
-      .loadAsync(glucoseEffectApiUrl())
+    loadGlucoseEffect()
       .then((gltf) => {
         if (cancelled) {
-          disposeObject3D(gltf.scene);
+          if (gltf) disposeObject3D(gltf.scene);
+          return;
+        }
+        if (!gltf) {
+          onStatus("missing");
           return;
         }
         try {

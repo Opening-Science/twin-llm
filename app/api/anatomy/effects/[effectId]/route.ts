@@ -1,4 +1,4 @@
 import { createAnatomyEffectHandler } from "@/features/digital-twin/anatomy/atlas-handler";
-import { openGlucoseEffect } from "@/packages/anatomy/effect-store";
+import { openEffect } from "@/packages/anatomy/atlas-store";
 
-export const GET = createAnatomyEffectHandler({ openEffect: openGlucoseEffect });
+export const GET = createAnatomyEffectHandler({ openEffect });

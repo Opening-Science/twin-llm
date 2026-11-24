@@ -1,6 +1,7 @@
 import { join, resolve } from "node:path";
 
 import { DEMO_BODIES, type DemoBodyId } from "./demo-bodies";
+import { EFFECTS, type EffectId } from "./effects";
 import { FITTED_ATLASES } from "./fitted-atlases";
 import { ATLASES, type AtlasId } from "./manifest";
 import { RIGGED_BODIES } from "./rigged-bodies";
@@ -28,6 +29,10 @@ export const demoBodyFilePath = (dir: string, id: DemoBodyId): string =>
 /** Rigged demo bodies are baked into the same dir; same closed-set guarantee. */
 export const riggedBodyFilePath = (dir: string, id: DemoBodyId): string =>
   join(dir, RIGGED_BODIES[id].fileName);
+
+/** Anatomy effects are fetched into the same dir; same closed-set guarantee. */
+export const effectFilePath = (dir: string, id: EffectId): string =>
+  join(dir, EFFECTS[id].fileName);
 
 /** Where Blender's fitted atlases and their quantised copies go, inside the anatomy dir. */
 export const FITTED_DIR_NAME = "fitted";

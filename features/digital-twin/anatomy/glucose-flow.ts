@@ -3,7 +3,8 @@ import { AnimationMixer, LoopRepeat, type AnimationClip, type Object3D } from "t
 import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
 import { type AtlasId } from "@/packages/anatomy/manifest";
 
-export type GlucoseStatus = "idle" | "loading" | "ready" | "error";
+/** `missing`: the file is not fetched here, which is a setup step, not a failure. */
+export type GlucoseStatus = "idle" | "loading" | "ready" | "missing" | "error";
 
 export const glucoseUnavailable = (
   atlasId: AtlasId,

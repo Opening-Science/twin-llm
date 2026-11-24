@@ -20,16 +20,25 @@ import { RIGGED_BODIES, riggedBodyVersion } from "@/packages/anatomy/rigged-bodi
 import {
   GLUCOSE_EFFECT,
   anatomyEffectVersion,
+  type AnatomyEffectId,
   isAnatomyEffectId,
 } from "@/packages/anatomy/effects";
 
-import { ANATOMY_NOT_INSTALLED_API, FITTED_NOT_INSTALLED_API } from "./anatomy-copy";
+import {
+  ANATOMY_NOT_INSTALLED_API,
+  EFFECT_NOT_INSTALLED_API,
+  FITTED_NOT_INSTALLED_API,
+} from "./anatomy-copy";
 import { DEMO_NOT_INSTALLED_API, RIGGED_NOT_INSTALLED_API } from "./demo-copy";
 import { createPinnedGlbHandler } from "./pinned-glb-handler";
 
+/**
+ * GET /api/anatomy/effects/:effectId. Effects are fetched like the atlases
+ * (`bun run anatomy:fetch`); caching and 404 rules are the shared ones.
+ */
 export const createAnatomyEffectHandler = (
   deps: Readonly<{
-    openEffect: () => Promise<Uint8Array<ArrayBuffer> | null>;
+    openEffect: (id: AnatomyEffectId) => Promise<Uint8Array<ArrayBuffer> | null>;
   }>,
 ) =>
   createPinnedGlbHandler({
@@ -38,8 +47,7 @@ export const createAnatomyEffectHandler = (
     sha256: () => GLUCOSE_EFFECT.sha256,
     version: anatomyEffectVersion,
     open: deps.openEffect,
-    notInstalled:
-      "Anatomy effect not installed. Restore the committed glucose particle asset.",
+    notInstalled: EFFECT_NOT_INSTALLED_API,
   });
 
 /**

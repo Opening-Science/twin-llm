@@ -1,12 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { AnimationClip, Group, Mesh, NumberKeyframeTrack, type Object3D } from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
 
 import { createGlucoseFlow, glucoseUnavailable } from "./glucose-flow";
+
+/** The pinned effect, when `bun run anatomy:fetch` has installed it here. */
+const EFFECT_FILE = join(
+  import.meta.dir,
+  "../../../data/anatomy",
+  GLUCOSE_EFFECT.fileName,
+);
 
 const pool = () => {
   const root = new Group();
@@ -108,66 +117,67 @@ describe("glucose flow", () => {
     expect(() => createGlucoseFlow(root, [])).toThrow("animation is missing");
   });
 
-  test("the committed GLB matches its pin and supports all 101 density settings", async () => {
-    const bytes = await readFile(
-      new URL(
-        "../../../data/anatomy/glucose-particles/glucose-particles.glb",
-        import.meta.url,
-      ),
-    );
-    expect(bytes.byteLength).toBe(GLUCOSE_EFFECT.bytes);
-    expect(createHash("sha256").update(bytes).digest("hex")).toBe(GLUCOSE_EFFECT.sha256);
-    const buffer = new Uint8Array(bytes).buffer;
-    const gltf = await new GLTFLoader().parseAsync(buffer, "");
-    expect(gltf.animations.map((clip) => [clip.name, clip.duration])).toEqual([
-      ["GlucoseFlow", 12],
-    ]);
-    const meshes: Mesh[] = [];
-    gltf.scene.traverse((node) => {
-      if (node instanceof Mesh && node.userData.glucoseDensityRank !== undefined) {
-        meshes.push(node);
+  test.skipIf(!existsSync(EFFECT_FILE))(
+    "the fetched GLB matches its pin and supports all 101 density settings",
+    async () => {
+      const bytes = await readFile(EFFECT_FILE);
+      expect(bytes.byteLength).toBe(GLUCOSE_EFFECT.bytes);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+        GLUCOSE_EFFECT.sha256,
+      );
+      const buffer = new Uint8Array(bytes).buffer;
+      const gltf = await new GLTFLoader().parseAsync(buffer, "");
+      expect(gltf.animations.map((clip) => [clip.name, clip.duration])).toEqual([
+        ["GlucoseFlow", 12],
+      ]);
+      const meshes: Mesh[] = [];
+      gltf.scene.traverse((node) => {
+        if (node instanceof Mesh && node.userData.glucoseDensityRank !== undefined) {
+          meshes.push(node);
+        }
+      });
+      expect(meshes.length).toBe(180);
+      expect(new Set(meshes.map((mesh) => mesh.geometry)).size).toBe(1);
+      const geometry = meshes[0].geometry;
+      const positions = geometry.getAttribute("position");
+      const original = Array.from({ length: positions.count }, (_, i) => [
+        positions.getX(i),
+        positions.getY(i),
+        positions.getZ(i),
+      ]);
+      geometry.computeBoundingBox();
+      const originalBounds = geometry.boundingBox!.clone();
+      const flow = createGlucoseFlow(gltf.scene, gltf.animations);
+      expect(flow.maxParticles).toBe(180);
+      expect(meshes.every((mesh) => mesh.geometry === geometry)).toBe(true);
+      // Particles keep the size the vessel-wall check was run at.
+      const expectUnscaled = () => {
+        for (let i = 0; i < original.length; i++) {
+          expect(positions.getX(i)).toBe(original[i][0]);
+          expect(positions.getY(i)).toBe(original[i][1]);
+          expect(positions.getZ(i)).toBe(original[i][2]);
+        }
+      };
+      expectUnscaled();
+      geometry.computeBoundingBox();
+      expect(geometry.boundingBox!.equals(originalBounds)).toBe(true);
+      const particles: Object3D[] = [];
+      gltf.scene.traverse((node) => {
+        if (node.userData.glucoseDensityRank !== undefined) particles.push(node);
+      });
+      for (let percent = 0; percent <= 100; percent++) {
+        const count = Math.round(percent * 1.8);
+        expect(flow.setDensity(percent / 100)).toBe(count);
+        flow.update(0.01);
+        expect(particles.filter((node) => node.visible).length).toBe(count);
       }
-    });
-    expect(meshes.length).toBe(180);
-    expect(new Set(meshes.map((mesh) => mesh.geometry)).size).toBe(1);
-    const geometry = meshes[0].geometry;
-    const positions = geometry.getAttribute("position");
-    const original = Array.from({ length: positions.count }, (_, i) => [
-      positions.getX(i),
-      positions.getY(i),
-      positions.getZ(i),
-    ]);
-    geometry.computeBoundingBox();
-    const originalBounds = geometry.boundingBox!.clone();
-    const flow = createGlucoseFlow(gltf.scene, gltf.animations);
-    expect(flow.maxParticles).toBe(180);
-    expect(meshes.every((mesh) => mesh.geometry === geometry)).toBe(true);
-    // Particles keep the size the vessel-wall check was run at.
-    const expectUnscaled = () => {
-      for (let i = 0; i < original.length; i++) {
-        expect(positions.getX(i)).toBe(original[i][0]);
-        expect(positions.getY(i)).toBe(original[i][1]);
-        expect(positions.getZ(i)).toBe(original[i][2]);
-      }
-    };
-    expectUnscaled();
-    geometry.computeBoundingBox();
-    expect(geometry.boundingBox!.equals(originalBounds)).toBe(true);
-    const particles: Object3D[] = [];
-    gltf.scene.traverse((node) => {
-      if (node.userData.glucoseDensityRank !== undefined) particles.push(node);
-    });
-    for (let percent = 0; percent <= 100; percent++) {
-      const count = Math.round(percent * 1.8);
-      expect(flow.setDensity(percent / 100)).toBe(count);
-      flow.update(0.01);
-      expect(particles.filter((node) => node.visible).length).toBe(count);
-    }
-    flow.dispose();
-    const second = createGlucoseFlow(gltf.scene, gltf.animations);
-    expectUnscaled();
-    second.dispose();
-  });
+      flow.dispose();
+      const second = createGlucoseFlow(gltf.scene, gltf.animations);
+      expectUnscaled();
+      second.dispose();
+    },
+    60_000,
+  );
 });
 
 describe("glucose atlas integration policy", () => {
