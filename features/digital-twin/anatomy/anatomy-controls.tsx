@@ -33,6 +33,7 @@ import {
   HIGHLIGHT_SYSTEMS,
   HIGHLIGHT_SYSTEMS_ONLY,
   LAYER_LABEL,
+  SEGMENT_FIT_REFUSED,
   SYSTEM_LABEL,
   type AnatomyEnvelope,
 } from "./anatomy-copy";
@@ -200,6 +201,9 @@ export const AnatomyControls = ({
         {ready && !ready.fitOk ? <p>{ANATOMY_FIT_FAILED}</p> : null}
         {ready && ready.fitOk ? (
           <p>{anatomyFitNote(ready.anchor, envelope, posed)}</p>
+        ) : null}
+        {ready && ready.fitOk && ready.segmentsRefused ? (
+          <p>{SEGMENT_FIT_REFUSED}</p>
         ) : null}
         {state.requested ? <p>{anatomyTypicalNote(envelope)}</p> : null}
         {state.requested && coverage ? <p>{coverage}</p> : null}

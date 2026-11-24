@@ -17,6 +17,7 @@ import {
   FIT_ATLAS_TOGGLE,
   HIGHLIGHT_HIDDEN,
   HIGHLIGHT_SYSTEMS_ONLY,
+  SEGMENT_FIT_REFUSED,
 } from "./anatomy-copy";
 import { initialAnatomyState, type AnatomyState } from "./anatomy-state";
 import {
@@ -53,6 +54,7 @@ const ready = (
   parts: [] as const,
   anchor: "hips" as const,
   fitOk: true,
+  segmentsRefused: false,
   ...overrides,
 });
 
@@ -107,6 +109,18 @@ describe("AnatomyControls", () => {
     expect(
       render({ ...initialAnatomyState, requested: true, load: ready({ fitOk: false }) }),
     ).toContain(ANATOMY_FIT_FAILED);
+  });
+
+  test("a refused segment fit says why the one-scale fit shows", () => {
+    const shown = (segmentsRefused: boolean) =>
+      render({
+        ...initialAnatomyState,
+        requested: true,
+        load: ready({ segmentsRefused }),
+      });
+    expect(shown(true)).toContain(anatomyFitNote("hips"));
+    expect(shown(true)).toContain(SEGMENT_FIT_REFUSED);
+    expect(shown(false)).not.toContain(SEGMENT_FIT_REFUSED);
   });
 
   test("loading shows a percentage, an error offers a retry", () => {
@@ -193,6 +207,10 @@ describe("AnatomyControls", () => {
 
   test("a demo body that is not posed (the static fallback) never claims the stance", () => {
     expect(anatomyFitNote("bbox", "demo")).toBe(DEMO_FIT_NOTE_UNPOSED);
+    // The segment fit says what it does, and whose body it is not, on a scan.
+    expect(anatomyFitNote("segments")).toContain("part by part");
+    expect(anatomyFitNote("segments")).toContain("Not the scanned person's anatomy.");
+    expect(anatomyFitNote("segments", "demo", true)).toContain("stands unposed");
     expect(DEMO_FIT_NOTE_UNPOSED).not.toContain("stance");
     for (const html of [demoHtml(), demoHtml(false)]) {
       expect(html).toContain(DEMO_FIT_NOTE_UNPOSED);

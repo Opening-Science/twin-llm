@@ -82,6 +82,7 @@ describe("anatomyReducer", () => {
           parts: [{ layer: "organs", system: "nervous", group: "brain" }],
           anchor: "hips",
           fitOk: true,
+          segmentsRefused: false,
         },
       },
     );
