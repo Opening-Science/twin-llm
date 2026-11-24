@@ -641,6 +641,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     kind: "exempt",
     why: NOT_PERSONAL,
   },
+  "GET /api/anatomy/effects/[effectId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
   "GET /api/anatomy/demo/[bodyId]": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
