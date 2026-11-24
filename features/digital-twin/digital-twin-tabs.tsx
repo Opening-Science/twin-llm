@@ -12,14 +12,14 @@ const TABS = [
 ] as const;
 
 export const DigitalTwinTabs = ({ pathname }: Readonly<{ pathname: string }>) => (
-  <nav aria-label={PAGE_TITLE} className="mt-4 flex flex-wrap gap-1 border-b">
+  <nav aria-label={PAGE_TITLE} className="segmented mt-4">
     {TABS.map(({ href, label }) => (
       <Link
         key={href}
         href={href}
         prefetch={false}
         aria-current={pathname === href ? "page" : undefined}
-        className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-[current=page]:border-primary aria-[current=page]:text-foreground rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-inset aria-[current=page]:font-semibold"
+        className="segmented-item"
       >
         {label}
       </Link>
