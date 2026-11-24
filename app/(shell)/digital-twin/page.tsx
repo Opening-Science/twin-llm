@@ -1,3 +1,4 @@
+import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
 import { DigitalTwinScreen } from "@/features/digital-twin/digital-twin-screen";
 import { lockedScreen } from "@/features/vault/page-gate";
 import { vitronicEnv } from "@/infrastructure/env";
@@ -12,5 +13,9 @@ export default async function DigitalTwinPage() {
   const locked = await lockedScreen();
   if (locked) return locked;
   // A boolean only: no env value leaves the server.
-  return <DigitalTwinScreen bodyLoopConfigured={vitronicEnv() !== null} />;
+  return (
+    <DigitalTwinFrame>
+      <DigitalTwinScreen bodyLoopConfigured={vitronicEnv() !== null} />
+    </DigitalTwinFrame>
+  );
 }

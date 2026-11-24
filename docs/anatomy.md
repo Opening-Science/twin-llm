@@ -2,6 +2,8 @@
 
 The Body twin viewer can slide from the BodyLoop scan into stacked reference anatomy: **Scan → Muscle → Skeleton → Organs**. The anatomy is a donor atlas fitted to the scan's height and hips. It is not the scanned person's anatomy, and the viewer says so next to the slider.
 
+The viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/digital-twin/your-day`) and **Your 10-Days** (`/digital-twin/your-10-days`) are placeholders and do not read replay data. All three pages use the same vault gate. Moving between these tabs keeps the chosen person in memory, without storing personal IDs in the URL or browser storage.
+
 ## Atlases
 
 | Atlas       | File                 | Donor                           | Licence     | Bytes      | SHA-256                                                            |

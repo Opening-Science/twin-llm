@@ -30,11 +30,11 @@ import {
   GENOME_EMPTY,
   GENOME_NOTE,
   GENOME_TWIN,
-  PAGE_TITLE,
   SOURCES_NOTE,
   SOURCES_PANEL,
   SOURCES_TITLE,
 } from "./twin-page-copy";
+import { useTwinPerson } from "./twin-person-selection";
 
 const SOURCES_PANEL_ID = "twin-sources";
 
@@ -141,6 +141,7 @@ export const DigitalTwinScreen = ({
   reportPreview,
   bodyLoopConfigured,
 }: DigitalTwinScreenProps) => {
+  const person = useTwinPerson();
   const [payload, setPayload] = useState<ArkStatusPayload | null>(preview ?? null);
   const [context, setContext] = useState<TwinContext | null>(contextPreview ?? null);
 
@@ -163,8 +164,7 @@ export const DigitalTwinScreen = ({
   const plan = twinSections({ context, genomeEnabled: status?.enabled === true });
 
   return (
-    <div className="page-wide">
-      <h1 className="text-display">{PAGE_TITLE}</h1>
+    <>
       <section className="mt-6">
         <SectionHead title={BODY_TWIN} note={BODY_TWIN_NOTE} />
         <div className="surface mt-4 px-4 py-5">
@@ -172,6 +172,10 @@ export const DigitalTwinScreen = ({
             preview={bodyPreview}
             onContext={setContext}
             bodyLoopConfigured={bodyLoopConfigured}
+            initialSubjectId={person?.subjectId}
+            initialPersonRef={person?.demoPersonRef}
+            onSubjectChange={person?.onSubjectChange}
+            onDemoPersonChange={person?.onDemoPersonChange}
           />
         </div>
       </section>
@@ -179,6 +183,6 @@ export const DigitalTwinScreen = ({
         <SourcesSection context={context} plan={plan} />
       ) : null}
       <GenomeSection status={status} reportPreview={reportPreview} />
-    </div>
+    </>
   );
 };
