@@ -50,35 +50,36 @@ await mockModuleForFile("@/infrastructure/current-user", {
 await mockModuleForFile("@/infrastructure/database", {
   database: () => ({
     user: { findUnique: async () => ({ clerkId: "local" }) },
-    modelResponse: {
+    answer: {
       findUnique: async () => ({
         id: "response-synthetic-1",
-        modelName: "Synthetic",
-        turn: { thread: { userId: USER_ID } },
+        answererLabel: "Synthetic",
+        state: "streaming",
+        exchange: { conversation: { ownerId: USER_ID } },
       }),
-      update: async (args: { data: { status: string; text: string } }) => {
+      update: async (args: { data: { state: string; bodySealed: string } }) => {
         const text = storeCipher().openText(
           "model_responses",
           "text",
           "response-synthetic-1",
-          args.data.text,
+          args.data.bodySealed,
         );
-        refusedRows.push(`${args.data.status} ${text}`);
+        refusedRows.push(`${args.data.state.toUpperCase()} ${text}`);
         return {};
       },
     },
-    turn: {
+    exchange: {
       findUnique: async () => ({
-        threadId: "thread-synthetic-1",
-        thread: {
-          userId: USER_ID,
-          turns: [
+        conversationId: "thread-synthetic-1",
+        conversation: {
+          ownerId: USER_ID,
+          exchanges: [
             {
               id: "turn-synthetic-0",
-              responses: [
+              answers: [
                 {
                   id: "response-synthetic-0",
-                  toolParts:
+                  toolTraceSealed:
                     earlierToolParts === null
                       ? null
                       : sealJson(
@@ -91,7 +92,10 @@ await mockModuleForFile("@/infrastructure/database", {
                 },
               ],
             },
-            { id: TURN_ID, responses: [{ id: "response-synthetic-1", toolParts: null }] },
+            {
+              id: TURN_ID,
+              answers: [{ id: "response-synthetic-1", toolTraceSealed: null }],
+            },
           ],
         },
       }),

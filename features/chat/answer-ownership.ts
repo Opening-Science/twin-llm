@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { ModelResponseStatus } from "@/generated/prisma/client";
+import { type AnswerStatus, statusOf } from "@/infrastructure/answer-state";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { database } from "@/infrastructure/database";
 
@@ -9,7 +9,7 @@ export type AnswerOwnership =
       kind: "owner";
       appUserId: string;
       modelName: string;
-      status: ModelResponseStatus;
+      status: AnswerStatus;
     }>
   | Readonly<{ kind: "missing" }>
   | Readonly<{ kind: "someone-else" }>;
@@ -19,17 +19,24 @@ export const answerOwnership = async (
   actorId: string,
   answer: Readonly<{ turnId: string; modelId: string }>,
 ): Promise<AnswerOwnership> => {
-  const row = await database().modelResponse.findUnique({
-    where: { turnId_modelId: { turnId: answer.turnId, modelId: answer.modelId } },
+  const row = await database().answer.findUnique({
+    where: {
+      exchangeId_answererRef: { exchangeId: answer.turnId, answererRef: answer.modelId },
+    },
     select: {
-      modelName: true,
-      status: true,
-      turn: { select: { thread: { select: { userId: true } } } },
+      answererLabel: true,
+      state: true,
+      exchange: { select: { conversation: { select: { ownerId: true } } } },
     },
   });
   if (row === null) return { kind: "missing" };
   const appUserId = await findAppUserId(actorId);
-  return appUserId !== null && row.turn.thread.userId === appUserId
-    ? { kind: "owner", appUserId, modelName: row.modelName, status: row.status }
+  return appUserId !== null && row.exchange.conversation.ownerId === appUserId
+    ? {
+        kind: "owner",
+        appUserId,
+        modelName: row.answererLabel,
+        status: statusOf(row.state),
+      }
     : { kind: "someone-else" };
 };

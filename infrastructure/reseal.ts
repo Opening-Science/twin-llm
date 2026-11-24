@@ -1,11 +1,14 @@
 import { type FieldCipher } from "./field-cipher";
 import { isSealedText, sealedTextKeyId } from "./field-crypto";
 import {
+  isChatCopy,
+  PERSONAL_COPIES,
   PERSONAL_TABLES,
   type PersonalTable,
   pendingRowsSql,
   plaintextCountSql,
   rowsWithKeySql,
+  sealContextFor,
   updateRowSql,
 } from "./personal-columns";
 
@@ -76,13 +79,14 @@ export const resealRow = (
       plain[column] = null;
       return null;
     }
+    const context = sealContextFor(entry, column);
     const value = isSealedText(stored)
-      ? cipher.openText(entry.table, column, id, stored)
+      ? cipher.openText(context.table, context.column, id, stored)
       : stored;
     plain[column] = value;
     if (sealedTextKeyId(stored) === active) return stored;
-    const next = cipher.sealText(entry.table, column, id, value);
-    if (cipher.openText(entry.table, column, id, next) !== value) {
+    const next = cipher.sealText(context.table, context.column, id, value);
+    if (cipher.openText(context.table, context.column, id, next) !== value) {
       throw new ResealCheckError(entry.table, column);
     }
     return next;
@@ -144,6 +148,36 @@ export const resealOwner = async (
   return counts;
 };
 
+/** The chat tables, old and new: the move's steps add and drop them while this code runs. */
+const CHAT_TABLES = new Set([
+  "conversations",
+  "exchanges",
+  "answers",
+  ...PERSONAL_COPIES.map((entry) => entry.table),
+]);
+
+/**
+ * The tables the checks read: every resealed table and every chat copy,
+ * less any chat table that is not there. The chat tables move adds and
+ * drops chat tables in steps (a rollback drops the new ones, the contract
+ * step the old ones), so a chat table that is gone is skipped, not an error.
+ * Only a clear "not there" skips one.
+ */
+export const checkedTables = async (query: SqlRun): Promise<readonly PersonalTable[]> => {
+  const present: PersonalTable[] = [];
+  for (const entry of [...PERSONAL_TABLES, ...PERSONAL_COPIES]) {
+    if (!CHAT_TABLES.has(entry.table)) {
+      present.push(entry);
+      continue;
+    }
+    const [row] = await query(`SELECT to_regclass($1::text) IS NOT NULL AS present`, [
+      `"${entry.table}"`,
+    ]);
+    if (row?.present !== false) present.push(entry);
+  }
+  return present;
+};
+
 /** How many of one owner's rows still name `keyId`; zero before that key is removed. */
 export const rowsWithKey = async (
   query: SqlRun,
@@ -151,7 +185,7 @@ export const rowsWithKey = async (
   keyId: string,
 ): Promise<number> => {
   let total = 0;
-  for (const entry of PERSONAL_TABLES) {
+  for (const entry of await checkedTables(query)) {
     const [row] = await query(rowsWithKeySql(entry, keyId), [ownerId]);
     total += Number(row?.n ?? 0);
   }
@@ -168,7 +202,7 @@ export const plaintextFindings = async (
   query: SqlRun,
 ): Promise<readonly PlaintextFinding[]> => {
   const findings: PlaintextFinding[] = [];
-  for (const entry of PERSONAL_TABLES) {
+  for (const entry of await checkedTables(query)) {
     const [row] = await query(plaintextCountSql(entry), []);
     for (const [column, count] of Object.entries(row ?? {})) {
       const rows = Number(count);
@@ -184,7 +218,8 @@ export const formatPlaintextFindings = (
 ): readonly string[] =>
   findings.length === 0
     ? ["  [ok] every listed personal column holds sealed values (tlenc1.)"]
-    : findings.map(
-        (finding) =>
-          `  [!!] ${finding.table}.${finding.column}: ${finding.rows} row(s) not sealed; run bun run vault:migrate (docs/runbook.md)`,
+    : findings.map((finding) =>
+        isChatCopy(finding.table)
+          ? `  [!!] ${finding.table}.${finding.column}: ${finding.rows} copied row(s) not sealed; run bun run db:chat-parity (docs/storage.md, Chat tables move)`
+          : `  [!!] ${finding.table}.${finding.column}: ${finding.rows} row(s) not sealed; run bun run vault:migrate (docs/runbook.md)`,
       );

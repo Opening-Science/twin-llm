@@ -4,11 +4,13 @@ import { openNumber, plainCipher, sealedCipher } from "./field-cipher";
 import { sealedTextKeyId } from "./field-crypto";
 import {
   observationLookupValue,
+  PERSONAL_COPIES,
   personalTable,
   type PersonalTable,
   variantSiteValue,
 } from "./personal-columns";
 import {
+  checkedTables,
   formatPlaintextFindings,
   plaintextFindings,
   ResealCheckError,
@@ -340,5 +342,93 @@ describe("migrating stored OAuth and BodyLoop tokens (#341)", () => {
         String(rotated?.accessTokenEnc),
       ),
     ).toBe(envValue("access"));
+  });
+});
+
+describe("the chat copies are checked, never resealed", () => {
+  const RESPONSES = PERSONAL_COPIES.find((entry) => entry.table === "model_responses");
+  if (RESPONSES === undefined) throw new Error("model_responses copy missing");
+  const copy = (id: string, text: string) => ({
+    id,
+    owner: OWNER,
+    text,
+    reasoningText: null,
+    attribution: null,
+    responseDocument: null,
+    toolParts: null,
+  });
+
+  test("a plain value left in a copy is a finding for the doctor and the Lab", async () => {
+    const sealed = sealedCipher(OLD).sealText("model_responses", "text", "a1", "Made-up");
+    const table = memoryTable(RESPONSES, [
+      copy("a1", sealed),
+      copy("a2", "plain made-up"),
+    ]);
+    expect(await plaintextFindings(table.ports.query)).toEqual([
+      { table: "model_responses", column: "text", rows: 1 },
+    ]);
+  });
+
+  test("the doctor points a plain copy at the parity check, not at vault:migrate", () => {
+    expect(
+      formatPlaintextFindings([{ table: "model_responses", column: "text", rows: 1 }]),
+    ).toEqual([
+      "  [!!] model_responses.text: 1 copied row(s) not sealed; run bun run db:chat-parity (docs/storage.md, Chat tables move)",
+    ]);
+  });
+
+  test("a copy still under a retiring key keeps that key from being removed", async () => {
+    const old = sealedCipher(OLD).sealText("model_responses", "text", "a1", "Made-up");
+    const table = memoryTable(RESPONSES, [copy("a1", old)]);
+    expect(await rowsWithKey(table.ports.query, OWNER, OLD.keyId)).toBe(1);
+    expect(await rowsWithKey(table.ports.query, OWNER, NEW.keyId)).toBe(0);
+  });
+});
+
+describe("the new chat tables are resealed under their frozen names", () => {
+  test("an answer resealed with a new key opens as model_responses.text, as before the move", () => {
+    const old = sealedCipher(OLD).sealText("model_responses", "text", "a1", "Made-up");
+    const rotated = sealedCipher(NEW, [OLD]);
+    const [body] = resealRow(rotated, personalTable("answers"), {
+      id: "a1",
+      body_sealed: old,
+      reasoning_sealed: null,
+      evidence_sealed: null,
+      document_sealed: null,
+      tool_trace_sealed: null,
+    });
+    expect(sealedTextKeyId(String(body))).toBe(NEW.keyId);
+    expect(
+      sealedCipher(NEW).openText("model_responses", "text", "a1", String(body)),
+    ).toBe("Made-up");
+    expect(() =>
+      sealedCipher(NEW).openText("answers", "body_sealed", "a1", String(body)),
+    ).toThrow();
+  });
+});
+
+describe("the checks after a rollback of the chat tables move", () => {
+  /** A database where the new chat tables are gone and every other table is empty. */
+  const rolledBack = async (
+    sql: string,
+    params: readonly unknown[] = [],
+  ): Promise<readonly SqlRow[]> => {
+    if (sql.includes("to_regclass")) {
+      return [
+        { present: !/^"(conversations|exchanges|answers)"$/.test(String(params[0])) },
+      ];
+    }
+    if (/FROM "(conversations|exchanges|answers)"/.test(sql)) {
+      throw new Error("relation does not exist");
+    }
+    return sql.startsWith("SELECT count(*)::int AS n") ? [{ n: 0 }] : [{}];
+  };
+
+  test("skip the chat tables that are gone, and still read the rest", async () => {
+    const tables = await checkedTables(rolledBack);
+    expect(tables.map((entry) => entry.table)).not.toContain("answers");
+    expect(tables.map((entry) => entry.table)).toContain("model_responses");
+    expect(await plaintextFindings(rolledBack)).toEqual([]);
+    expect(await rowsWithKey(rolledBack, OWNER, OLD.keyId)).toBe(0);
   });
 });

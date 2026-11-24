@@ -64,6 +64,18 @@ The base URL is reduced to a bare origin before it is stored or dialled
   equivalent (TOFU pin + upsert). Digital Twin is two sections: Genome twin and
   Body twin, each with its own empty state.
 
+If the card says the connection was saved but its status could not be
+refreshed, reload Connectors before trying to save again.
+
+Saving pins the scanner certificate but does not validate the API token.
+If **Sync scan** reports that the scanner rejected the token, check that the
+token belongs to that scanner and can read scans. If there is no matching
+scan, verify the Self subject's `proband_id` (not the `viatarId`) and confirm
+that the scanner has a completed scan for it. You can correct the **Scan key**
+next to **Sync scan**; a successful import saves the corrected key. The key
+cannot be changed once the Self subject has imported scans, to keep different
+subjects' scans separate.
+
 cloud_connect push auth (username/password) is not shipped yet (VUSE XR 29 Sep).
 `POST /api/vitronic/upload/[connectionId]` still returns 501 after secret/size checks.
 
@@ -131,7 +143,7 @@ reported to VUSE XR.
 - `PUT /api/vitronic/subjects/:id/default` — `{ viatarId }` pins the scan the viewer opens first; `{ viatarId: null }` clears it. Only a stored snapshot of the actor's own subject can be pinned (404 otherwise). Audited as `vitronic.subjects.default` (subject id and scan number only) before the write, so a failed append changes nothing
 - `POST /api/vitronic/subjects/:id/sync` — live GET per (subject, viatar); 404 when the subject is not the actor's own
 - `POST /api/vitronic/subjects/:id/files` — file ingest for that subject (glb-only allowed)
-- `POST /api/vitronic/sync` — empty body: isSelf newest scan; measurements JSON requires `subjectId`
+- `POST /api/vitronic/sync` — empty body: isSelf newest scan; optional `{ probandId }` corrects the key atomically with the first successful scanner import; measurements JSON requires `subjectId`
 - `POST /api/vitronic/upload/[connectionId]` — cloud_connect push; auth tuple vs `uploadSecretEnc`;
   401 wrong secret; 413 over 100 MiB; parser is `shape pending VUSE XR answer 3`
 - `GET /api/vitronic/avatar/:snapshotId` — signed-in actor only; snapshot must belong to the actor;

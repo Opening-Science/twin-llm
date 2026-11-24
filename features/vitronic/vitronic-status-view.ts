@@ -10,6 +10,8 @@ export type VitronicStatusPayload = Readonly<{
   lastSyncAt: string | null;
   hasAvatar: boolean;
   signedIn?: boolean;
+  probandId?: number | null;
+  scanKeyLocked?: boolean;
   tlsFingerprintPrefix?: string | null;
   scanDate?: string | null;
   properties?: readonly VitronicPropertyRow[];
@@ -46,6 +48,11 @@ export const isVitronicStatusPayload = (
     typeof row.connected === "boolean" &&
     (row.lastSyncAt === null || typeof row.lastSyncAt === "string") &&
     typeof row.hasAvatar === "boolean" &&
+    (row.probandId == null ||
+      (typeof row.probandId === "number" &&
+        Number.isInteger(row.probandId) &&
+        row.probandId > 0)) &&
+    (row.scanKeyLocked === undefined || typeof row.scanKeyLocked === "boolean") &&
     prefixOk &&
     scanOk &&
     propertiesOk

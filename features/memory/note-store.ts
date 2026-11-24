@@ -158,15 +158,15 @@ const readNotesBeforeThread = async (
   turnId: string,
 ): Promise<readonly TwinNote[]> => {
   if (await notesOff(userId)) return [];
-  const turn = await database().turn.findUnique({
+  const exchange = await database().exchange.findUnique({
     where: { id: turnId },
-    select: { thread: { select: { createdAt: true, userId: true } } },
+    select: { conversation: { select: { startedAt: true, ownerId: true } } },
   });
-  if (turn === null || turn.thread.userId !== userId) return [];
+  if (exchange === null || exchange.conversation.ownerId !== userId) return [];
   return notes(
     await cipherForUser(userId),
     await database().twinNote.findMany({
-      where: { userId, createdAt: { lt: turn.thread.createdAt } },
+      where: { userId, createdAt: { lt: exchange.conversation.startedAt } },
       select: FIELDS,
       orderBy: { createdAt: "desc" },
       take: 50,

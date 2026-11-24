@@ -237,10 +237,10 @@ export const readExampleThread = async (
   sql: SqlQuery,
   clerkId: string,
 ): Promise<boolean> => {
-  if (!(await tableExists(sql, "threads")) || !(await tableExists(sql, "users")))
+  if (!(await tableExists(sql, "conversations")) || !(await tableExists(sql, "users")))
     return false;
   const [row] = await sql.unsafe(
-    'select exists(select 1 from threads t join users u on u.id = t."userId" where u."clerkId" = $1 and t.title = $2) as present',
+    'select exists(select 1 from conversations c join users u on u.id = c.owner_id where u."clerkId" = $1 and c.title_sealed = $2) as present',
     [clerkId, EXAMPLE_TITLE],
   );
   return row?.present === true;

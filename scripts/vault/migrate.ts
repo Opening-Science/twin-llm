@@ -27,8 +27,8 @@ import { dirname, join } from "node:path";
 
 import { storageEnv } from "../../infrastructure/env";
 import { resealMeshFiles } from "../../infrastructure/mesh-files";
-import { PERSONAL_TABLES, pendingRowsSql } from "../../infrastructure/personal-columns";
-import { resealOwner } from "../../infrastructure/reseal";
+import { isChatCopy, pendingRowsSql } from "../../infrastructure/personal-columns";
+import { checkedTables, resealOwner } from "../../infrastructure/reseal";
 import { backupFileName, parseVaultArgs, pgEnvFor } from "./cli-args";
 import { openTerminal } from "./terminal";
 import {
@@ -166,15 +166,19 @@ const main = async (): Promise<void> => {
   // 5. Mesh files.
   const meshes = await resealMeshFiles(meshDirOf(userId), userId, cipher);
 
-  // 6. Check: nothing of this person is left unsealed.
-  for (const entry of PERSONAL_TABLES) {
+  // 6. Check: nothing of this person is left unsealed, in the chat copies too.
+  for (const entry of await checkedTables(query)) {
     const left = await query(pendingRowsSql(entry, cipher.activeKeyId ?? ""), [
       userId,
       "",
       1,
     ]);
     if (left.length > 0)
-      return stop(`${entry.table} still has rows to seal; run this again.`);
+      return stop(
+        isChatCopy(entry.table)
+          ? `${entry.table} holds a copy that is not sealed like its chat table; run bun run db:chat-parity (docs/storage.md).`
+          : `${entry.table} still has rows to seal; run this again.`,
+      );
   }
   const total = { ...counts, meshFiles: meshes.sealed + meshes.resealed };
   await appendVaultCounts(actorId, "migrate", total);

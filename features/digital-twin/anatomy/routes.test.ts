@@ -13,15 +13,18 @@ import {
   type FittedAtlasId,
 } from "@/packages/anatomy/fitted-atlases";
 import { RIGGED_BODIES, riggedBodyApiUrl } from "@/packages/anatomy/rigged-bodies";
+import { GLUCOSE_EFFECT, glucoseEffectApiUrl } from "@/packages/anatomy/effects";
 
 import {
   ANATOMY_NOT_INSTALLED_API,
+  EFFECT_NOT_INSTALLED_API,
   FITTED_NOT_INSTALLED_API,
   SKELETON_NOT_CONFIGURED_API,
   SKELETON_NOT_PINNED_API,
 } from "./anatomy-copy";
 import {
   createAnatomyAtlasHandler,
+  createAnatomyEffectHandler,
   createDemoBodyHandler,
   createFittedAtlasHandler,
   createRiggedBodyHandler,
@@ -31,6 +34,46 @@ import { createSkeletonHandler } from "./skeleton-handler";
 import { createAnatomyStatusHandler } from "./status-handler";
 
 const BYTES = new Uint8Array([103, 108, 84, 70, 2, 0, 0, 0]);
+
+describe("GET /api/anatomy/effects/:effectId", () => {
+  test("serves the versioned companion with immutable caching and its own pin", async () => {
+    const GET = createAnatomyEffectHandler({ openEffect: async () => BYTES });
+    const response = await GET(new Request(`http://local${glucoseEffectApiUrl()}`), {
+      params: Promise.resolve({ effectId: "glucose-particles" }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("model/gltf-binary");
+    expect(response.headers.get("etag")).toBe(`"${GLUCOSE_EFFECT.sha256}"`);
+    expect(response.headers.get("cache-control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(BYTES);
+  });
+
+  test("unknown effects never open a file; missing assets return an uncached error", async () => {
+    const opened: string[] = [];
+    const GET = createAnatomyEffectHandler({
+      openEffect: async (id) => {
+        opened.push(id);
+        return null;
+      },
+    });
+    const request = new Request("http://local/api/anatomy/effects/unknown");
+    expect(
+      (await GET(request, { params: Promise.resolve({ effectId: "../atlas" }) })).status,
+    ).toBe(404);
+    expect(opened).toEqual([]);
+    const missing = await GET(request, {
+      params: Promise.resolve({ effectId: "glucose-particles" }),
+    });
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("cache-control")).toBe("no-store");
+    expect(await missing.json()).toEqual({
+      error: EFFECT_NOT_INSTALLED_API,
+      installed: false,
+    });
+  });
+});
 
 const atlasGet = (installed: readonly AtlasId[]) => {
   const opened: AtlasId[] = [];

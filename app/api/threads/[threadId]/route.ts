@@ -12,8 +12,12 @@ const deleteThread = createThreadDeleteHandler({
   appUserIdFor: findAppUserId,
   deleteOwnedThread: (userId, threadId) =>
     database().$transaction(async (tx) => {
-      const turns = await tx.turn.count({ where: { threadId, thread: { userId } } });
-      const { count } = await tx.thread.deleteMany({ where: { id: threadId, userId } });
+      const turns = await tx.exchange.count({
+        where: { conversationId: threadId, conversation: { ownerId: userId } },
+      });
+      const { count } = await tx.conversation.deleteMany({
+        where: { id: threadId, ownerId: userId },
+      });
       return count === 0 ? null : turns;
     }),
   appendAudit: (input) => append(database(), input),

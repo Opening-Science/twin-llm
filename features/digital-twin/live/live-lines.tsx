@@ -13,6 +13,7 @@ import {
   BODYPARTS3D_BEAT_UNAVAILABLE,
   BODYPARTS3D_BREATH_NOTE,
   BODYPARTS3D_HEART_NOTE,
+  animationHeartLine,
   breathingLine,
   CHAMBERS_ILLUSTRATIVE,
   CHAMBERS_LINE,
@@ -22,6 +23,7 @@ import {
   LIVE_PANEL,
   NO_RATE,
   pulseLine,
+  recordedHeartLine,
   SHOW_ORGANS,
 } from "./live-copy";
 import { type HeartRhythm } from "./heart-rhythm";
@@ -34,6 +36,7 @@ export const liveLines = (
   scheme: AtlasScheme,
   today: string,
   timing: HeartRhythm["timing"] = "regular",
+  animationHeart?: Readonly<{ bpm: number | null; illustrative: boolean }>,
 ): readonly string[] => {
   const moving = status.pulsing || status.breathing;
   const bodyParts3d = scheme === "bodyparts3d";
@@ -44,7 +47,14 @@ export const liveLines = (
       : moving || status.glowing
         ? [ILLUSTRATIVE]
         : []),
-    ...(status.pulsing && vitals.heart ? [pulseLine(vitals.heart, today)] : []),
+    ...(status.pulsing && animationHeart?.illustrative && animationHeart.bpm !== null
+      ? [
+          ...(vitals.heart ? [recordedHeartLine(vitals.heart, today)] : []),
+          animationHeartLine(animationHeart.bpm),
+        ]
+      : status.pulsing && vitals.heart
+        ? [pulseLine(vitals.heart, today)]
+        : []),
     ...(chambers !== null
       ? [
           bodyParts3d
@@ -52,7 +62,7 @@ export const liveLines = (
               ? BODYPARTS3D_BEAT_UNAVAILABLE
               : BODYPARTS3D_BEAT_NOTE
             : CHAMBERS_LINE,
-          chambersTimingLine(timing, chambers),
+          chambersTimingLine(timing, chambers, animationHeart?.illustrative),
         ]
       : []),
     ...(status.pulsing && bodyParts3d && chambers === null
@@ -86,12 +96,13 @@ export const liveNote = (
   status: LiveStatus,
   vitals: LiveVitals,
   context: LiveContext,
+  hasAnimationHeart = false,
 ): string | null => {
   if (context.reducedMotion || status.pulsing || status.breathing || status.glowing)
     return null;
   const hasRate =
     vitals.heart !== null || vitals.breath !== null || vitals.hrvBelow !== null;
-  if (!hasRate) return context.inEnvironment ? NO_RATE : null;
+  if (!hasRate && !hasAnimationHeart) return context.inEnvironment ? NO_RATE : null;
   return context.on ? SHOW_ORGANS : null;
 };
 
@@ -105,6 +116,7 @@ export const liveNote = (
 export const LiveLines = ({
   status,
   vitals,
+  animationHeart,
   scheme,
   timing,
   context,
@@ -112,6 +124,7 @@ export const LiveLines = ({
 }: Readonly<{
   status: LiveStatus;
   vitals: LiveVitals;
+  animationHeart?: Readonly<{ bpm: number | null; illustrative: boolean }>;
   /** Where the heart chambers' beat times come from. */
   timing: HeartRhythm["timing"];
   scheme: AtlasScheme;
@@ -119,8 +132,15 @@ export const LiveLines = ({
   extra?: readonly string[];
 }>) => {
   // The viewer's own calendar day, so "today" means today where they are.
-  const moving = liveLines(status, vitals, scheme, isoLocalDate(), timing);
-  const note = liveNote(status, vitals, context);
+  const moving = liveLines(
+    status,
+    vitals,
+    scheme,
+    isoLocalDate(),
+    timing,
+    animationHeart,
+  );
+  const note = liveNote(status, vitals, context, animationHeart?.bpm != null);
   const lines = [...(moving.length > 0 ? moving : note ? [note] : []), ...extra];
   const [open, onToggle] = usePanelOpen(LIVE_PANEL_ID);
   if (lines.length === 0) return null;

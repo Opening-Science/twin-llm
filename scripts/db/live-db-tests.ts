@@ -12,10 +12,18 @@ export type LiveDbTest = { readonly file: string; readonly tests: number };
 
 export const LIVE_DB_TESTS: readonly LiveDbTest[] = [
   { file: "features/data-explorer/cohort-queries.live.test.ts", tests: 7 },
+  { file: "infrastructure/database-timezone.live.test.ts", tests: 3 },
   { file: "packages/gbd-local/store.live.test.ts", tests: 7 },
   { file: "features/gbd/gbd-import-routes.live.test.ts", tests: 2 },
   { file: "scripts/gbd/import.live.test.ts", tests: 2 },
   { file: "scripts/synthetic-scans/ingest.live.test.ts", tests: 2 },
+  { file: "scripts/db/chat-move/expand.live.test.ts", tests: 4 },
+  { file: "scripts/db/chat-move/mirror.live.test.ts", tests: 11 },
+  { file: "scripts/db/chat-move/backfill.live.test.ts", tests: 10 },
+  { file: "scripts/db/chat-move/parity.live.test.ts", tests: 8 },
+  { file: "scripts/db/chat-move/backfill-load.live.test.ts", tests: 1 },
+  { file: "scripts/db/chat-move/rollback.live.test.ts", tests: 1 },
+  { file: "scripts/db/chat-move/switch.live.test.ts", tests: 8 },
 ];
 
 export const EXPECTED_LIVE_DB_TESTS = LIVE_DB_TESTS.reduce(

@@ -46,3 +46,20 @@ export const EFFECTS: Readonly<Record<EffectId, EffectEntry>> = Object.freeze({
       "Glucose particles: illustrative paths baked along the BodyParts3D vessels by the Open Science Foundation; BodyParts3D, © The Database Center for Life Science, CC BY 4.0. Not measured glucose or blood flow.",
   },
 });
+
+export const GLUCOSE_EFFECT = {
+  ...EFFECTS["glucose-particles"],
+  id: "glucose-particles",
+  clip: "GlucoseFlow",
+  maxParticles: 180,
+} as const;
+
+export type AnatomyEffectId = typeof GLUCOSE_EFFECT.id;
+
+export const isAnatomyEffectId = (value: unknown): value is AnatomyEffectId =>
+  value === GLUCOSE_EFFECT.id;
+
+export const anatomyEffectVersion = (): string => GLUCOSE_EFFECT.sha256.slice(0, 16);
+
+export const glucoseEffectApiUrl = (): string =>
+  `/api/anatomy/effects/${GLUCOSE_EFFECT.id}?v=${anatomyEffectVersion()}`;

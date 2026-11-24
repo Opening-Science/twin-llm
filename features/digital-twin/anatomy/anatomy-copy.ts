@@ -20,6 +20,9 @@ import {
 export const ANATOMY_NOT_INSTALLED_API =
   "Anatomy atlas not installed. Run bun run anatomy:fetch.";
 
+export const EFFECT_NOT_INSTALLED_API =
+  "Anatomy effect not installed. Run bun run anatomy:fetch.";
+
 /** The install step is in docs/anatomy.md; the page itself never names a command. */
 export const ANATOMY_NOT_INSTALLED = "Reference anatomy is not available here.";
 export const ANATOMY_LOAD_ERROR = "Could not load the reference anatomy.";

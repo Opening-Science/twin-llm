@@ -1,3 +1,4 @@
+import { CHAT_SEAL_CONTEXTS, type SealContext } from "./chat-seal-contexts";
 import { TOKEN_COLUMNS } from "./connector-tokens";
 import { TEXT_PREFIX } from "./field-crypto";
 
@@ -8,7 +9,8 @@ import { TEXT_PREFIX } from "./field-crypto";
  * existing install (`bun run vault:migrate`), key rotation
  * (`bun run vault:rotate`) and the tests. The stores seal and open the same
  * columns through `field-cipher.ts`; the context of each value is
- * `<table>.<column>.<row id>` with the SQL names below.
+ * `<table>.<column>.<row id>` with the SQL names below, except where a table
+ * lists `contexts` (the chat tables, sealed under frozen names).
  *
  * Pure: SQL text and functions over plain values only.
  */
@@ -38,12 +40,22 @@ export type PersonalTable = Readonly<{
   }>;
   /** A column that must be null in personal mode (the plain search vector). */
   plainMustBeNull?: string;
+  /**
+   * The context each sealed column is sealed under, when it is not the
+   * column's own table and name: the chat tables keep their old names
+   * (`chat-seal-contexts.ts`).
+   */
+  contexts?: Readonly<Record<string, SealContext>>;
 }>;
+
+/** The context a sealed column's values are sealed under. */
+export const sealContextFor = (entry: PersonalTable, column: string): SealContext =>
+  entry.contexts?.[column] ?? { table: entry.table, column };
 
 const ownerByUserId = (column: string) => `"${column}"`;
 
-const OWNER_OF_TURN = `(SELECT t."userId" FROM "threads" t WHERE t."id" = "turns"."threadId")`;
-const OWNER_OF_RESPONSE = `(SELECT t."userId" FROM "turns" u JOIN "threads" t ON t."id" = u."threadId" WHERE u."id" = "model_responses"."turnId")`;
+const OWNER_OF_EXCHANGE = `(SELECT c."owner_id" FROM "conversations" c WHERE c."id" = "exchanges"."conversation_id")`;
+const OWNER_OF_ANSWER = `(SELECT c."owner_id" FROM "exchanges" e JOIN "conversations" c ON c."id" = e."conversation_id" WHERE e."id" = "answers"."exchange_id")`;
 
 // ─── Lookup values, shared with the stores ──────────────────────────────────
 
@@ -71,13 +83,32 @@ export const variantIdsOf = (variantId: string | null): readonly string[] =>
   variantId === null ? [] : variantId.split(";").filter((id) => id.length > 0);
 
 export const PERSONAL_TABLES: readonly PersonalTable[] = [
-  { table: "threads", idColumn: "id", owner: ownerByUserId("userId"), sealed: ["title"] },
-  { table: "turns", idColumn: "id", owner: OWNER_OF_TURN, sealed: ["prompt", "label"] },
   {
-    table: "model_responses",
+    table: "conversations",
     idColumn: "id",
-    owner: OWNER_OF_RESPONSE,
-    sealed: ["text", "reasoningText", "attribution", "responseDocument", "toolParts"],
+    owner: ownerByUserId("owner_id"),
+    sealed: ["title_sealed"],
+    contexts: CHAT_SEAL_CONTEXTS.conversations,
+  },
+  {
+    table: "exchanges",
+    idColumn: "id",
+    owner: OWNER_OF_EXCHANGE,
+    sealed: ["question_sealed", "bubble_text_sealed"],
+    contexts: CHAT_SEAL_CONTEXTS.exchanges,
+  },
+  {
+    table: "answers",
+    idColumn: "id",
+    owner: OWNER_OF_ANSWER,
+    sealed: [
+      "body_sealed",
+      "reasoning_sealed",
+      "evidence_sealed",
+      "document_sealed",
+      "tool_trace_sealed",
+    ],
+    contexts: CHAT_SEAL_CONTEXTS.answers,
   },
   {
     table: "thread_search_embeddings",
@@ -235,6 +266,40 @@ export const PERSONAL_TABLES: readonly PersonalTable[] = [
     owner: ownerByUserId("userId"),
     sealed: [...TOKEN_COLUMNS[table]],
   })),
+];
+
+// ─── The old chat tables while the move soaks (DATA-MODEL.md C.4) ───────────
+
+const OWNER_OF_TURN = `(SELECT t."userId" FROM "threads" t WHERE t."id" = "turns"."threadId")`;
+const OWNER_OF_RESPONSE = `(SELECT t."userId" FROM "turns" u JOIN "threads" t ON t."id" = u."threadId" WHERE u."id" = "model_responses"."turnId")`;
+
+/**
+ * Since the switch, threads, turns and model_responses hold copies of the
+ * new chat tables' sealed values, kept by the reverse triggers until the
+ * contract step drops them. They are checked, never resealed: a reseal
+ * rewrites conversations, exchanges and answers, and the reverse triggers
+ * copy each new value back byte for byte. The checks make sure no plain
+ * value and no retired key is left behind in a copy.
+ */
+export const PERSONAL_COPIES: readonly PersonalTable[] = [
+  { table: "threads", idColumn: "id", owner: ownerByUserId("userId"), sealed: ["title"] },
+  { table: "turns", idColumn: "id", owner: OWNER_OF_TURN, sealed: ["prompt", "label"] },
+  {
+    table: "model_responses",
+    idColumn: "id",
+    owner: OWNER_OF_RESPONSE,
+    sealed: ["text", "reasoningText", "attribution", "responseDocument", "toolParts"],
+  },
+];
+
+/** True for a copy table: a reseal never writes it, so its fix is a fresh copy. */
+export const isChatCopy = (table: string): boolean =>
+  PERSONAL_COPIES.some((entry) => entry.table === table);
+
+/** Every table whose sealed values the checks look at: the resealed ones and the copies. */
+export const CHECKED_TABLES: readonly PersonalTable[] = [
+  ...PERSONAL_TABLES,
+  ...PERSONAL_COPIES,
 ];
 
 export const personalTable = (table: string): PersonalTable => {

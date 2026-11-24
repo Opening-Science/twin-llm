@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { GlbTooLargeError } from "@/packages/vitronic/glb";
 
 import { VitronicSubjectNotOwnedError, type VitronicIngestInput } from "./connection";
 import { ingestSchema } from "./ingest-schema";
+import { scannerSyncErrorResponse } from "./scanner-sync-error-response";
 
 /**
  * Vitronic sync POST, as a factory, so the Next route file can export only POST and
@@ -28,10 +30,12 @@ export type VitronicSyncDeps = {
   readonly syncVitronicForUser: (params: {
     readonly userId: string;
     readonly actor: string;
+    readonly probandId?: number;
   }) => Promise<SyncResult>;
 };
 
 const MEASUREMENT_FIELDS = ["height", "viatar", "glbBase64", "scan_id", "properties"];
+const scanKeySchema = z.number().int().min(1).max(2_147_483_647).optional();
 
 const ok = (result: SyncResult) =>
   NextResponse.json({
@@ -61,7 +65,20 @@ export const createVitronicSyncHandler = (deps: VitronicSyncDeps) => {
 
     try {
       if (!hasMeasurements) {
-        return ok(await deps.syncVitronicForUser({ userId: appUserId, actor: clerkId }));
+        const key = scanKeySchema.safeParse(body.probandId);
+        if (!key.success) {
+          return NextResponse.json(
+            { error: "Enter a valid positive whole number for the BodyLoop scan key." },
+            { status: 400 },
+          );
+        }
+        return ok(
+          await deps.syncVitronicForUser({
+            userId: appUserId,
+            actor: clerkId,
+            ...(key.data === undefined ? {} : { probandId: key.data }),
+          }),
+        );
       }
       const parsed = ingestSchema.safeParse(raw);
       if (!parsed.success) {
@@ -109,14 +126,7 @@ export const createVitronicSyncHandler = (deps: VitronicSyncDeps) => {
           { status: 413 },
         );
       }
-      console.error(
-        "[vitronic] sync failed",
-        error instanceof Error ? error.name : "unknown",
-      );
-      return NextResponse.json(
-        { error: "Could not sync BodyLoop data. Check the connection and try again." },
-        { status: 502 },
-      );
+      return scannerSyncErrorResponse(error, "[vitronic] sync failed");
     }
   };
 };

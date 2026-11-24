@@ -43,6 +43,10 @@ const testPorts = (
   cipher: FieldCipher = plainCipher,
 ): Partial<VitronicSnapshotPorts> => ({
   database: () => ({
+    // Only a scanner sync opens a transaction; these ingests do not.
+    $transaction: async () => {
+      throw new Error("not used");
+    },
     vitronicSubject: {
       findFirst: async (args: {
         where: { id: string; userId: string };
@@ -408,6 +412,7 @@ describe("snapshot writes are scoped to the subject's owner", () => {
         throw new Error("not used");
       },
     });
+
     const res = await POST(
       new Request("http://local/api/vitronic/sync", {
         method: "POST",
@@ -422,4 +427,34 @@ describe("snapshot writes are scoped to the subject's owner", () => {
       "vitronic.write.refused",
     ]);
   });
+});
+
+test("the live sync route accepts a corrected scan key and rejects invalid keys", async () => {
+  const received: (number | undefined)[] = [];
+  const POST = createVitronicSyncHandler({
+    vitronicEnv: () => ({ encryptionKey: "synthetic", dataDir: null }),
+    resolveActorId: async () => ACTOR,
+    findAppUserId: async () => USER_ID,
+    ingestVitronicForUser: async () => {
+      throw new Error("not used");
+    },
+    syncVitronicForUser: async ({ probandId }) => {
+      received.push(probandId);
+      return { summary: { metrics: [], window: null }, glbSha256: null };
+    },
+  });
+  const submit = (body?: unknown) =>
+    POST(
+      new Request("http://local/api/vitronic/sync", {
+        method: "POST",
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    );
+
+  expect((await submit()).status).toBe(200);
+  expect((await submit({ probandId: 42 })).status).toBe(200);
+  for (const probandId of [0, -1, 1.5, "42", null, 2_147_483_648]) {
+    expect((await submit({ probandId })).status).toBe(400);
+  }
+  expect(received).toEqual([undefined, 42]);
 });

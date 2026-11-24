@@ -40,6 +40,7 @@ export type RunTaskDeps = Readonly<{
       actorId: string;
       appUserId: string;
       threadId: string | null;
+      taskId: string;
       skill: string;
       question: string;
       modelId: string;
@@ -84,6 +85,7 @@ export const createRunTask =
         actorId: task.actorId,
         appUserId: task.userId,
         threadId: task.threadId,
+        taskId: task.id,
         skill: task.skill,
         question,
         modelId: task.modelId,

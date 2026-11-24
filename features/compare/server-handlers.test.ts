@@ -189,8 +189,8 @@ describe("a scheduled turn (SERVER-SPEC 3.5)", () => {
     const run = createScheduledTurn({
       catalog: async () => CATALOG,
       provider: () => "ollama",
-      writeTurn: async ({ scheduled: mark, plan }) => {
-        calls.push(`write scheduled=${String(mark)} ${plan.prompt}`);
+      writeTurn: async ({ scheduleId, plan }) => {
+        calls.push(`write schedule=${scheduleId} ${plan.prompt}`);
         return {
           ok: true,
           threadId: "thread-1",
@@ -216,6 +216,7 @@ describe("a scheduled turn (SERVER-SPEC 3.5)", () => {
     actorId: "actor-1",
     appUserId: "user-1",
     threadId: null,
+    taskId: "task-1",
     skill: "sleep",
     question: "  How did I sleep?  ",
     modelId: "qwen3:4b",
@@ -228,7 +229,7 @@ describe("a scheduled turn (SERVER-SPEC 3.5)", () => {
       turnId: "turn-1",
       threadId: "thread-1",
     });
-    expect(calls).toEqual(["write scheduled=true How did I sleep?"]);
+    expect(calls).toEqual(["write schedule=task-1 How did I sleep?"]);
     expect(sent).toEqual([
       {
         modelId: "qwen3:4b",

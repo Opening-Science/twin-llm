@@ -2,6 +2,8 @@
 
 The Body twin viewer can slide from the BodyLoop scan into stacked reference anatomy: **Scan → Muscle → Skeleton → Organs**. The anatomy is a donor atlas fitted to the scan's height and hips. It is not the scanned person's anatomy, and the viewer says so next to the slider.
 
+The viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/digital-twin/your-day`) and **Your 10-Days** (`/digital-twin/your-10-days`) are placeholders and do not read replay data. All three pages use the same vault gate. Moving between these tabs keeps the chosen person in memory, without storing personal IDs in the URL or browser storage.
+
 ## Atlases
 
 | Atlas       | File                 | Donor                           | Licence     | Bytes      | SHA-256                                                            |
@@ -28,9 +30,9 @@ The Body twin viewer can slide from the BodyLoop scan into stacked reference ana
 bun run anatomy:fetch
 ```
 
-The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas, both demo bodies and both rigged demo bodies. `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`), `--demo <id>` one demo body and `--rigged <id>` one rigged demo body (`anny-adult-m`, `anny-adult-f`); `--skip-rigged` leaves the rigged bodies out.
+The script downloads each file with a size cap, checks its pinned SHA-256 and only then writes it (`.partial`, then rename). A mismatch writes nothing. Files land in `ANATOMY_DATA_DIR` (default `data/anatomy/`, gitignored). With no flags it fetches every atlas, both demo bodies, both rigged demo bodies and the anatomy effects (the glucose particles). `bun run anatomy:fetch --check` reports without downloading; `--atlas <id>` fetches one atlas (`bodyparts3d`, `hra-f`, `hra-m`), `--demo <id>` one demo body and `--rigged <id>` one rigged demo body (`anny-adult-m`, `anny-adult-f`); `--skip-rigged` leaves the rigged bodies out.
 
-Without these files the Digital Twin page says "Reference anatomy is not available here." or "Could not load the demo body." and names no command; the API responses (`/api/anatomy/...`) still name `bun run anatomy:fetch`.
+Without these files the Digital Twin page says "Reference anatomy is not available here.", "Could not load the demo body." or "Vessel particles are not installed here." and names no command; the API responses (`/api/anatomy/...`) still name `bun run anatomy:fetch`.
 
 To bump a pin: download the new file, record its bytes and SHA-256 in `packages/anatomy/manifest.ts`, re-measure the frame facts below, and update this table.
 
@@ -43,6 +45,67 @@ To bump a pin: download the new file, record its bytes and SHA-256 in `packages/
 - `GET /api/anatomy/atlas/:atlasId`: the GLB. With `?v=<first 16 hex of the SHA-256>` it is `public, max-age=31536000, immutable`; otherwise `public, max-age=0, must-revalidate`. ETag is the SHA-256; a matching `If-None-Match` returns 304. A missing or partial file is a JSON 404 that says how to install it. Unknown ids are 404 and never reach the file system.
 
 Atlases are public CC BY files from a closed list, not personal data, so the routes need no audit row. They are not served from `public/`, which Next serves with `max-age=0`.
+
+## Illustrative vessel particles
+
+`AnatomyLayers` accepts one typed `visualization` configuration (or `null`).
+Each variant keeps its settings and callbacks in its own `model`.
+`anatomy/atlas-visualization.tsx` owns atlas/pose compatibility, anatomy-focus
+policy and renderer selection. Add future visualization variants there instead
+of adding effect-specific props to `AnatomyLayers`; controls remain outside the
+renderer. Effects share the atlas placement and unmount when deselected or
+unsupported, releasing their resources and restoring animation state.
+
+Open **Live vitals** in the view toolbar to choose **HR** or **Glucose levels**.
+These modes are mutually exclusive; pressing the selected option turns it off.
+The **Vessel particles** slider appears only under **Glucose levels** and controls
+0–180 particles (initially 90). Glucose mode selects **Organs** depth; leave
+**Cardiovascular** enabled to see the particles. They are
+illustrative particles, not measured glucose particles or blood velocity; no clinical
+mapping is applied. HR uses the existing recorded readings by default. Its temporary
+25–230 bpm slider changes animation only, not the recorded value; reset returns to
+the recorded rate, or an explicitly illustrative 70 bpm if none exists. The
+override is scoped to the current subject and Demo person and is not saved. Night
+playback takes priority (including gaps) and disables the slider while open; the
+override resumes afterwards. Both views work without an HR reading.
+
+In HR and glucose modes, other organ systems become translucent (12% opacity), vessels use
+17% opacity, and the tagged heart structures remain more opaque (90%). The heart
+mask uses the same BodyParts3D anatomy IDs as picking and heartbeat animation,
+not the cardiovascular mesh's whole-body bounds. Organs blend without their shared
+depth prepass so translucent lungs do not hide the heart. Layer, system and depth
+visibility still apply. Selecting either mode selects **Organs** depth. HRA uses its
+separate heart mesh; on a fitted BodyParts3D atlas, which does not use the tagged
+heart mask, the entire cardiovascular system remains at 90% rather than hiding the
+heart. Leaving both modes restores the normal opacity and depth
+passes; zero density hides particles but keeps the glucose-mode anatomy appearance.
+
+- The particle-only companion is not committed. `bun run anatomy:fetch` installs it
+  in `ANATOMY_DATA_DIR` (default `data/anatomy/glucose-particles/`), checked against
+  its pin in `packages/anatomy/effects.ts`. It is served separately through
+  `GET /api/anatomy/effects/glucose-particles?v=000834e73f4b008e`, with the atlas
+  routes' caching and missing-file rules: without the file the route answers a
+  JSON 404 naming `bun run anatomy:fetch`, and the slider is disabled with a plain
+  not-installed line instead of an error. No second anatomy is loaded.
+- Its 12-second `GlucoseFlow` clip repeats at fixed 1x. Density only toggles ranked
+  node visibility and does not restart or retime the clip.
+- Particles are drawn at the size in the pinned GLB, the size the handoff's
+  vessel-wall clearance check was run at; the app does not rescale them.
+- The companion is a sibling of the atlas under the same fit/placement group,
+  not a child of a vessel mesh. It follows depth and cardiovascular visibility,
+  freezes for reduced motion, and suspends while off screen or the tab is hidden.
+- Only the original standing BodyParts3D atlas is supported. HRA, Blender-fitted
+  atlases and body motion explicitly disable the control and detach the effect.
+  The baked paths do not deform with heartbeat-driven vessel expansion.
+- The renderer and density controller (`glucose-particles.tsx`, `glucose-flow.ts`)
+  accept density as an input; the temporary `glucose-control.tsx` slider owns no
+  animation logic. Future application state can replace the slider without
+  changing the asset or playback controller. GPU and mixer resources are released
+  when the effect is detached, retried or the viewer unmounts.
+
+Asset contract, scope, attribution and authoring limitations:
+[particle handoff](glucose-particles.md).
+The derivative retains the BodyParts3D attribution and licence caveat above.
 
 ## Frames and fit
 
@@ -146,7 +209,7 @@ that into the organ (or its system) the next turn's UI context names.
 - **HRV glow:** a steady soft blue glow on the brain (HRA) or the nervous system (BodyParts3D) when HRV is below this person's usual level (rule in `docs/biomarkers.md`).
 - The glow is added on top of the highlight in `layer-material.ts` (emissive colour and intensity, no recompile) and both restore exactly in either order. Scaling sets the mesh's matrix by hand while it moves and restores its own transform after.
 - Lines under the canvas (bottom left in the environment) say "Illustrative, not a physiological simulation." (while the heart chambers beat, "Illustrative simulation, not a physiological model." instead, with a line on the chamber regions and one on where the beat times come from) and which value drives what, that it is the last reading and how old it is, and from whom, only while something moves or glows. They sit beside the 3D view, not inside its `role="application"`. Below 640 px in the environment they stack above a bottom-docked pick card instead of overlapping it.
-- **When:** on by default inside the environment; off in the inline viewer, where the toolbar's "Live vitals" toggle turns it on; always off with reduced motion. The toggle shows only when the subject has a rate or the HRV state. The heart and lungs are in the organ layer, so nothing moves before the organ stop.
+- **When:** on by default inside the environment; off in the inline viewer until HR is selected in "Live vitals"; always off with reduced motion. Without a recorded heart rate, HR uses an illustrative 70 bpm by default. The heart and lungs are in the organ layer, so nothing moves before the organ stop.
 - **Frames:** `frameloop="demand"` stays. While a moving part is drawn, a timer asks for about 30 fps (the auto-rotate pacing), and about 60 fps while the heart chambers beat, since an atrial contraction lasts about 0.1 s; off screen, in a hidden tab, or once nothing moving is drawn, it stops asking. Measured on the demo body (HRA female, organs, dev build, headless Chrome on an RTX 2080 Ti, 2026-10-30): 60.0 draws a second over 10 s, frame interval p50 16.7 ms and p99 16.8 ms, about 1 ms of main-thread work per frame. Integrated graphics will differ; the deformation itself is one pass over about 22,000 vertices.
 
 ## Performance

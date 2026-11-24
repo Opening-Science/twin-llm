@@ -5,6 +5,7 @@ import { readFile, stat } from "node:fs/promises";
 import { anatomyEnv } from "@/infrastructure/env";
 
 import { DEMO_BODIES, type DemoBodyId } from "./demo-bodies";
+import { EFFECTS, type EffectId } from "./effects";
 import {
   fittedAtlasEntry,
   splitFittedAtlasId,
@@ -14,6 +15,7 @@ import { ATLASES, type AtlasId } from "./manifest";
 import {
   atlasFilePath,
   demoBodyFilePath,
+  effectFilePath,
   fittedAtlasFilePath,
   resolveAnatomyDir,
   riggedBodyFilePath,
@@ -53,6 +55,10 @@ export const openAtlas = (id: AtlasId): Promise<Uint8Array<ArrayBuffer> | null> 
   openPinned(atlasFilePath(anatomyDir(), id), ATLASES[id].bytes);
 
 /** The demo body's bytes, or null when it is not installed. */
+/** An anatomy effect fetched by `bun run anatomy:fetch`, or null when it is not installed. */
+export const openEffect = (id: EffectId): Promise<Uint8Array<ArrayBuffer> | null> =>
+  openPinned(effectFilePath(anatomyDir(), id), EFFECTS[id].bytes);
+
 export const openDemoBody = (id: DemoBodyId): Promise<Uint8Array<ArrayBuffer> | null> =>
   openPinned(demoBodyFilePath(anatomyDir(), id), DEMO_BODIES[id].bytes);
 

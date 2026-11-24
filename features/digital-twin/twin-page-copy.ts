@@ -4,6 +4,9 @@
  * says where data comes from, never what it means for a person.
  */
 export const PAGE_TITLE = "Digital Twin";
+export const YOUR_TWIN = "Your Twin";
+export const YOUR_DAY = "Your Day";
+export const YOUR_TEN_DAYS = "Your 10-Days";
 export const BODY_TWIN = "Body twin";
 export const BODY_TWIN_NOTE =
   "A 3D body with reference anatomy and biomarkers. Not a statement about a person.";

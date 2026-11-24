@@ -147,6 +147,7 @@ const vitronicPorts = (record: Recorder): VitronicLocalReadPorts => ({
   cipher: async () => readCipher,
   database: () => ({
     vitronicSubject: {
+      findFirst: async () => ({ probandId: 7 }),
       findMany: async () => [
         {
           id: SUBJECT_ID,
@@ -636,6 +637,11 @@ const PERSONAL_READ_ROUTES: Readonly<Record<string, Entry>> = {
     why: NOT_PERSONAL,
   },
   "GET /api/anatomy/atlas/[atlasId]": {
+    whileLocked: OPEN_NOT_PERSONAL,
+    kind: "exempt",
+    why: NOT_PERSONAL,
+  },
+  "GET /api/anatomy/effects/[effectId]": {
     whileLocked: OPEN_NOT_PERSONAL,
     kind: "exempt",
     why: NOT_PERSONAL,
@@ -1232,7 +1238,12 @@ const PAGES: Readonly<Record<string, "gated" | Readonly<{ open: string }>>> = {
     open: "synthetic cohort",
   },
   "app/(shell)/dashboard/page.tsx": "gated",
+  "app/(shell)/digital-twin/layout.tsx": {
+    open: "in-memory selection only; each page gates its content",
+  },
   "app/(shell)/digital-twin/page.tsx": "gated",
+  "app/(shell)/digital-twin/your-day/page.tsx": "gated",
+  "app/(shell)/digital-twin/your-10-days/page.tsx": "gated",
   "app/(shell)/docs/[[...slug]]/page.tsx": { open: "the docs" },
   "app/(shell)/lab/page.tsx": {
     open: "the Lab hub: this machine's self-checks and file counts",
