@@ -73,11 +73,13 @@ export const SKELETON_LOADING = "Loading the CT skeleton…";
 export const SKELETON_LOAD_ERROR = "Could not load the CT skeleton.";
 export const SKELETON_FIT_FAILED = "The CT skeleton could not be placed in this body.";
 /** Says how the bones are placed, and that they are not this body's, in one short sentence. */
-export const skeletonFitNote = (anchor: "hips" | "bbox"): string =>
-  anchor === "hips"
-    ? "Bones from one public CT case, set at this body's hips by estimate, not this body's skeleton."
-    : "Bones from one public CT case, set in this body by estimate, not this body's skeleton.";
-/** What the build left out, from atlas.json; never drawn and never drawn from another atlas. */
+export const skeletonFitNote = (anchor: "hips" | "bbox" | "atlas"): string =>
+  anchor === "atlas"
+    ? "Trunk bones from one public CT case, scaled to the atlas's trunk; the rest is the atlas's. Not this body's skeleton."
+    : anchor === "hips"
+      ? "Bones from one public CT case, set at this body's hips by estimate, not this body's skeleton."
+      : "Bones from one public CT case, set in this body by estimate, not this body's skeleton.";
+/** What the build left out, from atlas.json; the atlas draws its own where it has them. */
 export const skeletonLeftOutNote = (summary: string): string | null =>
   summary.length > 0 ? `Left out: ${summary}.` : null;
 export const SKELETON_MODELLED_NOTE =

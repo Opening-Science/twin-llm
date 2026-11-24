@@ -14,6 +14,7 @@ import {
 import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
 import {
   fitAtlasToScan,
+  fitSkeletonToAtlas,
   fitSkeletonToScan,
   placeFittedAtlas,
 } from "@/packages/anatomy/fit";
@@ -29,6 +30,7 @@ import {
   type AtlasLayerId,
 } from "@/packages/anatomy/layers";
 import { ATLASES, atlasApiUrl, type AtlasId } from "@/packages/anatomy/manifest";
+import { ctRegions } from "@/packages/anatomy/ct-cover";
 import { type SkeletonAtlas } from "@/packages/anatomy/open-skeleton";
 import { type OrganSystem } from "@/packages/anatomy/systems";
 
@@ -52,6 +54,7 @@ import {
 import { loadAtlasGltf } from "./load-atlas";
 import { prepareAtlas, type PreparedAtlas } from "./prepare-atlas";
 import { applyExplode, prepareSkeleton, type PreparedSkeleton } from "./prepare-skeleton";
+import { applyCtTrim, type CtTrim, trimAtlasForCt } from "./trim-atlas";
 import { SCAN_RENDER_ORDER, setLayerPasses, setScanRenderOrder } from "./depth-prepass";
 import { focusesHeartHighlight, heartGroupWorldBox } from "./heart-geometry";
 import { collectScanMaterials, readScanFrame, readSkeletonScanFrame } from "./scan-frame";
@@ -75,9 +78,10 @@ const ignorePick = (): void => undefined;
  * Visibility and blend mode are set here so fully faded layers cost nothing.
  *
  * When an open-anatomy CT skeleton is configured and switched on, it is the
- * Skeleton layer: the atlas's own bones are hidden (so nothing the CT build
- * left out is drawn from another donor), and the CT bones fade, isolate and
- * spread apart on the same uniforms and passes as the atlas layers.
+ * Skeleton layer where it has bones: the atlas hides the bones the CT build
+ * has and keeps the rest (skull, neck, shoulders, limbs), and the CT bones
+ * fade, isolate and spread apart on the same uniforms and passes as the atlas
+ * layers.
  */
 export const AnatomyLayers = ({
   scanRoot,
@@ -302,16 +306,41 @@ export const AnatomyLayers = ({
     return { position, quaternion, scale };
   }, [fit]);
 
-  const bonesFit = useMemo(
+  // Beside the CT skeleton the atlas keeps the bones the CT build lacks.
+  const atlasTrim = useMemo(
     () =>
-      bones && scanRoot
-        ? fitSkeletonToScan(
-            { box: bones.box, hipBox: bones.hipBox, spine: bones.spine },
-            readSkeletonScanFrame(scanRoot, statureM),
+      prepared && bones
+        ? trimAtlasForCt(
+            prepared.root,
+            prepared.parts,
+            ATLASES[atlasId].scheme,
+            ctRegions(bones.parts.map((part) => part.label)),
           )
         : null,
-    [bones, scanRoot, statureM],
+    [prepared, bones, atlasId],
   );
+  const trims = atlasTrim?.trims ?? null;
+  const trimsRef = useRef(trims);
+  useEffect(() => {
+    trimsRef.current = trims;
+    invalidate();
+  }, [trims, invalidate]);
+
+  // The CT trunk joins the atlas's neck, shoulders and legs when the atlas has
+  // its trunk marks; otherwise it stands at its own size at the body's hips.
+  const bonesFit = useMemo(() => {
+    if (!bones || !scanRoot) return null;
+    const frame = { box: bones.box, hipBox: bones.hipBox, spine: bones.spine };
+    const marks = atlasTrim?.marks;
+    const onAtlas =
+      marks && fit?.ok
+        ? fitSkeletonToAtlas(frame, {
+            hips: marks.hips.clone().applyMatrix4(fit.matrix),
+            t1: marks.t1.clone().applyMatrix4(fit.matrix),
+          })
+        : null;
+    return onAtlas ?? fitSkeletonToScan(frame, readSkeletonScanFrame(scanRoot, statureM));
+  }, [bones, scanRoot, statureM, atlasTrim, fit]);
 
   const bonesTransform = useMemo(() => {
     if (!bonesFit?.ok) return null;
@@ -422,15 +451,20 @@ export const AnatomyLayers = ({
     }
 
     if (atlas) {
-      // With the CT skeleton in place the atlas draws no bones of its own.
-      const atlasShown = ctReady ? { ...shown, skeleton: false } : shown;
+      // With the CT skeleton in place the atlas draws only the bones it lacks.
+      const trims = trimsRef.current;
       for (const layer of ATLAS_LAYER_IDS) {
         applyMixToUniforms(atlas.uniforms[layer], viewMix(layer, next, alone));
       }
       for (const part of atlas.parts) {
+        const trim: CtTrim =
+          ctReady && part.layer === "skeleton"
+            ? (trims?.get(part.mesh) ?? "none")
+            : "all";
+        if (part.layer === "skeleton") applyCtTrim(part.mesh, trim, ctReady);
         const mix = applyMask(
           viewMix(part.layer, next, alone),
-          partShown(part, atlasShown, hidden),
+          partShown(part, shown, hidden) && trim !== "none",
         );
         const mode = blendModeFor(mix, "atlas");
         Object.assign(part.mesh, { visible: mix.visible });
@@ -459,11 +493,16 @@ export const AnatomyLayers = ({
   const pickParts = useMemo(
     () => [
       ...(ready
-        ? prepared.parts.filter((part) => !(bonesReady && part.layer === "skeleton"))
+        ? prepared.parts.filter(
+            (part) =>
+              !bonesReady ||
+              part.layer !== "skeleton" ||
+              (trims?.get(part.mesh) ?? "none") !== "none",
+          )
         : NO_PARTS),
       ...(bonesReady ? bones.parts : NO_PARTS),
     ],
-    [ready, prepared, bonesReady, bones],
+    [ready, prepared, bonesReady, bones, trims],
   );
   // The layer drawn alone, once it is showing; picks and the heart focus follow it.
   const shownIsolate = drawnIsolate(

@@ -4,6 +4,7 @@ import { Box3, Matrix4, Quaternion, Vector3 } from "three";
 import {
   atlasToScanRotation,
   fitAtlasToScan,
+  fitSkeletonToAtlas,
   fitSkeletonToScan,
   placeFittedAtlas,
   uprightRotation,
@@ -217,5 +218,56 @@ describe("placeFittedAtlas", () => {
     expect(
       placeFittedAtlas(new Box3(), { matrixWorld: bodyWorld, frame: bodyFrame }).ok,
     ).toBe(false);
+  });
+});
+
+describe("fitSkeletonToAtlas", () => {
+  const trunk = new Box3(new Vector3(-0.18, -0.35, -0.15), new Vector3(0.18, 0.33, 0.14));
+  const hips = new Box3(new Vector3(-0.15, -0.35, -0.12), new Vector3(0.15, -0.13, 0.08));
+  // Acetabulum estimate (0, -0.273, -0.02); T1 0.5 m straight above it.
+  const spine = {
+    top: new Vector3(0, 0.227, -0.02),
+    bottom: new Vector3(0, -0.2, -0.02),
+  };
+  const frame = { box: trunk, hipBox: hips, spine };
+  const marks = (length: number) => ({
+    hips: new Vector3(0.01, 0.02, 0.97),
+    t1: new Vector3(0.01, 0.02, 0.97 + length),
+  });
+
+  test("hip joints and T1 land on the atlas's, scaled by the hip-to-T1 length", () => {
+    const fit = fitSkeletonToAtlas(frame, marks(0.55));
+    expect(fit?.anchor).toBe("atlas");
+    if (!fit) throw new Error("no fit");
+    expect(round(new Vector3(0, -0.273, -0.02).applyMatrix4(fit.matrix))).toEqual([
+      0.01, 0.02, 0.97,
+    ]);
+    expect(round(spine.top.clone().applyMatrix4(fit.matrix))).toEqual([0.01, 0.02, 1.52]);
+    const scale = new Vector3();
+    fit.matrix.decompose(new Vector3(), new Quaternion(), scale);
+    expect(round(scale)).toEqual([1.1, 1.1, 1.1]);
+  });
+
+  test("the front still faces the atlas's front (-Y)", () => {
+    const fit = fitSkeletonToAtlas(frame, marks(0.5));
+    if (!fit) throw new Error("no fit");
+    expect(new Vector3(0, 0, 1).transformDirection(fit.matrix).y).toBeLessThan(-0.99);
+  });
+
+  test("a leaning atlas trunk tilts the CT along with it", () => {
+    const tilted = {
+      hips: new Vector3(0, 0, 1),
+      t1: new Vector3(0, -0.1, 1.49),
+    };
+    const fit = fitSkeletonToAtlas(frame, tilted);
+    if (!fit) throw new Error("no fit");
+    expect(round(spine.top.clone().applyMatrix4(fit.matrix))).toEqual([0, -0.1, 1.49]);
+  });
+
+  test("too unlike a trunk, no hip bones or no spine: null, so the scan fit is kept", () => {
+    expect(fitSkeletonToAtlas(frame, marks(0.3))).toBeNull();
+    expect(fitSkeletonToAtlas(frame, marks(0.8))).toBeNull();
+    expect(fitSkeletonToAtlas({ ...frame, hipBox: null }, marks(0.5))).toBeNull();
+    expect(fitSkeletonToAtlas({ ...frame, spine: null }, marks(0.5))).toBeNull();
   });
 });

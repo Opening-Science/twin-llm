@@ -46,7 +46,7 @@ export type SkeletonLoad =
   | Readonly<{ kind: "loading" }>
   | Readonly<{
       kind: "ready";
-      anchor: "hips" | "bbox";
+      anchor: "hips" | "bbox" | "atlas";
       fitOk: boolean;
       /** Bones drawn, after the ones atlas.json leaves out. */
       bones: number;

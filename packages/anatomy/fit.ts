@@ -119,7 +119,8 @@ export type SkeletonFrame = Readonly<{
 
 export type SkeletonFit = Readonly<{
   matrix: Matrix4;
-  anchor: "hips" | "bbox";
+  /** "atlas": scaled onto the atlas's own trunk (`fitSkeletonToAtlas`). */
+  anchor: "hips" | "bbox" | "atlas";
   ok: boolean;
 }>;
 
@@ -175,6 +176,63 @@ export const fitSkeletonToScan = (
     .multiply(atlasToScanRotation())
     .multiply(new Matrix4().makeRotationFromQuaternion(upright));
   return { matrix, anchor, ok };
+};
+
+/** Where an atlas's trunk sits, in the same frame as the placed atlas. */
+export type TrunkMarks = Readonly<{
+  /** Midpoint of the two hip joints, estimated as for the CT (ACETABULUM_SHARE). */
+  hips: Vector3;
+  /** T1's centre. */
+  t1: Vector3;
+}>;
+
+/**
+ * The CT trunk is scaled onto the atlas's by its hip-to-T1 length; outside this
+ * band the two donors are too unlike to join, and the CT keeps its own size.
+ */
+export const TRUNK_SCALE_BAND: readonly [number, number] = [0.75, 1.35];
+
+/**
+ * Places a CT trunk on the atlas's trunk, so the atlas's neck, shoulders and
+ * legs join it: the spine stands upright as in `fitSkeletonToScan`, then turns
+ * by the smallest angle that lays its hip-to-T1 line along the atlas's, is
+ * scaled evenly to the atlas's hip-to-T1 length, and its hip joints go to the
+ * atlas's. Null when the CT has no hip bones or no T1, or when the scale falls
+ * outside TRUNK_SCALE_BAND; the caller then keeps `fitSkeletonToScan`.
+ */
+export const fitSkeletonToAtlas = (
+  skeleton: SkeletonFrame,
+  atlas: TrunkMarks,
+): SkeletonFit | null => {
+  if (!skeleton.hipBox || !skeleton.spine || skeleton.hipBox.isEmpty()) return null;
+  const hipBox = skeleton.hipBox;
+  const hips = new Vector3(
+    (hipBox.min.x + hipBox.max.x) / 2,
+    hipBox.min.y + ACETABULUM_SHARE * (hipBox.max.y - hipBox.min.y),
+    (hipBox.min.z + hipBox.max.z) / 2,
+  );
+  const along = new Vector3().subVectors(skeleton.spine.top, hips);
+  const target = new Vector3().subVectors(atlas.t1, atlas.hips);
+  if (along.lengthSq() < 1e-8 || target.lengthSq() < 1e-8) return null;
+  const scale = target.length() / along.length();
+  if (!(scale >= TRUNK_SCALE_BAND[0] && scale <= TRUNK_SCALE_BAND[1])) return null;
+  const base = new Quaternion()
+    .setFromRotationMatrix(atlasToScanRotation())
+    .multiply(uprightRotation(skeleton.spine));
+  const turn = new Quaternion().setFromUnitVectors(
+    along.clone().applyQuaternion(base).normalize(),
+    target.clone().normalize(),
+  );
+  const rotation = turn.multiply(base);
+  const position = atlas.hips
+    .clone()
+    .sub(hips.clone().applyQuaternion(rotation).multiplyScalar(scale));
+  const matrix = new Matrix4().compose(
+    position,
+    rotation,
+    new Vector3(scale, scale, scale),
+  );
+  return { matrix, anchor: "atlas", ok: true };
 };
 
 /**
