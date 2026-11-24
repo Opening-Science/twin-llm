@@ -117,10 +117,13 @@ Code comments name these steps by the sections of the design note they
 came from: C.1 expand, C.2 backfill, C.3 parity, C.4 switch, C.6
 contract, and B.5 for the sealing contexts.
 
-Only the expand step is in the schema so far: the new tables
-exist with no foreign keys, and nothing in the app reads them.
+Steps 1 to 3 are in the schema. Since the switch the app reads and
+writes `conversations`, `exchanges` and `answers`; `threads`, `turns` and
+`model_responses` are kept current by reverse triggers until the contract
+step, which is not built yet. The paragraphs below describe the steps in
+order; the switch has its own subsection.
 
-Triggers named `chat_move_mirror` on `threads`, `turns` and
+Before the switch, triggers named `chat_move_mirror` on `threads`, `turns` and
 `model_responses` repeat every insert, update and delete on the new tables
 in the same transaction (`scripts/db/chat-move/mirror-sql.ts`; rollback is
 `DROP_MIRROR_SQL` there). A trigger on `scheduled_tasks` sets an exchange's
@@ -204,8 +207,63 @@ old `<table>.<column>.<id>` string, so copying needs no keys and a locked
 vault does not stop it.
 
 `schema_moves` has one row, `chat-tables`, from the expand migration until
-the contract step. Its `phase` is `expanded`, then `backfilled`.
-`schema_move_cursors` holds the backfill's position per table.
+the contract step. Its `phase` is `expanded`, then `backfilled`, then
+`switched`. `schema_move_cursors` holds the backfill's position per table.
+
+### The switch
+
+The migration `20261124120000_chat_tables_switch` holds `SWITCH_SQL` from
+`scripts/db/chat-move/switch-sql.ts` (a test keeps them equal). In one
+transaction it locks both sides, refuses unless the move is `backfilled`
+and every copy matches (the `db:chat-parity` checks, run inside the
+migration) or every chat table is empty (a new install), adds the new
+tables' keys where they are missing, drops the mirror triggers, creates
+`chat_move_reverse` on `conversations`, `exchanges` and `answers` (every
+insert, update and delete repeated on the old table, mapped back), points
+`scheduled_tasks.thread_id` and `thread_search_embeddings.thread_id` at
+`conversations`, and marks the move `switched`. The two directions never
+exist at once, so a write cannot bounce back. A new scheduled exchange
+gets its task's id in `schedule_id` from the app.
+
+The reseal list now names the new tables, each sealed column under its
+frozen context, and the old tables are the copies that are checked but
+never resealed: `vault:migrate` and `vault:rotate` rewrite the new tables
+and the reverse triggers copy each value back byte for byte.
+`db:chat-backfill` and `db:chat-rollback` refuse a switched move.
+
+To switch, with a fresh backup and the app stopped:
+
+```bash
+bun run db:chat-parity     # must print parity OK
+bun run db:deploy          # applies the switch migration
+bash scripts/db/verify-chat-move.sh   # its probe is rolled back; never db:verify here
+bun run db:chat-parity     # still OK; run it nightly during the soak
+```
+
+If the migration refuses (its message names the command to run), Prisma
+records it as failed: run `bunx prisma migrate resolve --rolled-back
+20261124120000_chat_tables_switch`, fix what the message names, and deploy
+again. Nothing was changed.
+
+To switch back during the soak, stop the app, then:
+
+```bash
+bun run db:chat-switch-back --yes   # SWITCH_BACK_SQL in one transaction
+bun run db:chat-parity
+```
+
+It drops the reverse triggers, puts the mirror triggers back, points the
+two keys at `threads` again, marks the move `backfilled` and forgets the
+switch migration, so a later `bun run db:deploy` on the switched release
+switches again. No row changes; it prints both sides' counts before and
+after. Then run the release before the switch: its app reads the old
+tables, which hold every write made since the switch.
+
+The live tests in `scripts/db/chat-move/` rehearse the switch too: writes
+reaching the old tables, every state's status, the cascades through the
+repointed keys, a refused switch, switching back and again, and a reseal
+reaching the old copies. The release-1 tests put the database back as it
+was before the switch while they run, and switch it again after.
 
 ## Two-layer personal data
 

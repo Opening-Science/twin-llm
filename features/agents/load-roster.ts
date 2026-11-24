@@ -35,19 +35,22 @@ export const loadAgentUsage = async (
 ): Promise<readonly UsageRow[] | null> => {
   if (userId === null) return [];
   try {
-    const groups = await database().modelResponse.groupBy({
-      by: ["modelId", "modelName"],
-      where: { modelId: { startsWith: "agent:" }, turn: { thread: { userId } } },
+    const groups = await database().answer.groupBy({
+      by: ["answererRef", "answererLabel"],
+      where: {
+        answererRef: { startsWith: "agent:" },
+        exchange: { conversation: { ownerId: userId } },
+      },
       _count: { _all: true },
       _sum: { costUsd: true },
-      _max: { createdAt: true },
+      _max: { openedAt: true },
     });
     return groups.map((group) => ({
-      modelId: group.modelId,
-      modelName: group.modelName,
+      modelId: group.answererRef,
+      modelName: group.answererLabel,
       answers: group._count._all,
       costUsd: group._sum.costUsd === null ? 0 : Number(group._sum.costUsd),
-      lastAt: group._max.createdAt?.toISOString() ?? null,
+      lastAt: group._max.openedAt?.toISOString() ?? null,
     }));
   } catch (error) {
     console.error("[agents] answer counts could not be read", errorName(error));

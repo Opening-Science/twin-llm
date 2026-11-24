@@ -2,11 +2,11 @@ import "server-only";
 
 import { unstable_rethrow } from "next/navigation";
 
+import { openChatText } from "@/infrastructure/chat-seal-contexts";
 import { database } from "@/infrastructure/database";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 import { readableTitle } from "@/infrastructure/readable-title";
 import type { ShellThread } from "@/infrastructure/recent-threads";
-import { openThreadTitle } from "@/infrastructure/thread-fields";
 
 /**
  * Every thread the viewer owns, newest activity first, for the sidebar, the
@@ -25,24 +25,28 @@ export const threadsForViewer = async (
   if (appUserId === null) return [];
   try {
     const [rows, cipher] = await Promise.all([
-      database().thread.findMany({
-        where: { userId: appUserId },
-        orderBy: { updatedAt: "desc" },
+      database().conversation.findMany({
+        where: { ownerId: appUserId },
+        orderBy: { lastActivityAt: "desc" },
         select: {
           id: true,
-          title: true,
-          updatedAt: true,
-          turns: { select: { responses: { select: { modelId: true } } } },
+          titleSealed: true,
+          lastActivityAt: true,
+          exchanges: { select: { answers: { select: { answererRef: true } } } },
         },
       }),
       cipherForUser(appUserId),
     ]);
     return rows.map((row) => ({
       id: row.id,
-      title: readableTitle(openThreadTitle(cipher, row.id, row.title)),
-      updatedAt: row.updatedAt.toISOString(),
+      title: readableTitle(
+        openChatText(cipher, "conversations", "title_sealed", row.id, row.titleSealed),
+      ),
+      updatedAt: row.lastActivityAt.toISOString(),
       modelCount: new Set(
-        row.turns.flatMap((turn) => turn.responses.map(({ modelId }) => modelId)),
+        row.exchanges.flatMap((exchange) =>
+          exchange.answers.map(({ answererRef }) => answererRef),
+        ),
       ).size,
     }));
   } catch (error) {

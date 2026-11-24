@@ -11,6 +11,7 @@ import {
   PERSONAL_TABLES,
   pendingRowsSql,
   personalTable,
+  sealContextFor,
   plaintextCountSql,
   rowsWithKeySql,
   updateRowSql,
@@ -61,27 +62,53 @@ describe("personal columns registry (#141)", () => {
     }
   });
 
-  test("the chat copies list every sealed column of the new chat tables", () => {
+  test("the reseal list names every sealed column of the new chat tables", () => {
     const tables = schemaColumns();
-    for (const entry of PERSONAL_COPIES) {
-      const columns = [...(tables.get(entry.table) ?? [])];
-      expect(entry.sealed.slice().sort(), entry.table).toEqual(
+    for (const table of ["conversations", "exchanges", "answers"]) {
+      const columns = [...(tables.get(table) ?? [])];
+      expect(personalTable(table).sealed.slice().sort(), table).toEqual(
         columns.filter((column) => column.endsWith("_sealed")).sort(),
       );
     }
+  });
+
+  test("since the switch the old chat tables are the copies, and every listed column exists", () => {
+    const tables = schemaColumns();
     expect(PERSONAL_COPIES.map((entry) => entry.table)).toEqual([
-      "conversations",
-      "exchanges",
-      "answers",
+      "threads",
+      "turns",
+      "model_responses",
     ]);
+    for (const entry of PERSONAL_COPIES) {
+      for (const column of [entry.idColumn, ...entry.sealed]) {
+        expect(tables.get(entry.table)?.has(column), `${entry.table}.${column}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  test("the new chat tables seal under the old names; every other table under its own", () => {
+    expect(sealContextFor(personalTable("answers"), "body_sealed")).toEqual({
+      table: "model_responses",
+      column: "text",
+    });
+    expect(sealContextFor(personalTable("conversations"), "title_sealed")).toEqual({
+      table: "threads",
+      column: "title",
+    });
+    expect(sealContextFor(personalTable("twin_notes"), "title")).toEqual({
+      table: "twin_notes",
+      column: "title",
+    });
   });
 
   test("checks cover the copies; the reseal list does not", () => {
     expect(CHECKED_TABLES.map((entry) => entry.table)).toEqual([
       ...PERSONAL_TABLES.map((entry) => entry.table),
-      "conversations",
-      "exchanges",
-      "answers",
+      "threads",
+      "turns",
+      "model_responses",
     ]);
     for (const copy of PERSONAL_COPIES) {
       expect(PERSONAL_TABLES.map((entry) => entry.table)).not.toContain(copy.table);
@@ -90,9 +117,9 @@ describe("personal columns registry (#141)", () => {
 
   test("covers the tables of the privacy design", () => {
     expect(PERSONAL_TABLES.map((entry) => entry.table)).toEqual([
-      "threads",
-      "turns",
-      "model_responses",
+      "conversations",
+      "exchanges",
+      "answers",
       "thread_search_embeddings",
       "oura_snapshots",
       "whoop_snapshots",
@@ -134,12 +161,14 @@ describe("personal columns registry (#141)", () => {
   });
 
   test("pending rows: one owner, after an id, not sealed with the active key", () => {
-    const sql = pendingRowsSql(personalTable("turns"), KEY);
+    const sql = pendingRowsSql(personalTable("exchanges"), KEY);
     expect(sql).toContain(`= $1`);
     expect(sql).toContain(`"id" > $2`);
     expect(sql).toContain("LIMIT $3");
-    expect(sql).toContain(`"prompt" NOT LIKE '${keyPrefix(KEY)}%'`);
-    expect(sql).toContain(`FROM "threads" t WHERE t."id" = "turns"."threadId"`);
+    expect(sql).toContain(`"question_sealed" NOT LIKE '${keyPrefix(KEY)}%'`);
+    expect(sql).toContain(
+      `FROM "conversations" c WHERE c."id" = "exchanges"."conversation_id"`,
+    );
   });
 
   test("a row update sets sealed then lookup columns, casts lists, keys on the id", () => {
@@ -149,8 +178,8 @@ describe("personal columns registry (#141)", () => {
     expect(updateRowSql(personalTable("personal_tables"))).toBe(
       `UPDATE "personal_tables" SET "columns" = $1 WHERE "dataset_id" = $2`,
     );
-    expect(rowsWithKeySql(personalTable("threads"), KEY)).toContain(
-      `"title" LIKE 'tlenc1.${KEY}.%'`,
+    expect(rowsWithKeySql(personalTable("conversations"), KEY)).toContain(
+      `"title_sealed" LIKE 'tlenc1.${KEY}.%'`,
     );
   });
 

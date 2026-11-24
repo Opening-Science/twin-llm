@@ -51,7 +51,7 @@ export const startTurn = async (
     ownerId: owner.id,
     threadId: input.threadId,
     plan: planned.plan,
-    scheduled: false,
+    scheduleId: null,
   });
   if (result.ok) {
     trackPromptSent({

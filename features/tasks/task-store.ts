@@ -3,7 +3,7 @@ import "server-only";
 import { database } from "@/infrastructure/database";
 import { type FieldCipher, newRowId } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
-import { openThreadTitle } from "@/infrastructure/thread-fields";
+import { openChatText } from "@/infrastructure/chat-seal-contexts";
 
 import { nextRunAfter, type Schedule } from "./schedule";
 import type { TaskRunResult } from "./run-task";
@@ -46,7 +46,7 @@ export const listTasks = async (userId: string): Promise<readonly TaskView[]> =>
   const rows = await database().scheduledTask.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
-    include: { thread: { select: { id: true, title: true } } },
+    include: { conversation: { select: { id: true, titleSealed: true } } },
   });
   const cipher = await cipherForUser(userId);
   return rows.flatMap((row) => {
@@ -60,9 +60,15 @@ export const listTasks = async (userId: string): Promise<readonly TaskView[]> =>
         modelId: row.modelId,
         threadId: row.threadId,
         threadTitle:
-          row.thread === null
+          row.conversation === null
             ? null
-            : openThreadTitle(cipher, row.thread.id, row.thread.title),
+            : openChatText(
+                cipher,
+                "conversations",
+                "title_sealed",
+                row.conversation.id,
+                row.conversation.titleSealed,
+              ),
         schedule,
         enabled: row.enabled,
         notify: row.notify,
@@ -91,7 +97,8 @@ export const countTasks = (userId: string): Promise<number> =>
   database().scheduledTask.count({ where: { userId } });
 
 export const threadOwnedBy = async (userId: string, threadId: string): Promise<boolean> =>
-  (await database().thread.count({ where: { id: threadId, userId } })) === 1;
+  (await database().conversation.count({ where: { id: threadId, ownerId: userId } })) ===
+  1;
 
 export type NewTask = Readonly<{
   threadId: string | null;
@@ -284,9 +291,9 @@ export const finishTaskRun = async (
  * left half written is marked failed, since no browser will ever stream it.
  */
 export const releaseInterruptedRuns = async (now: Date = new Date()): Promise<number> => {
-  await database().modelResponse.updateMany({
-    where: { status: "STREAMING", turn: { scheduled: true } },
-    data: { status: "FAILED", completedAt: now },
+  await database().answer.updateMany({
+    where: { state: "streaming", exchange: { origin: "schedule" } },
+    data: { state: "failed", closedAt: now },
   });
   return (
     await database().scheduledTask.updateMany({

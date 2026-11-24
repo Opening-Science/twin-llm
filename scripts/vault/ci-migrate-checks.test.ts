@@ -17,14 +17,14 @@ const seeded: DatabaseState = {
   personal_datasets: { rows: 2, plain: 10, digest: "a" },
   personal_observations: { rows: 5, plain: 30, digest: "b" },
   threads: { rows: 0, plain: 0, digest: "" },
-  answers: { rows: 1, plain: 2, digest: "a1" },
+  model_responses: { rows: 1, plain: 2, digest: "a1" },
 };
 
 const sealed: DatabaseState = {
   personal_datasets: { rows: 2, plain: 0, digest: "c" },
   personal_observations: { rows: 5, plain: 0, digest: "d" },
   threads: { rows: 0, plain: 0, digest: "" },
-  answers: { rows: 1, plain: 0, digest: "a2" },
+  model_responses: { rows: 1, plain: 0, digest: "a2" },
 };
 
 describe("the run's passphrase", () => {
@@ -57,7 +57,7 @@ describe("the log", () => {
     expect(stateLines(seeded)).toEqual([
       "  personal_datasets: 2 row(s), 10 plain",
       "  personal_observations: 5 row(s), 30 plain",
-      "  answers: 1 row(s), 2 plain",
+      "  model_responses: 1 row(s), 2 plain",
     ]);
   });
 });

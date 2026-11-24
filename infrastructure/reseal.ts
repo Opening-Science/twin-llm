@@ -8,6 +8,7 @@ import {
   pendingRowsSql,
   plaintextCountSql,
   rowsWithKeySql,
+  sealContextFor,
   updateRowSql,
 } from "./personal-columns";
 
@@ -78,13 +79,14 @@ export const resealRow = (
       plain[column] = null;
       return null;
     }
+    const context = sealContextFor(entry, column);
     const value = isSealedText(stored)
-      ? cipher.openText(entry.table, column, id, stored)
+      ? cipher.openText(context.table, context.column, id, stored)
       : stored;
     plain[column] = value;
     if (sealedTextKeyId(stored) === active) return stored;
-    const next = cipher.sealText(entry.table, column, id, value);
-    if (cipher.openText(entry.table, column, id, next) !== value) {
+    const next = cipher.sealText(context.table, context.column, id, value);
+    if (cipher.openText(context.table, context.column, id, next) !== value) {
       throw new ResealCheckError(entry.table, column);
     }
     return next;
@@ -146,21 +148,34 @@ export const resealOwner = async (
   return counts;
 };
 
+/** The chat tables, old and new: the move's steps add and drop them while this code runs. */
+const CHAT_TABLES = new Set([
+  "conversations",
+  "exchanges",
+  "answers",
+  ...PERSONAL_COPIES.map((entry) => entry.table),
+]);
+
 /**
- * The tables the checks read: every resealed table, and each chat copy that
- * is there. A rollback of the chat tables move drops the copies while this
- * code stays deployed, so a copy table that is gone is skipped, not an error.
+ * The tables the checks read: every resealed table and every chat copy,
+ * less any chat table that is not there. The chat tables move adds and
+ * drops chat tables in steps (a rollback drops the new ones, the contract
+ * step the old ones), so a chat table that is gone is skipped, not an error.
  * Only a clear "not there" skips one.
  */
 export const checkedTables = async (query: SqlRun): Promise<readonly PersonalTable[]> => {
-  const copies: PersonalTable[] = [];
-  for (const entry of PERSONAL_COPIES) {
+  const present: PersonalTable[] = [];
+  for (const entry of [...PERSONAL_TABLES, ...PERSONAL_COPIES]) {
+    if (!CHAT_TABLES.has(entry.table)) {
+      present.push(entry);
+      continue;
+    }
     const [row] = await query(`SELECT to_regclass($1::text) IS NOT NULL AS present`, [
       `"${entry.table}"`,
     ]);
-    if (row?.present !== false) copies.push(entry);
+    if (row?.present !== false) present.push(entry);
   }
-  return [...PERSONAL_TABLES, ...copies];
+  return present;
 };
 
 /** How many of one owner's rows still name `keyId`; zero before that key is removed. */

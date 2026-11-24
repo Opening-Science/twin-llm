@@ -20,42 +20,47 @@ import type { GenomeThread } from "./start-answer";
  * included. A turn that does not exist is an error, never "not genome".
  */
 export const loadGenomeThread = async (turnId: string): Promise<GenomeThread> => {
-  const turn = await database().turn.findUnique({
+  const exchange = await database().exchange.findUnique({
     where: { id: turnId },
     select: {
-      threadId: true,
-      thread: {
+      conversationId: true,
+      conversation: {
         select: {
-          userId: true,
-          turns: {
-            select: { id: true, responses: { select: { id: true, toolParts: true } } },
+          ownerId: true,
+          exchanges: {
+            select: {
+              id: true,
+              answers: { select: { id: true, toolTraceSealed: true } },
+            },
           },
         },
       },
     },
   });
-  if (turn === null) throw new Error("genome thread check: turn not found");
+  if (exchange === null) throw new Error("genome thread check: turn not found");
 
-  const turns = turn.thread.turns;
-  const cipher = await cipherForUser(turn.thread.userId);
+  const exchanges = exchange.conversation.exchanges;
+  const cipher = await cipherForUser(exchange.conversation.ownerId);
   if (
-    turns.some((each) =>
-      each.responses.some((row) =>
-        toolPartsUseGenome(openResponse(cipher, row).toolParts),
+    exchanges.some((each) =>
+      each.answers.some((row) =>
+        toolPartsUseGenome(
+          openResponse(cipher, { id: row.id, toolParts: row.toolTraceSealed }).toolParts,
+        ),
       ),
     )
   ) {
-    return { threadId: turn.threadId, usedGenome: true };
+    return { threadId: exchange.conversationId, usedGenome: true };
   }
   const genomeRow = await database().auditEvent.findFirst({
     where: {
-      sessionId: { in: turns.map((each) => each.id) },
+      sessionId: { in: exchanges.map((each) => each.id) },
       tool: { in: [...LOCAL_ONLY_AUDIT_TOOLS] },
     },
     select: { tool: true },
   });
   return {
-    threadId: turn.threadId,
+    threadId: exchange.conversationId,
     usedGenome: genomeRow !== null && isGenomeAuditTool(genomeRow.tool),
   };
 };

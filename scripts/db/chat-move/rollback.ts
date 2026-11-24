@@ -3,7 +3,8 @@
  *
  * Undoes the expand, mirror and backfill steps of the chat tables move
  * (docs/storage.md, "Chat tables move"): ROLLBACK_SQL in one transaction, so
- * it happens whole or not at all. Only before the switch: until then nothing
+ * it happens whole or not at all. Only before the switch (it refuses a
+ * switched move; db:chat-switch-back comes first): until then nothing
  * but the checks reads the new tables, and they skip copy tables that are
  * gone. threads, turns and model_responses are not touched; their row counts
  * are printed before and after. Take a fresh backup first, as for any schema
@@ -58,6 +59,12 @@ if (isMain) {
       .catch(() => null);
     if (marker === null) {
       console.error(`db:chat-rollback: no ${MOVE} move to roll back`);
+      process.exitCode = 1;
+    } else if (marker.phase === "switched") {
+      // The app reads the new tables now; dropping them would lose its writes.
+      console.error(
+        `db:chat-rollback: the ${MOVE} move is switched; run bun run db:chat-switch-back --yes first`,
+      );
       process.exitCode = 1;
     } else {
       const [before] = await db.$queryRawUnsafe<OldCounts[]>(OLD_COUNTS_SQL);

@@ -163,6 +163,11 @@ if (isMain) {
       console.error(`db:chat-backfill: no ${MOVE} move in progress; run db:deploy first`);
       process.exit(1);
     }
+    if (marker.phase === "switched") {
+      // The app writes the new tables now; the reverse triggers keep the old ones.
+      console.error(`db:chat-backfill: the ${MOVE} move is switched; nothing to copy`);
+      process.exit(1);
+    }
     let step = "copy";
     try {
       const restart = process.argv.includes("--restart");

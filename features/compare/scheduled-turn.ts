@@ -23,6 +23,8 @@ export type ScheduledTurnInput = Readonly<{
   actorId: string;
   appUserId: string;
   threadId: string | null;
+  /** The task that runs; its id goes on the exchange (`schedule_id`). */
+  taskId: string;
   skill: string;
   question: string;
   modelId: string;
@@ -38,7 +40,7 @@ export type ScheduledTurnDeps = Readonly<{
       ownerId: string;
       threadId: string | null;
       plan: TurnPlan;
-      scheduled: true;
+      scheduleId: string;
     }>,
   ) => Promise<StartTurnResult>;
   startAnswer: (
@@ -86,7 +88,7 @@ export const createScheduledTurn =
       ownerId: input.appUserId,
       threadId: input.threadId,
       plan: planned.plan,
-      scheduled: true,
+      scheduleId: input.taskId,
     });
     if (!written.ok) return failed(input.threadId);
 

@@ -73,6 +73,29 @@ const vectorSql = (values: readonly number[]): Prisma.Sql =>
     `'[${values.map((value) => (Number.isFinite(value) ? String(value) : "0")).join(",")}]'::vector`,
   );
 
+/** A conversation's id, sealed title and last activity. */
+const CONVERSATION_FIELDS = {
+  id: true,
+  titleSealed: true,
+  lastActivityAt: true,
+} as const;
+
+type ConversationFields = Readonly<{
+  id: string;
+  titleSealed: string;
+  lastActivityAt: Date;
+}>;
+
+/** A conversation under the search's own names; the title still sealed. */
+const threadOf = (conversation: ConversationFields) => ({
+  threadId: conversation.id,
+  title: conversation.titleSealed,
+  updatedAt: conversation.lastActivityAt,
+});
+
+const titleOf = (cipher: FieldCipher, conversation: ConversationFields): string =>
+  openThreadTitle(cipher, conversation.id, conversation.titleSealed);
+
 const insensitive = (query: string) => ({
   contains: query,
   mode: "insensitive" as const,
@@ -86,32 +109,48 @@ const sealedWordRows = async (
   cap: number,
 ): Promise<readonly WordRow[]> => {
   const db = database();
-  const threads = await db.thread.findMany({
-    where: { userId },
-    select: { id: true, title: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
+  const conversations = await db.conversation.findMany({
+    where: { ownerId: userId },
+    select: CONVERSATION_FIELDS,
+    orderBy: { lastActivityAt: "desc" },
   });
   const byId = new Map(
-    threads.map((thread) => [
-      thread.id,
-      {
-        threadId: thread.id,
-        title: openThreadTitle(cipher, thread.id, thread.title),
-        updatedAt: thread.updatedAt,
-      },
+    conversations.map((conversation) => [
+      conversation.id,
+      { ...threadOf(conversation), title: titleOf(cipher, conversation) },
     ]),
   );
   const [turns, answers] = await Promise.all([
-    db.turn.findMany({
-      where: { thread: { userId } },
-      select: { id: true, threadId: true, prompt: true },
-      orderBy: { createdAt: "desc" },
-    }),
-    db.modelResponse.findMany({
-      where: { status: "COMPLETE", turn: { thread: { userId } } },
-      select: { id: true, text: true, turn: { select: { threadId: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
+    db.exchange
+      .findMany({
+        where: { conversation: { ownerId: userId } },
+        select: { id: true, conversationId: true, questionSealed: true },
+        orderBy: { askedAt: "desc" },
+      })
+      .then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          threadId: row.conversationId,
+          prompt: row.questionSealed,
+        })),
+      ),
+    db.answer
+      .findMany({
+        where: { state: "complete", exchange: { conversation: { ownerId: userId } } },
+        select: {
+          id: true,
+          bodySealed: true,
+          exchange: { select: { conversationId: true } },
+        },
+        orderBy: { openedAt: "desc" },
+      })
+      .then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          text: row.bodySealed,
+          turn: { threadId: row.exchange.conversationId },
+        })),
+      ),
   ]);
   const withThread = (threadId: string, text: string | null): WordRow[] => {
     const thread = byId.get(threadId);
@@ -143,49 +182,42 @@ const wordRows = async (
   const cipher = await cipherForUser(userId);
   if (cipher.mode === "sealed") return sealedWordRows(userId, cipher, query, cap);
   const db = database();
-  const threadFields = { id: true, title: true, updatedAt: true } as const;
   const [titles, prompts, answers] = await Promise.all([
-    db.thread.findMany({
-      where: { userId, title: insensitive(query) },
-      select: threadFields,
-      orderBy: { updatedAt: "desc" },
+    db.conversation.findMany({
+      where: { ownerId: userId, titleSealed: insensitive(query) },
+      select: CONVERSATION_FIELDS,
+      orderBy: { lastActivityAt: "desc" },
       take: cap,
     }),
-    db.turn.findMany({
-      where: { thread: { userId }, prompt: insensitive(query) },
-      select: { prompt: true, thread: { select: threadFields } },
-      orderBy: { createdAt: "desc" },
+    db.exchange.findMany({
+      where: { conversation: { ownerId: userId }, questionSealed: insensitive(query) },
+      select: { questionSealed: true, conversation: { select: CONVERSATION_FIELDS } },
+      orderBy: { askedAt: "desc" },
       take: cap,
     }),
-    db.modelResponse.findMany({
+    db.answer.findMany({
       where: {
-        status: "COMPLETE",
-        turn: { thread: { userId } },
-        text: insensitive(query),
+        state: "complete",
+        exchange: { conversation: { ownerId: userId } },
+        bodySealed: insensitive(query),
       },
-      select: { text: true, turn: { select: { thread: { select: threadFields } } } },
-      orderBy: { createdAt: "desc" },
+      select: {
+        bodySealed: true,
+        exchange: { select: { conversation: { select: CONVERSATION_FIELDS } } },
+      },
+      orderBy: { openedAt: "desc" },
       take: cap,
     }),
   ]);
   return [
-    ...titles.map((thread) => ({
-      threadId: thread.id,
-      title: thread.title,
-      updatedAt: thread.updatedAt,
-      text: null,
-    })),
-    ...prompts.map((turn) => ({
-      threadId: turn.thread.id,
-      title: turn.thread.title,
-      updatedAt: turn.thread.updatedAt,
-      text: turn.prompt,
+    ...titles.map((conversation) => ({ ...threadOf(conversation), text: null })),
+    ...prompts.map((exchange) => ({
+      ...threadOf(exchange.conversation),
+      text: exchange.questionSealed,
     })),
     ...answers.map((answer) => ({
-      threadId: answer.turn.thread.id,
-      title: answer.turn.thread.title,
-      updatedAt: answer.turn.thread.updatedAt,
-      text: answer.text,
+      ...threadOf(answer.exchange.conversation),
+      text: answer.bodySealed,
     })),
   ];
 };
@@ -271,38 +303,45 @@ const sourceTexts = async (
   const db = database();
   const ids = (kind: NearestRow["sourceKind"]) =>
     rows.filter((row) => row.sourceKind === kind).map((row) => row.sourceId);
-  const threadFields = { id: true, title: true, updatedAt: true } as const;
   const cipher = await cipherForUser(userId);
-  const opened = <T extends Readonly<{ id: string; title: string }>>(thread: T): T => ({
-    ...thread,
-    title: openThreadTitle(cipher, thread.id, thread.title),
+  const opened = (conversation: ConversationFields) => ({
+    id: conversation.id,
+    title: titleOf(cipher, conversation),
+    updatedAt: conversation.lastActivityAt,
   });
   const [prompts, answers] = await Promise.all([
-    db.turn
+    db.exchange
       .findMany({
-        where: { id: { in: ids("prompt") }, thread: { userId } },
-        select: { id: true, prompt: true, thread: { select: threadFields } },
-      })
-      .then((rows) =>
-        rows.map((turn) => ({
-          ...turn,
-          prompt: openPrompt(cipher, turn.id, turn.prompt),
-          thread: opened(turn.thread),
-        })),
-      ),
-    db.modelResponse
-      .findMany({
-        where: { id: { in: ids("answer") }, turn: { thread: { userId } } },
+        where: { id: { in: ids("prompt") }, conversation: { ownerId: userId } },
         select: {
           id: true,
-          text: true,
-          turn: { select: { thread: { select: threadFields } } },
+          questionSealed: true,
+          conversation: { select: CONVERSATION_FIELDS },
+        },
+      })
+      .then((rows) =>
+        rows.map((exchange) => ({
+          id: exchange.id,
+          prompt: openPrompt(cipher, exchange.id, exchange.questionSealed),
+          thread: opened(exchange.conversation),
+        })),
+      ),
+    db.answer
+      .findMany({
+        where: {
+          id: { in: ids("answer") },
+          exchange: { conversation: { ownerId: userId } },
+        },
+        select: {
+          id: true,
+          bodySealed: true,
+          exchange: { select: { conversation: { select: CONVERSATION_FIELDS } } },
         },
       })
       .then((rows) =>
         rows.map((answer) => ({
-          ...openResponse(cipher, answer),
-          turn: { thread: opened(answer.turn.thread) },
+          ...openResponse(cipher, { id: answer.id, text: answer.bodySealed }),
+          turn: { thread: opened(answer.exchange.conversation) },
         })),
       ),
   ]);
@@ -343,15 +382,27 @@ const genomeThreads = async (
 ): Promise<ReadonlySet<string>> => {
   if (threadIds.length === 0) return new Set();
   const db = database();
-  const turns = await db.turn.findMany({
-    where: { threadId: { in: [...threadIds] } },
-    select: {
-      id: true,
-      threadId: true,
-      thread: { select: { userId: true } },
-      responses: { select: { id: true, toolParts: true } },
-    },
-  });
+  const turns = await db.exchange
+    .findMany({
+      where: { conversationId: { in: [...threadIds] } },
+      select: {
+        id: true,
+        conversationId: true,
+        conversation: { select: { ownerId: true } },
+        answers: { select: { id: true, toolTraceSealed: true } },
+      },
+    })
+    .then((rows) =>
+      rows.map((row) => ({
+        id: row.id,
+        threadId: row.conversationId,
+        thread: { userId: row.conversation.ownerId },
+        responses: row.answers.map((answer) => ({
+          id: answer.id,
+          toolParts: answer.toolTraceSealed,
+        })),
+      })),
+    );
   const ciphers = new Map<string, FieldCipher>();
   for (const userId of new Set(turns.map((turn) => turn.thread.userId))) {
     ciphers.set(userId, await cipherForUser(userId));
@@ -399,32 +450,36 @@ const recentSources = async (
 ): Promise<readonly IndexSource[]> => {
   const db = database();
   const [turns, answers] = await Promise.all([
-    db.turn.findMany({
-      where: { thread: { userId } },
-      select: { id: true, threadId: true, prompt: true },
-      orderBy: { createdAt: "desc" },
+    db.exchange.findMany({
+      where: { conversation: { ownerId: userId } },
+      select: { id: true, conversationId: true, questionSealed: true },
+      orderBy: { askedAt: "desc" },
       take: cap,
     }),
-    db.modelResponse.findMany({
-      where: { status: "COMPLETE", turn: { thread: { userId } } },
-      select: { id: true, text: true, turn: { select: { threadId: true } } },
-      orderBy: { createdAt: "desc" },
+    db.answer.findMany({
+      where: { state: "complete", exchange: { conversation: { ownerId: userId } } },
+      select: {
+        id: true,
+        bodySealed: true,
+        exchange: { select: { conversationId: true } },
+      },
+      orderBy: { openedAt: "desc" },
       take: cap,
     }),
   ]);
   const cipher = await cipherForUser(userId);
   return [
-    ...turns.map((turn) => ({
-      threadId: turn.threadId,
+    ...turns.map((exchange) => ({
+      threadId: exchange.conversationId,
       sourceKind: "prompt" as const,
-      sourceId: turn.id,
-      text: openPrompt(cipher, turn.id, turn.prompt),
+      sourceId: exchange.id,
+      text: openPrompt(cipher, exchange.id, exchange.questionSealed),
     })),
     ...answers.map((answer) => ({
-      threadId: answer.turn.threadId,
+      threadId: answer.exchange.conversationId,
       sourceKind: "answer" as const,
       sourceId: answer.id,
-      text: openResponse(cipher, answer).text,
+      text: openResponse(cipher, { id: answer.id, text: answer.bodySealed }).text,
     })),
   ];
 };

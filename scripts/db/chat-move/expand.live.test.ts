@@ -1,6 +1,12 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { columnShapes, liveDatabase, runLive } from "./live.test-helpers";
+import {
+  asBeforeSwitch,
+  asSwitched,
+  columnShapes,
+  liveDatabase,
+  runLive,
+} from "./live.test-helpers";
 import { CHAT_MOVES, type ColumnCopy } from "./tables";
 
 /**
@@ -25,7 +31,11 @@ const expectedType = (column: ColumnCopy, oldType: string): string => {
 
 describe.skipIf(!runLive)("chat tables after the expand migration (RUN_LIVE=1)", () => {
   const db = liveDatabase();
-  afterAll(() => db.$disconnect());
+  beforeAll(() => asBeforeSwitch(db));
+  afterAll(async () => {
+    await asSwitched(db);
+    await db.$disconnect();
+  });
 
   test("each new column holds what its old column holds", async () => {
     const mismatches: string[] = [];

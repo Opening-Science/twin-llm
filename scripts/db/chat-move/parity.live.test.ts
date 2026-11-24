@@ -8,7 +8,13 @@ import {
 
 import { finishBackfill, runBackfill } from "./backfill";
 import { UNDO_FINISH_SQL } from "./backfill-sql";
-import { liveDatabase, requireNoThreads, runLive } from "./live.test-helpers";
+import {
+  asBeforeSwitch,
+  asSwitched,
+  liveDatabase,
+  requireNoThreads,
+  runLive,
+} from "./live.test-helpers";
 import { checkParity, openProblems, reportLines } from "./parity";
 import { withoutMirror } from "./seed.test-helpers";
 
@@ -38,6 +44,7 @@ describe.skipIf(!runLive)("chat parity gate (RUN_LIVE=1)", () => {
 
   beforeAll(async () => {
     await requireNoThreads(db);
+    await asBeforeSwitch(db);
     await withoutMirror(db, async (tx) => {
       for (const [userId, sealing] of [
         [SEALED_USER, true],
@@ -122,6 +129,7 @@ describe.skipIf(!runLive)("chat parity gate (RUN_LIVE=1)", () => {
     await db.$executeRawUnsafe(`DELETE FROM "answers"`);
     await db.$executeRawUnsafe(`DELETE FROM "exchanges"`);
     await db.$executeRawUnsafe(`DELETE FROM "conversations"`);
+    await asSwitched(db);
     await db.$disconnect();
   });
 

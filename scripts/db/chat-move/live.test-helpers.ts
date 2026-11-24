@@ -1,6 +1,9 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { postgresAdapter } from "@/infrastructure/database-adapter";
 
+import { MOVE, UNDO_FINISH_SQL } from "./backfill-sql";
+import { FORGET_SWITCH_SQL, SWITCH_BACK_SQL, SWITCH_SQL } from "./switch-sql";
+
 /**
  * A client for the chat-move live tests, which run against a throwaway,
  * migrated database only:
@@ -52,6 +55,39 @@ export const columnShapes = async (
         scale: row.numeric_scale,
       },
     ]),
+  );
+};
+
+/**
+ * The release-1 live tests (expand, mirror, backfill, parity, rollback)
+ * rehearse the move before the switch. A database migrated to the newest
+ * schema is switched, so they first put it back as the expand and mirror
+ * migrations left it: switched back, the backfill's finish step undone and
+ * the phase `expanded`. The switch migration stays recorded.
+ */
+export const asBeforeSwitch = async (db: PrismaClient): Promise<void> => {
+  const marker = await db.schemaMove.findUnique({ where: { move: MOVE } });
+  if (marker?.phase !== "switched") return;
+  await db.$transaction(
+    async (tx) => {
+      for (const statement of SWITCH_BACK_SQL.filter((s) => s !== FORGET_SWITCH_SQL)) {
+        await tx.$executeRawUnsafe(statement);
+      }
+      for (const statement of UNDO_FINISH_SQL) await tx.$executeRawUnsafe(statement);
+    },
+    { timeout: 60_000 },
+  );
+};
+
+/** Switches again once a release-1 test has cleared its rows, as the migration does. */
+export const asSwitched = async (db: PrismaClient): Promise<void> => {
+  const marker = await db.schemaMove.findUnique({ where: { move: MOVE } });
+  if (marker?.phase === "switched") return;
+  await db.$transaction(
+    async (tx) => {
+      for (const statement of SWITCH_SQL) await tx.$executeRawUnsafe(statement);
+    },
+    { timeout: 60_000 },
   );
 };
 

@@ -113,22 +113,22 @@ describe("the committed fixture", () => {
 
 type Row = Readonly<Record<string, unknown>>;
 
-/** Just enough of Postgres for the insert: users, threads, turns, responses and one subject. */
+/** Just enough of Postgres for the insert: users, conversations, exchanges, answers and one subject. */
 const fakeDatabase = (subject: Row | null) => {
-  const tables: Record<"users" | "threads" | "turns" | "model_responses", Row[]> = {
+  const tables: Record<"users" | "conversations" | "exchanges" | "answers", Row[]> = {
     users: [],
-    threads: [],
-    turns: [],
-    model_responses: [],
+    conversations: [],
+    exchanges: [],
+    answers: [],
   };
   const query: SqlQuery = {
     unsafe: async (text, params = []) => {
       if (text.includes("to_regclass")) return [{ present: true }];
       if (text.startsWith("select is_synthetic"))
         return subject === null ? [] : [subject];
-      if (text.startsWith("select exists(select 1 from threads")) {
+      if (text.startsWith("select exists(select 1 from conversations")) {
         const users = tables.users.filter((u) => u.clerkId === params[0]);
-        const present = tables.threads.some(
+        const present = tables.conversations.some(
           (t) => t.title === params[1] && users.some((u) => u.id === t.userId),
         );
         return [{ present }];
@@ -139,16 +139,16 @@ const fakeDatabase = (subject: Row | null) => {
         tables.users.push({ id: params[0], clerkId: params[1] });
         return [{ id: params[0] }];
       }
-      if (text.startsWith("insert into threads")) {
-        tables.threads.push({ id: params[0], userId: params[1], title: params[2] });
+      if (text.startsWith("insert into conversations")) {
+        tables.conversations.push({ id: params[0], userId: params[1], title: params[2] });
         return [];
       }
-      if (text.startsWith("insert into turns")) {
-        tables.turns.push({ id: params[0], threadId: params[1], prompt: params[2] });
+      if (text.startsWith("insert into exchanges")) {
+        tables.exchanges.push({ id: params[0], threadId: params[1], prompt: params[2] });
         return [];
       }
-      if (text.startsWith("insert into model_responses")) {
-        tables.model_responses.push({
+      if (text.startsWith("insert into answers")) {
+        tables.answers.push({
           turnId: params[1],
           modelId: params[2],
           toolParts: JSON.parse(String(params[8])),
@@ -183,13 +183,13 @@ describe("insertExampleThread", () => {
       kind: "exists",
     });
     expect(db.tables.users).toEqual([{ id: "id-1", clerkId: "local" }]);
-    expect(db.tables.threads).toEqual([
+    expect(db.tables.conversations).toEqual([
       { id: "id-2", userId: "id-1", title: "Example (synthetic)" },
     ]);
-    expect(db.tables.turns).toEqual([
+    expect(db.tables.exchanges).toEqual([
       { id: "id-3", threadId: "id-2", prompt: fixture.prompt },
     ]);
-    expect(db.tables.model_responses).toEqual([
+    expect(db.tables.answers).toEqual([
       { turnId: "id-3", modelId: "qwen3:4b", toolParts: fixture.response.toolParts },
     ]);
   });
@@ -206,7 +206,7 @@ describe("insertExampleThread", () => {
       { id: "user-local", clerkId: "local" },
       { id: "id-1", clerkId: "second" },
     ]);
-    expect(db.tables.threads.map((t) => t.userId)).toEqual(["user-local", "id-1"]);
+    expect(db.tables.conversations.map((t) => t.userId)).toEqual(["user-local", "id-1"]);
   });
 
   test("refuses a subject the warehouse holds as not synthetic", async () => {
@@ -216,6 +216,6 @@ describe("insertExampleThread", () => {
       kind: "refused",
       why: "ba419d35-0dfe-8af7-347c-eebf02485a56 is in the warehouse but not marked synthetic",
     });
-    expect(db.tables.threads).toEqual([]);
+    expect(db.tables.conversations).toEqual([]);
   });
 });

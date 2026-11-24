@@ -1,15 +1,22 @@
 import "server-only";
 
+import { stateOf } from "@/infrastructure/answer-state";
+import {
+  sealChatJson,
+  sealChatNullable,
+  sealChatText,
+} from "@/infrastructure/chat-seal-contexts";
 import { database } from "@/infrastructure/database";
-import { type FieldCipher, sealJson, sealNullable } from "@/infrastructure/field-cipher";
+import type { FieldCipher } from "@/infrastructure/field-cipher";
 import { cipherForUser } from "@/infrastructure/field-cipher-runtime";
 
 import {
   type ModelResponseCompleteParams,
   type ModelResponseCompleteUpdate,
+  type ModelResponseFailedUpdate,
+  type ModelResponseRefusedUpdate,
   type ModelResponseStoppedParams,
   type ModelResponseStoppedUpdate,
-  type ModelResponseWritePort,
   writeModelResponseComplete,
   writeModelResponseFailed,
   writeModelResponseRefused,
@@ -17,30 +24,43 @@ import {
 } from "./write-model-response-complete";
 
 /**
- * The terminal row writes, bound to the real database. Every text and JSON
- * column is sealed with the thread owner's keys (#141) before it is written;
- * the row's id is read first because it is part of each value's context.
+ * The terminal answer writes, bound to the real database (the `answers`
+ * table). Every text and JSON column is sealed with the conversation owner's
+ * keys (#141) under its frozen context name (`chat-seal-contexts.ts`) before
+ * it is written; the row's id is read first because it is part of each
+ * value's context. The write ports keep the app's own names; here they
+ * become the table's columns.
  */
 
-const TABLE = "model_responses";
-
 type RowKey = ModelResponseCompleteUpdate["where"];
+
+const answerKey = (where: RowKey) => ({
+  exchangeId_answererRef: {
+    exchangeId: where.turnId_modelId.turnId,
+    answererRef: where.turnId_modelId.modelId,
+  },
+});
 
 const rowOf = async (
   where: RowKey,
 ): Promise<Readonly<{ id: string; cipher: FieldCipher }>> => {
-  const row = await database().modelResponse.findUnique({
-    where,
-    select: { id: true, turn: { select: { thread: { select: { userId: true } } } } },
+  const row = await database().answer.findUnique({
+    where: answerKey(where),
+    select: {
+      id: true,
+      exchange: { select: { conversation: { select: { ownerId: true } } } },
+    },
   });
   if (row === null) throw new Error("model response row not found");
-  return { id: row.id, cipher: await cipherForUser(row.turn.thread.userId) };
+  return { id: row.id, cipher: await cipherForUser(row.exchange.conversation.ownerId) };
 };
+
+type JsonColumn = "evidence_sealed" | "document_sealed" | "tool_trace_sealed";
 
 /** Undefined leaves a column as it is; null clears it. */
 const sealOptionalJson = (
   cipher: FieldCipher,
-  column: string,
+  column: JsonColumn,
   id: string,
   value: unknown,
 ): string | null | undefined =>
@@ -48,69 +68,79 @@ const sealOptionalJson = (
     ? undefined
     : value === null
       ? null
-      : sealJson(cipher, TABLE, column, id, value);
+      : sealChatJson(cipher, "answers", column, id, value);
 
-const sealAnswer = <
-  Data extends ModelResponseCompleteUpdate["data"] | ModelResponseStoppedUpdate["data"],
->(
+const sealAnswer = (
   cipher: FieldCipher,
   id: string,
-  data: Data,
+  data: ModelResponseCompleteUpdate["data"] | ModelResponseStoppedUpdate["data"],
 ) => ({
-  ...data,
-  text: cipher.sealText(TABLE, "text", id, data.text),
-  reasoningText: sealNullable(cipher, TABLE, "reasoningText", id, data.reasoningText),
-  attribution: sealOptionalJson(cipher, "attribution", id, data.attribution),
-  responseDocument: sealOptionalJson(
+  ...(data.status === "COMPLETE"
+    ? {
+        firstTokenMs: data.timeToFirstTokenMs,
+        tokensPerSecond: data.tokensPerSecond,
+        inputTokens: data.inputTokens,
+        outputTokens: data.outputTokens,
+        totalTokens: data.totalTokens,
+      }
+    : {}),
+  state: stateOf(data.status),
+  closedAt: data.completedAt,
+  bodySealed: sealChatText(cipher, "answers", "body_sealed", id, data.text),
+  reasoningSealed: sealChatNullable(
     cipher,
-    "responseDocument",
+    "answers",
+    "reasoning_sealed",
     id,
-    data.responseDocument,
+    data.reasoningText,
   ),
-  toolParts: sealOptionalJson(cipher, "toolParts", id, data.toolParts),
+  evidenceSealed: sealOptionalJson(cipher, "evidence_sealed", id, data.attribution),
+  documentSealed: sealOptionalJson(cipher, "document_sealed", id, data.responseDocument),
+  toolTraceSealed: sealOptionalJson(cipher, "tool_trace_sealed", id, data.toolParts),
 });
 
-const completePort: ModelResponseWritePort = {
-  update: async ({ where, data }) => {
-    const { id, cipher } = await rowOf(where);
-    return database().modelResponse.update({
-      where: { id },
-      data: sealAnswer(cipher, id, data),
-    });
-  },
+const writeAnswer = async ({
+  where,
+  data,
+}: ModelResponseCompleteUpdate | ModelResponseStoppedUpdate): Promise<unknown> => {
+  const { id, cipher } = await rowOf(where);
+  return database().answer.update({ where: { id }, data: sealAnswer(cipher, id, data) });
 };
 
 export const markModelResponseComplete = (params: ModelResponseCompleteParams) =>
-  writeModelResponseComplete(completePort, params);
+  writeModelResponseComplete({ update: writeAnswer }, params);
 
 export const markModelResponseStopped = (params: ModelResponseStoppedParams) =>
-  writeModelResponseStopped(
-    {
-      update: async ({ where, data }) => {
-        const { id, cipher } = await rowOf(where);
-        return database().modelResponse.update({
-          where: { id },
-          data: sealAnswer(cipher, id, data),
-        });
-      },
-    },
-    params,
-  );
+  writeModelResponseStopped({ update: writeAnswer }, params);
 
 export const markModelResponseFailed = (
   target: Readonly<{ turnId: string; modelId: string }>,
-) => writeModelResponseFailed(database().modelResponse, target);
+) =>
+  writeModelResponseFailed(
+    {
+      update: ({ where, data }: ModelResponseFailedUpdate) =>
+        database().answer.update({
+          where: answerKey(where),
+          data: { state: stateOf(data.status), closedAt: data.completedAt },
+        }),
+    },
+    target,
+  );
 
 export const markModelResponseRefused = (
   target: Readonly<{ turnId: string; modelId: string; sentence: string }>,
 ) =>
   writeModelResponseRefused(
     {
-      update: async ({ where, data }) => {
+      update: async ({ where, data }: ModelResponseRefusedUpdate) => {
         const { id, cipher } = await rowOf(where);
-        return database().modelResponse.update({
+        return database().answer.update({
           where: { id },
-          data: { ...data, text: cipher.sealText(TABLE, "text", id, data.text) },
+          data: {
+            state: stateOf(data.status),
+            closedAt: data.completedAt,
+            bodySealed: sealChatText(cipher, "answers", "body_sealed", id, data.text),
+          },
         });
       },
     },
