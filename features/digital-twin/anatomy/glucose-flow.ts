@@ -1,35 +1,9 @@
-import {
-  AnimationMixer,
-  LoopRepeat,
-  type AnimationClip,
-  type BufferGeometry,
-  type Mesh,
-  type Object3D,
-} from "three";
+import { AnimationMixer, LoopRepeat, type AnimationClip, type Object3D } from "three";
 
 import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
 import { type AtlasId } from "@/packages/anatomy/manifest";
 
 export type GlucoseStatus = "idle" | "loading" | "ready" | "error";
-
-export const GLUCOSE_PARTICLE_SIZE = 1.2;
-
-const resizedGeometries = new WeakSet<BufferGeometry>();
-
-const enlargeParticleMeshes = (particles: readonly { node: Object3D }[]): void => {
-  for (const { node } of particles) {
-    node.traverse((object) => {
-      const mesh = object as Mesh;
-      if (!mesh.isMesh || resizedGeometries.has(mesh.geometry)) return;
-      mesh.geometry.scale(
-        GLUCOSE_PARTICLE_SIZE,
-        GLUCOSE_PARTICLE_SIZE,
-        GLUCOSE_PARTICLE_SIZE,
-      );
-      resizedGeometries.add(mesh.geometry);
-    });
-  }
-};
 
 export const glucoseUnavailable = (
   atlasId: AtlasId,
@@ -72,7 +46,6 @@ export const createGlucoseFlow = (root: Object3D, clips: readonly AnimationClip[
   }
   const clip = clips.find((candidate) => candidate.name === GLUCOSE_EFFECT.clip);
   if (!clip) throw new Error("GlucoseFlow animation is missing.");
-  enlargeParticleMeshes(particles);
   const mixer = new AnimationMixer(root);
   const action = mixer.clipAction(clip);
   action.setLoop(LoopRepeat, Infinity);

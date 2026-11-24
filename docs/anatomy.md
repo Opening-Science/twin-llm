@@ -83,10 +83,8 @@ passes; zero density hides particles but keeps the glucose-mode anatomy appearan
   tracing independently of `ANATOMY_DATA_DIR`; no second anatomy is loaded.
 - Its 12-second `GlucoseFlow` clip repeats at fixed 1x. Density only toggles ranked
   node visibility and does not restart or retime the clip.
-- At load time the particle mesh is enlarged 20% in each dimension compared with
-  the committed GLB, without changing its paths or animated scale. The handoff's
-  vessel-wall clearance validation covers the original asset, not this larger size;
-  larger particles may protrude through vessel walls.
+- Particles are drawn at the size in the committed GLB, the size the handoff's
+  vessel-wall clearance check was run at; the app does not rescale them.
 - The companion is a sibling of the atlas under the same fit/placement group,
   not a child of a vessel mesh. It follows depth and cardiovascular visibility,
   freezes for reduced motion, and suspends while off screen or the tab is hidden.

@@ -142,17 +142,17 @@ describe("glucose flow", () => {
     const flow = createGlucoseFlow(gltf.scene, gltf.animations);
     expect(flow.maxParticles).toBe(180);
     expect(meshes.every((mesh) => mesh.geometry === geometry)).toBe(true);
-    const expectScaled = () => {
+    // Particles keep the size the vessel-wall check was run at.
+    const expectUnscaled = () => {
       for (let i = 0; i < original.length; i++) {
-        expect(positions.getX(i)).toBeCloseTo(original[i][0] * 1.2, 7);
-        expect(positions.getY(i)).toBeCloseTo(original[i][1] * 1.2, 7);
-        expect(positions.getZ(i)).toBeCloseTo(original[i][2] * 1.2, 7);
+        expect(positions.getX(i)).toBe(original[i][0]);
+        expect(positions.getY(i)).toBe(original[i][1]);
+        expect(positions.getZ(i)).toBe(original[i][2]);
       }
     };
-    expectScaled();
+    expectUnscaled();
     geometry.computeBoundingBox();
-    expect(geometry.boundingBox!.min.x).toBeCloseTo(originalBounds.min.x * 1.2, 7);
-    expect(geometry.boundingBox!.max.x).toBeCloseTo(originalBounds.max.x * 1.2, 7);
+    expect(geometry.boundingBox!.equals(originalBounds)).toBe(true);
     const particles: Object3D[] = [];
     gltf.scene.traverse((node) => {
       if (node.userData.glucoseDensityRank !== undefined) particles.push(node);
@@ -165,7 +165,7 @@ describe("glucose flow", () => {
     }
     flow.dispose();
     const second = createGlucoseFlow(gltf.scene, gltf.animations);
-    expectScaled();
+    expectUnscaled();
     second.dispose();
   });
 });
