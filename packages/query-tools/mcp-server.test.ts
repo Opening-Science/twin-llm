@@ -167,7 +167,7 @@ describe("query tools MCP server", () => {
     ).toEqual([
       [
         "imported_latest",
-        { codes: 1, dataset_id: null },
+        { codes: 1, measures: 0, dataset_id: null },
         { code: "IMPORTED_DATA_NOT_PERMITTED" },
         0,
       ],

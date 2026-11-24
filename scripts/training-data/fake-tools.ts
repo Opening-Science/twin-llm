@@ -87,7 +87,8 @@ export const fakeTools = (data: FakeRows) => {
       case "latest_by_loinc": {
         const input = KEYED_TOOLS.latest_by_loinc.parse(args);
         if (!(input.subject_ref in data)) return SUBJECT_SCOPE_VIOLATION;
-        const latest = input.loinc.flatMap((loinc) => {
+        const codes = input.loinc ?? [];
+        const latest = codes.flatMap((loinc) => {
           const own = rows(input.subject_ref)
             .filter((row) => row.loinc === loinc)
             .toSorted((a, b) => b.effectiveAt.getTime() - a.effectiveAt.getTime());
@@ -105,10 +106,10 @@ export const fakeTools = (data: FakeRows) => {
               ]
             : [];
         });
-        if (latest.length === 0) return noReadingForCodes(input.loinc);
+        if (latest.length === 0) return noReadingForCodes(codes);
         return {
           rows: latest,
-          codes_without_rows: input.loinc.filter(
+          codes_without_rows: codes.filter(
             (code) => !latest.some((row) => row.loinc === code),
           ),
         };

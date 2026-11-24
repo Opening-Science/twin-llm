@@ -47,6 +47,29 @@ const slim = (node: unknown): unknown => {
 };
 
 /**
+ * Measures by name (#900): a tool that takes `measure` shows the model
+ * `measure` and not `loinc`, so the model names measures and never has to
+ * write a code, and `measure` is required unless the tool also takes a stored
+ * series `name`. zod still accepts `loinc` (a model trained on codes, MCP
+ * clients, the answer key), with its check digit checked before any read.
+ */
+const measuresOnly = (root: Record<string, unknown>): Record<string, unknown> => {
+  const properties = isRecord(root.properties) ? root.properties : null;
+  if (properties === null || !("measure" in properties) || !("loinc" in properties)) {
+    return root;
+  }
+  const { loinc: _loinc, ...kept } = properties;
+  const required = Array.isArray(root.required)
+    ? root.required.filter((key) => key !== "loinc")
+    : [];
+  return {
+    ...root,
+    properties: kept,
+    required: "name" in properties ? required : [...required, "measure"],
+  };
+};
+
+/**
  * The JSON Schema a model gets for a tool's input: draft-07, the input side
  * and closed objects, as the AI SDK emits it, without `$schema`, regex `pattern`s or
  * `format`s, so a window bound is a plain string with its description. The
@@ -57,7 +80,7 @@ export const modelJsonSchema = (schema: z.ZodType): JSONSchema7 => {
   const slimmed = slim(z.toJSONSchema(schema, { target: "draft-7", io: "input" }));
   const { description: _rootDescription, ...root } = isRecord(slimmed) ? slimmed : {};
   // zod's draft-07 output with keys removed is still a draft-07 schema.
-  return root as JSONSchema7;
+  return measuresOnly(root) as JSONSchema7;
 };
 
 /**
