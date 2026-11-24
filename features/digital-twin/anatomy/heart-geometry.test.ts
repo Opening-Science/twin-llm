@@ -103,6 +103,21 @@ describe("heart geometry for picking and focusing", () => {
     expect(heartGroupWorldBox(parts, 3, layers, ["cardiovascular"])).toBeNull();
   });
 
+  test("no heart to frame while another layer is isolated", () => {
+    const { mesh } = taggedHeart();
+    const parts = [
+      {
+        mesh,
+        group: "heart",
+        layer: "organs" as const,
+        system: "cardiovascular" as const,
+      },
+    ];
+    const layers = { muscle: true, skeleton: true, organs: true };
+    expect(heartGroupWorldBox(parts, 3, layers, [], "skeleton")).toBeNull();
+    expect(heartGroupWorldBox(parts, 0, layers, [], "organs")).not.toBeNull();
+  });
+
   test("focus bounds contain only the heart, including the atlas placement transform", () => {
     const { root, mesh } = taggedHeart();
     root.rotation.x = Math.PI / 2;

@@ -78,6 +78,33 @@ export const layerMix = (layer: LayerId, depth: number): LayerMix => {
   return { alpha, fade, visible };
 };
 
+const SOLID: LayerMix = { alpha: 1, fade: 0, visible: true };
+const HIDDEN: LayerMix = { alpha: 0, fade: 0, visible: false };
+
+/**
+ * Isolate shows one atlas layer alone: that layer solid whatever the depth,
+ * the scan and every other layer hidden. Without isolate it is `layerMix`.
+ */
+export const viewMix = (
+  layer: LayerId,
+  depth: number,
+  isolate: AtlasLayerId | null,
+): LayerMix => {
+  if (isolate === null) return layerMix(layer, depth);
+  return layer === isolate ? SOLID : HIDDEN;
+};
+
+/**
+ * The isolate the scene draws: the chosen one only once that layer is
+ * actually showing. While it loads, after a failed load or fit, or with its
+ * toggle off, the view stays as it was, so the scan never vanishes into an
+ * empty canvas.
+ */
+export const drawnIsolate = (
+  isolate: AtlasLayerId | null,
+  showing: (layer: AtlasLayerId) => boolean,
+): AtlasLayerId | null => (isolate !== null && showing(isolate) ? isolate : null);
+
 /** Toggles only ever hide; the slider alone decides solid versus glass. */
 export const applyMask = (mix: LayerMix, shown: boolean): LayerMix =>
   shown ? mix : { ...mix, visible: false };

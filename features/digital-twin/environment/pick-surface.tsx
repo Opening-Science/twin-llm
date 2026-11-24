@@ -52,6 +52,7 @@ export const PickSurface = ({
   getDepth,
   layers,
   hiddenSystems,
+  isolate = null,
   onPick,
   onHeartFocus,
 }: Readonly<{
@@ -63,6 +64,8 @@ export const PickSurface = ({
   getDepth: () => number;
   layers: Readonly<Record<AtlasLayerId, boolean>>;
   hiddenSystems: readonly OrganSystem[];
+  /** The layer shown alone, if any. */
+  isolate?: AtlasLayerId | null;
   /** null: the tap hit nothing that draws. */
   onPick: (picked: Picked | null) => void;
   onHeartFocus?: (box: Box3) => void;
@@ -79,6 +82,7 @@ export const PickSurface = ({
     getDepth,
     layers,
     hiddenSystems,
+    isolate,
     onPick,
     onHeartFocus,
   });
@@ -91,6 +95,7 @@ export const PickSurface = ({
       getDepth,
       layers,
       hiddenSystems,
+      isolate,
       onPick,
       onHeartFocus,
     };
@@ -120,7 +125,7 @@ export const PickSurface = ({
         face: hit.face,
       }));
       const depth = now.getDepth();
-      const index = choosePick(mapped, depth, now.layers, now.hiddenSystems);
+      const index = choosePick(mapped, depth, now.layers, now.hiddenSystems, now.isolate);
       const chosen = index === null ? null : mapped[index]!;
       const heart = chosen?.part ? isHeartHit(chosen.part, chosen.face) : false;
       const target = chosen ? pickTarget(chosen.part, now.groups) : null;
@@ -137,7 +142,13 @@ export const PickSurface = ({
       if (heart && chosen?.part && now.onHeartFocus) {
         const box =
           chosen.part.group === "heart"
-            ? heartGroupWorldBox(now.parts, depth, now.layers, now.hiddenSystems)
+            ? heartGroupWorldBox(
+                now.parts,
+                depth,
+                now.layers,
+                now.hiddenSystems,
+                now.isolate,
+              )
             : heartWorldBox(chosen.part.mesh, true);
         if (box) now.onHeartFocus(box);
       }

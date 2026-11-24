@@ -16,6 +16,8 @@ import {
   BODY_CARD_NOTE,
   BODY_CARD_TITLE,
   CARD_ATLAS_NOTE,
+  CARD_CT_NOTE,
+  CARD_MODELLED,
   CLOSE_CARD,
   LINKED_BIOMARKERS,
   NO_LINKED_BIOMARKERS,
@@ -67,7 +69,10 @@ export type PickCardProps = Readonly<{
   onClose: () => void;
 }>;
 
-/** The lines under the title: system, layer and the ontology id, when there is one. */
+/**
+ * The lines under the title: system, layer and the ontology id, when there is
+ * one; a CT skeleton part built rather than segmented says so.
+ */
 export const cardFacts = (picked: Picked): readonly string[] => {
   const { target } = picked;
   if (target.kind !== "part") return [];
@@ -75,6 +80,7 @@ export const cardFacts = (picked: Picked): readonly string[] => {
     SYSTEM_LABEL[target.system],
     LAYER_LABEL[target.layer],
     ...(target.ontologyId ? [target.ontologyId] : []),
+    ...(target.modelled ? [CARD_MODELLED] : []),
   ];
 };
 
@@ -153,7 +159,7 @@ export const PickCard = ({
           <p className="text-muted-foreground text-xs">{facts.join(" · ")}</p>
         ) : null}
         <p className="text-muted-foreground text-[11px] leading-snug">
-          {part ? CARD_ATLAS_NOTE : BODY_CARD_NOTE}
+          {part ? (part.ct ? CARD_CT_NOTE : CARD_ATLAS_NOTE) : BODY_CARD_NOTE}
         </p>
         {part ? (
           <>
