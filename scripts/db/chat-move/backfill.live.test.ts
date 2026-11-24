@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { finishBackfill, runBackfill } from "./backfill";
 import { batchSql, FINISH_CONSTRAINTS, MOVE, UNDO_FINISH_SQL } from "./backfill-sql";
-import { liveDatabase, requireNoThreads, runLive } from "./live.test-helpers";
+import {
+  asBeforeSwitch,
+  asSwitched,
+  liveDatabase,
+  requireNoThreads,
+  runLive,
+} from "./live.test-helpers";
 import { differencesSql } from "./parity-sql";
 import { clearSeed, SEED_USERS, type SeedShape, seedOldChats } from "./seed.test-helpers";
 import { CHAT_MOVES } from "./tables";
@@ -44,10 +50,12 @@ describe.skipIf(!runLive)("chat backfill (RUN_LIVE=1)", () => {
 
   beforeAll(async () => {
     await requireNoThreads(db);
+    await asBeforeSwitch(db);
     seed = await seedOldChats(db, 20);
   });
   afterAll(async () => {
     await clearSeed(db, UNDO_FINISH_SQL);
+    await asSwitched(db);
     await db.$disconnect();
   });
 

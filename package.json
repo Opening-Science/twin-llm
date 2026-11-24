@@ -43,6 +43,7 @@
     "db:chat-backfill": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/backfill.ts",
     "db:chat-parity": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/parity.ts",
     "db:chat-rollback": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/rollback.ts",
+    "db:chat-switch-back": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/switch-back.ts",
     "db:studio": "prisma studio",
     "verify:import": "bash scripts/verify-import.sh",
     "sbom": "bun scripts/sbom/write.ts",

@@ -177,19 +177,19 @@ export const insertExampleThread = async (
     const turnId = newId();
     const response = fixture.response;
     await tx.unsafe(
-      'insert into threads (id, "userId", title, "createdAt", "updatedAt") values ($1, $2, $3, $4, $4)',
+      "insert into conversations (id, owner_id, title_sealed, started_at, last_activity_at) values ($1, $2, $3, $4, $4)",
       [threadId, String(user?.id), fixture.title, at],
     );
     await tx.unsafe(
-      'insert into turns (id, "threadId", prompt, "createdAt") values ($1, $2, $3, $4)',
+      "insert into exchanges (id, conversation_id, question_sealed, asked_at) values ($1, $2, $3, $4)",
       [turnId, threadId, fixture.prompt, at],
     );
     await tx.unsafe(
-      `insert into model_responses (id, "turnId", "modelId", "modelName", status, text, position,
-         "reasoningText", attribution, "responseDocument", "toolParts",
-         "timeToFirstTokenMs", "tokensPerSecond", "inputTokens", "outputTokens", "totalTokens",
-         "costUsd", "createdAt", "completedAt")
-       values ($1, $2, $3, $4, 'COMPLETE', $5, 0, $6, $7::text, $8::text, $9::text,
+      `insert into answers (id, exchange_id, answerer_ref, answerer_label, state, body_sealed, column_index,
+         reasoning_sealed, evidence_sealed, document_sealed, tool_trace_sealed,
+         first_token_ms, tokens_per_second, input_tokens, output_tokens, total_tokens,
+         cost_usd, opened_at, closed_at)
+       values ($1, $2, $3, $4, 'complete', $5, 0, $6, $7::text, $8::text, $9::text,
          $10, $11, $12, $13, $14, 0, $15, $15)`,
       [
         newId(),

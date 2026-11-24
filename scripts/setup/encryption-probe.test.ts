@@ -6,10 +6,10 @@ describe("doctor: Encryption at rest (#141)", () => {
   test("personal mode lists plain columns and leftover backups", () => {
     const lines = encryptionSection({
       dataMode: "personal",
-      findings: [{ table: "turns", column: "prompt", rows: 4 }],
+      findings: [{ table: "exchanges", column: "question_sealed", rows: 4 }],
       backups: ["pre-encryption-2026-10-31T120000Z.dump"],
     }).join("\n");
-    expect(lines).toContain("turns.prompt: 4 row(s) not sealed");
+    expect(lines).toContain("exchanges.question_sealed: 4 row(s) not sealed");
     expect(lines).toContain("pre-encryption-2026-10-31T120000Z.dump holds plain data");
   });
 

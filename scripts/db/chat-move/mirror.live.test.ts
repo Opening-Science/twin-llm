@@ -2,7 +2,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 
 import { Prisma } from "@/generated/prisma/client";
 
-import { liveDatabase, requireNoThreads, runLive } from "./live.test-helpers";
+import {
+  asBeforeSwitch,
+  asSwitched,
+  liveDatabase,
+  requireNoThreads,
+  runLive,
+} from "./live.test-helpers";
 
 /**
  * The mirror triggers against a real Postgres, with made-up rows only:
@@ -58,6 +64,7 @@ describe.skipIf(!runLive)("chat mirror triggers (RUN_LIVE=1)", () => {
 
   beforeAll(async () => {
     await requireNoThreads(db);
+    await asBeforeSwitch(db);
     await db.user.create({ data: { id: USER, clerkId: USER } });
   });
   afterEach(async () => {
@@ -66,6 +73,7 @@ describe.skipIf(!runLive)("chat mirror triggers (RUN_LIVE=1)", () => {
   });
   afterAll(async () => {
     await db.user.deleteMany({ where: { id: USER } });
+    await asSwitched(db);
     await db.$disconnect();
   });
 

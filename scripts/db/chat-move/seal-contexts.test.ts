@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { CHAT_SEAL_CONTEXTS } from "@/infrastructure/chat-seal-contexts";
-import { PERSONAL_TABLES } from "@/infrastructure/personal-columns";
+import { CHAT_SEAL_CONTEXTS, sealContextOf } from "@/infrastructure/chat-seal-contexts";
+import {
+  PERSONAL_COPIES,
+  PERSONAL_TABLES,
+  sealContextFor,
+} from "@/infrastructure/personal-columns";
 
 import { CHAT_MOVES } from "./tables";
 
@@ -23,13 +27,25 @@ describe("frozen seal contexts and the column map", () => {
     expect(fromContexts).toEqual(fromMap);
   });
 
-  test("the contexts are exactly the columns the reseal list seals today", () => {
-    const sealedToday = PERSONAL_TABLES.filter((table) =>
-      ["threads", "turns", "model_responses"].includes(table.table),
-    ).flatMap((table) => table.sealed.map((column) => `${table.table}.${column}`));
+  test("the contexts are exactly the columns the old tables' copies hold", () => {
+    const copied = PERSONAL_COPIES.flatMap((table) =>
+      table.sealed.map((column) => `${table.table}.${column}`),
+    );
     const frozen = Object.values(CHAT_SEAL_CONTEXTS).flatMap((columns) =>
       Object.values(columns).map((context) => `${context.table}.${context.column}`),
     );
-    expect(frozen.sort()).toEqual(sealedToday.sort());
+    expect(frozen.sort()).toEqual(copied.sort());
+  });
+
+  test("the reseal list seals the new tables under the frozen contexts", () => {
+    for (const [table, columns] of Object.entries(CHAT_SEAL_CONTEXTS)) {
+      const entry = PERSONAL_TABLES.find((each) => each.table === table);
+      expect(entry?.sealed).toEqual(Object.keys(columns));
+      for (const column of Object.keys(columns)) {
+        expect(entry === undefined ? null : sealContextFor(entry, column)).toEqual(
+          sealContextOf(table, column),
+        );
+      }
+    }
   });
 });

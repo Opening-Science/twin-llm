@@ -152,6 +152,7 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "db:chat-backfill": DB,
   "db:chat-parity": DB,
   "db:chat-rollback": DB,
+  "db:chat-switch-back": DB,
   "db:studio": "the person's own view of their database; no learning",
   "verify:import": TOOLING,
   sbom: TOOLING,

@@ -79,25 +79,28 @@ const seed = async (): Promise<void> => {
     console.log(`  ${kind} ${fileName}: ${plan.dataset.rowCount} row(s)`);
   }
   // One made-up chat, plain like the rest. While the chat tables move, the
-  // mirror triggers copy it, and a reseal of the old tables must reach the
-  // copies too.
+  // reverse triggers copy it into the old tables, and a reseal of the new
+  // tables must reach those copies too.
   const db = database();
-  await db.thread.create({
+  await db.conversation.create({
     data: {
-      userId,
-      title: "Made-up title",
-      turns: {
+      id: "ci-made-up-conversation",
+      ownerId: userId,
+      titleSealed: "Made-up title",
+      exchanges: {
         create: {
-          prompt: "Made-up question",
-          label: "Made-up bubble",
-          responses: {
+          id: "ci-made-up-exchange",
+          questionSealed: "Made-up question",
+          bubbleTextSealed: "Made-up bubble",
+          answers: {
             create: {
-              modelId: "made-up:model",
-              modelName: "Made-up model",
-              status: "COMPLETE",
-              text: "Made-up answer",
-              reasoningText: "Made-up reasoning",
-              completedAt: new Date(),
+              id: "ci-made-up-answer",
+              answererRef: "made-up:model",
+              answererLabel: "Made-up model",
+              state: "complete",
+              bodySealed: "Made-up answer",
+              reasoningSealed: "Made-up reasoning",
+              closedAt: new Date(),
             },
           },
         },

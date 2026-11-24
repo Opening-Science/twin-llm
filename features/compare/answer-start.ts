@@ -2,7 +2,7 @@ import type { ChatRequest } from "@/features/chat/chat-request";
 import type { RunningAnswer } from "@/features/chat/running-answers";
 import { createStartAnswer, type StartAnswerDeps } from "@/features/chat/start-answer";
 import type { CatalogAgent } from "@/infrastructure/model-catalog";
-import type { ModelResponseStatus } from "@/generated/prisma/client";
+import type { AnswerStatus } from "@/infrastructure/answer-state";
 
 /**
  * One answer's start, shared by `POST /api/chat` and a scheduled run
@@ -66,5 +66,4 @@ export const ANSWER_FINISHED_SENTENCE =
  * stored; a failed, refused or stopped one may be retried ("Try again"), and
  * a row still marked as streaming may be read again after a reload.
  */
-export const answerMayStart = (status: ModelResponseStatus): boolean =>
-  status !== "COMPLETE";
+export const answerMayStart = (status: AnswerStatus): boolean => status !== "COMPLETE";

@@ -12,21 +12,31 @@ import { type ThreadView, threadViewsOf } from "./thread-views";
  * that asks has no stored parts yet.
  */
 export const loadThreadViews = async (turnId: string): Promise<ThreadView[]> => {
-  const turn = await database().turn.findUnique({
+  const exchange = await database().exchange.findUnique({
     where: { id: turnId },
-    select: { threadId: true, thread: { select: { userId: true } } },
+    select: { conversationId: true, conversation: { select: { ownerId: true } } },
   });
-  if (turn === null) return [];
-  const cipher = await cipherForUser(turn.thread.userId);
-  const rows = await database().modelResponse.findMany({
-    where: { status: "COMPLETE", turn: { threadId: turn.threadId } },
+  if (exchange === null) return [];
+  const cipher = await cipherForUser(exchange.conversation.ownerId);
+  const rows = await database().answer.findMany({
+    where: { state: "complete", exchange: { conversationId: exchange.conversationId } },
     select: {
       id: true,
-      modelName: true,
-      toolParts: true,
-      responseDocument: true,
-      completedAt: true,
+      answererLabel: true,
+      toolTraceSealed: true,
+      documentSealed: true,
+      closedAt: true,
     },
   });
-  return threadViewsOf(rows.map((row) => openResponse(cipher, row)));
+  return threadViewsOf(
+    rows.map((row) =>
+      openResponse(cipher, {
+        id: row.id,
+        modelName: row.answererLabel,
+        toolParts: row.toolTraceSealed,
+        responseDocument: row.documentSealed,
+        completedAt: row.closedAt,
+      }),
+    ),
+  );
 };

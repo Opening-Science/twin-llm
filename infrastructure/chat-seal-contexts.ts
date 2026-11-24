@@ -1,4 +1,4 @@
-import type { FieldCipher } from "./field-cipher";
+import { type FieldCipher, openJson, sealJson } from "./field-cipher";
 import { RESPONSES, THREADS, TURNS } from "./thread-fields";
 
 /**
@@ -67,4 +67,49 @@ export const sealChatText = <T extends ChatTable>(
 ): string => {
   const context = contextOf(table, column);
   return cipher.sealText(context.table, context.column, rowId, value);
+};
+
+/** `sealChatText` for a column that may be null. */
+export const sealChatNullable = <T extends ChatTable>(
+  cipher: FieldCipher,
+  table: T,
+  column: SealedColumn<T>,
+  rowId: string,
+  value: string | null,
+): string | null =>
+  value === null ? null : sealChatText(cipher, table, column, rowId, value);
+
+/** `openChatText` for a column that may be null. */
+export const openChatNullable = <T extends ChatTable>(
+  cipher: FieldCipher,
+  table: T,
+  column: SealedColumn<T>,
+  rowId: string,
+  stored: string | null,
+): string | null =>
+  stored === null ? null : openChatText(cipher, table, column, rowId, stored);
+
+/** Seals a JSON value (as JSON text) under its frozen context. */
+export const sealChatJson = <T extends ChatTable>(
+  cipher: FieldCipher,
+  table: T,
+  column: SealedColumn<T>,
+  rowId: string,
+  value: unknown,
+): string => {
+  const context = contextOf(table, column);
+  return sealJson(cipher, context.table, context.column, rowId, value);
+};
+
+/** Opens a sealed JSON column; null when it is null. */
+export const openChatJson = <T extends ChatTable>(
+  cipher: FieldCipher,
+  table: T,
+  column: SealedColumn<T>,
+  rowId: string,
+  stored: string | null,
+): unknown => {
+  if (stored === null) return null;
+  const context = contextOf(table, column);
+  return openJson(cipher, context.table, context.column, rowId, stored);
 };

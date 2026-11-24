@@ -3,6 +3,7 @@ import "server-only";
 import { markModelResponseFailed } from "@/features/chat/persist-model-response";
 import { publicProviderFailure } from "@/features/chat/public-provider-failure";
 import { runnableSkills } from "@/features/skills/load-skills";
+import { statusOf } from "@/infrastructure/answer-state";
 import { database } from "@/infrastructure/database";
 import { serverEnv } from "@/infrastructure/env";
 import { fetchChatCatalog } from "@/infrastructure/fetch-model-catalog";
@@ -23,13 +24,18 @@ export const runScheduledTurn = createScheduledTurn({
   startAnswer: (actorId, appUserId, call, agent) =>
     startAnswer(actorId, appUserId, call, agent),
   markFailed: markModelResponseFailed,
-  storedStatus: async (target) =>
-    (
-      await database().modelResponse.findUnique({
-        where: { turnId_modelId: target },
-        select: { status: true },
-      })
-    )?.status ?? null,
+  storedStatus: async (target) => {
+    const row = await database().answer.findUnique({
+      where: {
+        exchangeId_answererRef: {
+          exchangeId: target.turnId,
+          answererRef: target.modelId,
+        },
+      },
+      select: { state: true },
+    });
+    return row === null ? null : statusOf(row.state);
+  },
   logError: (message, detail) => {
     console.error(`[tasks] ${message}`, publicProviderFailure(detail));
   },

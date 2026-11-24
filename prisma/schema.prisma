@@ -36,6 +36,7 @@ model User {
 
   onboardingProfile OnboardingProfile?
   threads           Thread[]
+  conversations     Conversation[]
 
   ouraConnection         OuraConnection?
   ouraSnapshots          OuraSnapshot[]
@@ -98,10 +99,8 @@ model Thread {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  turns            Turn[]
-  searchEmbeddings ThreadSearchEmbedding[]
-  scheduledTasks   ScheduledTask[]
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  turns Turn[]
 
   @@index([userId, updatedAt])
   @@map("threads")
@@ -128,7 +127,7 @@ model ThreadSearchEmbedding {
   embeddingSealed String?                @map("embedding_sealed")
   createdAt       DateTime               @default(now()) @map("created_at")
 
-  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@unique([sourceKind, sourceId])
   @@index([userId])
@@ -217,12 +216,12 @@ model ModelResponse {
   @@map("model_responses")
 }
 
-// The three tables that will replace threads, turns and model_responses
-// (docs/storage.md, "Chat tables move"). Expand phase: nothing in
-// the app reads or writes them yet. Each row keeps the id of the old row it
-// copies, and every *_sealed column holds the old column's stored value byte
-// for byte, sealed under the old table and column names. Foreign keys are
-// added when the backfill finishes, so these models declare no relations.
+// The three tables that replace threads, turns and model_responses
+// (docs/storage.md, "Chat tables move"). Since the switch the app reads and
+// writes these; reverse triggers copy every write back to the old tables
+// until the contract step drops them. Each row keeps the id of the old row
+// it copies, and every *_sealed column is sealed under the old table and
+// column names (infrastructure/chat-seal-contexts.ts).
 
 enum ExchangeOrigin {
   person
@@ -250,6 +249,11 @@ model Conversation {
   startedAt      DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
   lastActivityAt DateTime @default(now()) @map("last_activity_at") @db.Timestamptz(3)
 
+  owner            User                    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  exchanges        Exchange[]
+  searchEmbeddings ThreadSearchEmbedding[]
+  scheduledTasks   ScheduledTask[]
+
   @@index([ownerId, lastActivityAt(sort: Desc)])
   @@map("conversations")
 }
@@ -268,6 +272,10 @@ model Exchange {
   /// The scheduled task that asked it; null for a person, or when the task
   /// that asked an old scheduled turn cannot be told apart.
   scheduleId       String?        @map("schedule_id")
+
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  schedule     ScheduledTask? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  answers      Answer[]
 
   @@index([conversationId, askedAt])
   @@index([scheduleId])
@@ -303,13 +311,15 @@ model Answer {
   openedAt DateTime  @default(now()) @map("opened_at") @db.Timestamptz(3)
   closedAt DateTime? @map("closed_at") @db.Timestamptz(3)
 
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
   @@unique([exchangeId, answererRef])
   @@index([state])
   @@map("answers")
 }
 
-/// A schema move in progress, such as `chat-tables`. Phase is "expanded" or
-/// "backfilled" (CHECK in the migration SQL). The row goes when the move's
+/// A schema move in progress, such as `chat-tables`. Phase is "expanded",
+/// "backfilled" or "switched" (CHECK in the migration SQL). The row goes when the move's
 /// contract step drops the old tables.
 model SchemaMove {
   move      String   @id
@@ -1122,8 +1132,10 @@ model ScheduledTask {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  thread Thread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  /// The exchanges its runs asked.
+  exchanges    Exchange[]
 
   @@index([userId, createdAt])
   @@index([enabled, nextRunAt])

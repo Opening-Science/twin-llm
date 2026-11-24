@@ -108,25 +108,25 @@ describe.skipIf(!runLive)("timestamptz through the app's client (RUN_LIVE=1)", (
     expect(results).toEqual(INSTANTS.map((iso) => ({ held: iso, read: iso })));
   });
 
-  test("a time copied from an old UTC column reads back as the same instant", async () => {
+  test("a time copied back to an old UTC column keeps the same instant", async () => {
     const results = [];
     for (const [index, iso] of INSTANTS.entries()) {
       const id = `tz-copy-${index}`;
-      // The mirror trigger copies it with the backfill's `AT TIME ZONE 'UTC'`.
-      await db().thread.create({
+      // The reverse trigger copies it with `AT TIME ZONE 'UTC'`.
+      await db().conversation.create({
         data: {
           id,
-          userId: USER,
-          title: "made up",
-          createdAt: new Date(iso),
-          updatedAt: new Date(iso),
+          ownerId: USER,
+          titleSealed: "made up",
+          startedAt: new Date(iso),
+          lastActivityAt: new Date(iso),
         },
       });
-      const read = await db().conversation.findUniqueOrThrow({ where: { id } });
-      results.push({
-        held: await heldStart(db(), id),
-        read: read.startedAt.toISOString(),
-      });
+      const read = await db().thread.findUniqueOrThrow({ where: { id } });
+      const [held] = await db().$queryRaw<{ held: string }[]>`
+        SELECT to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS held
+          FROM threads WHERE id = ${id}`;
+      results.push({ held: held?.held ?? "missing", read: read.createdAt.toISOString() });
     }
     expect(results).toEqual(INSTANTS.map((iso) => ({ held: iso, read: iso })));
   });

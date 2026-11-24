@@ -2,7 +2,13 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { finishBackfill, runBackfill } from "./backfill";
 import { UNDO_FINISH_SQL } from "./backfill-sql";
-import { liveDatabase, requireNoThreads, runLive } from "./live.test-helpers";
+import {
+  asBeforeSwitch,
+  asSwitched,
+  liveDatabase,
+  requireNoThreads,
+  runLive,
+} from "./live.test-helpers";
 import { checkedTables, plaintextFindings } from "@/infrastructure/reseal";
 
 import { ROLLBACK_SQL } from "./rollback-sql";
@@ -42,12 +48,14 @@ describe.skipIf(!runLive)("chat move rollback (RUN_LIVE=1)", () => {
 
   beforeAll(async () => {
     await requireNoThreads(db);
+    await asBeforeSwitch(db);
     await seedOldChats(db, 20);
     await runBackfill(db, { batchSize: 50, log });
     await finishBackfill(db, log);
   });
   afterAll(async () => {
     await clearSeed(db, UNDO_FINISH_SQL);
+    await asSwitched(db);
     await db.$disconnect();
   });
 
