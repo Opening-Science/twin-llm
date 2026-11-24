@@ -129,6 +129,80 @@ const auditRow = (
   rowCount,
 });
 
+describe("relative windows (#901)", () => {
+  /** The eval pins its reference now; here, midday on 9 January 2024. */
+  const pinned: SessionScope = { ...synthetic, now: new Date("2024-01-09T12:00:00Z") };
+
+  test("trend over the last 9 days reads the same rows as 1 to 9 January, and says the dates", async () => {
+    const { ports, audits, queries } = fakePorts();
+    const input = { subject_ref: SUBJECT, loinc: HR, period: "last 9 days" };
+    const result = await runTrend(pinned, input, ports);
+    expect(result).toMatchObject({ loinc: HR, n: 5, slope_per_day: 1 });
+    expect(Reflect.get(result, "resolved_window")).toEqual({
+      period: "last 9 days",
+      start: "2024-01-01",
+      end: "2024-01-09",
+      first_day: "2024-01-01",
+      last_day: "2024-01-09",
+      time_zone: "UTC",
+    });
+    expect(queries.map((query) => [query.start, query.end])).toEqual([
+      [new Date("2024-01-01T00:00:00.000Z"), new Date("2024-01-09T23:59:59.999Z")],
+    ]);
+    // The audit records the dates the period was read as.
+    expect(audits[0]?.args).toEqual({ ...input, start: "2024-01-01", end: "2024-01-09" });
+  });
+
+  test("a wrong reference now reads another window: the check can fail", async () => {
+    const { ports } = fakePorts();
+    const later: SessionScope = { ...synthetic, now: new Date("2024-02-09T12:00:00Z") };
+    const result = await runTrend(
+      later,
+      { subject_ref: SUBJECT, loinc: HR, period: "last 9 days" },
+      ports,
+    );
+    expect(result).toMatchObject({ n: 3, first_at: "2024-02-01T08:00:00.000Z" });
+  });
+
+  test("compare_windows: a period for one window, dates for the other", async () => {
+    const { ports } = fakePorts();
+    const result = await runCompareWindows(
+      { ...synthetic, now: new Date("2024-02-10T08:00:00Z") },
+      {
+        subject_ref: SUBJECT,
+        loinc: HR,
+        window_a: JAN,
+        window_b: { period: "last 10 days" },
+      },
+      ports,
+    );
+    expect(result).toMatchObject({ window_a: { n: 5 }, window_b: { n: 3 } });
+    expect(Reflect.get(result, "resolved_windows")).toEqual({
+      window_b: {
+        period: "last 10 days",
+        start: "2024-02-01",
+        end: "2024-02-10",
+        first_day: "2024-02-01",
+        last_day: "2024-02-10",
+        time_zone: "UTC",
+      },
+    });
+  });
+
+  test("without a pinned now the real clock is used", async () => {
+    const { ports } = fakePorts();
+    const result = await runCoverage(
+      synthetic,
+      { subject_ref: SUBJECT, loinc: [HR], period: "last 7 days" },
+      ports,
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    expect(Reflect.get(Object(Reflect.get(result, "resolved_window")), "last_day")).toBe(
+      today,
+    );
+  });
+});
+
 describe("trend", () => {
   test("January heart rate: slope 1 /min per day, fitted 70 and 78, audited with 5 rows", async () => {
     const { ports, audits } = fakePorts();

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { topicOf } from "./event-rates/codes";
+import { PERIOD_PATTERN } from "./relative-window";
 import { EVENT_RATE_CODES } from "./event-rates/cohort-rates";
 import { CONVERSION_ANALYTES, CONVERSION_UNITS } from "./unit-conversions";
 
@@ -28,12 +29,37 @@ const windowBound = () =>
   z.union([z.iso.datetime(), z.iso.datetime({ precision: -1 }), z.iso.date()]);
 
 export const windowStart = windowBound().describe(
-  "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day",
+  "YYYY-MM-DD (whole day) or UTC datetime",
 );
 
-export const windowEnd = windowBound().describe(
-  "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day",
-);
+export const windowEnd = windowBound().describe("YYYY-MM-DD (whole day) or UTC datetime");
+
+/**
+ * A relative window (#901), resolved in code against the session's reference
+ * now (`relative-window.ts`): `last 3 months`, `this year`, `all`.
+ */
+export const periodSchema = z
+  .string()
+  .regex(PERIOD_PATTERN)
+  .describe("Or: last N days|weeks|months|years, this year, all");
+
+/** A window: `start` and `end`, or `period`. */
+export const windowFields = {
+  start: windowStart.optional(),
+  end: windowEnd.optional(),
+  period: periodSchema.optional(),
+};
+
+export const windowGiven = (window: {
+  readonly start?: string;
+  readonly end?: string;
+  readonly period?: string;
+}) =>
+  window.period === undefined
+    ? window.start !== undefined && window.end !== undefined
+    : window.start === undefined && window.end === undefined;
+
+export const WINDOW_GIVEN = { message: "give start and end, or period" } as const;
 
 export const listSubjectsInput = z
   .object({
@@ -51,10 +77,10 @@ export const observationsForSubjectInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: z.array(loincSchema).min(1).max(20),
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
     limit: z.number().int().min(1).max(500),
   })
+  .refine(windowGiven, WINDOW_GIVEN)
   .describe("Numeric observations for a subject, codes, and time range");
 
 export const latestByLoincInput = z
@@ -68,23 +94,35 @@ export const summaryStatsInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: loincSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
+  .refine(windowGiven, WINDOW_GIVEN)
   .describe("n / min / max / mean for one LOINC in a window");
 
+/** Start before end; a window given as a period has none yet and passes. */
 export const startBeforeEnd = (window: {
-  readonly start: string;
-  readonly end: string;
-}) => windowStartDate(window.start).getTime() < windowEndDate(window.end).getTime();
+  readonly start?: string;
+  readonly end?: string;
+}) =>
+  window.start === undefined ||
+  window.end === undefined ||
+  windowStartDate(window.start).getTime() < windowEndDate(window.end).getTime();
 
 export const START_BEFORE_END = { message: "start must be before end" } as const;
 
 export const windowSchema = z
-  .object({
-    start: windowStart,
-    end: windowEnd,
-  })
+  .object(windowFields)
+  .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
+  .refine(startBeforeEnd, START_BEFORE_END)
+  .describe("Time window: start before end, or period");
+
+/**
+ * A window by dates only, for the view tools (`view-schema.ts`): a saved view
+ * keeps the dates it was drawn for, and a period would move with the clock.
+ */
+export const datedWindowSchema = z
+  .object({ start: windowStart, end: windowEnd })
   .strict()
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Time window, start before end");
@@ -93,10 +131,10 @@ export const trendInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: loincSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Least-squares trend for one LOINC in a window");
 
@@ -114,10 +152,10 @@ export const coverageInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: z.array(loincSchema).min(1).max(20),
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("How much data there is per LOINC in a window");
 
@@ -140,8 +178,7 @@ export const rangePositionInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: loincSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
     pick: z
       .enum(RANGE_POSITION_PICKS)
       .describe(
@@ -155,6 +192,7 @@ export const rangePositionInput = z
       ),
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .refine(pickAtAgree, { message: "at is required with pick at, and only then" })
   .describe("One reading of one LOINC against its Anchor v3 published range");
@@ -175,10 +213,10 @@ export const cohortPositionInput = z
   .object({
     subject_ref: subjectRefSchema,
     loinc: loincSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe(
     "A subject's latest value of one LOINC in a window, as a percentile among its synthetic cohort",
@@ -217,8 +255,7 @@ const clinicalCodeSchema = z
 export const conditionsTimelineInput = z
   .object({
     subject_ref: subjectRefSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
     status: z
       .enum(CONDITION_STATUSES)
       .optional()
@@ -226,14 +263,14 @@ export const conditionsTimelineInput = z
     code: clinicalCodeSchema.optional(),
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Recorded conditions whose span overlaps a window, oldest onset first");
 
 export const medicationsTimelineInput = z
   .object({
     subject_ref: subjectRefSchema,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
     status: z
       .enum(MEDICATION_REQUEST_STATUSES)
       .optional()
@@ -241,6 +278,7 @@ export const medicationsTimelineInput = z
     code: clinicalCodeSchema.optional(),
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Recorded medication requests authored in a window, oldest first");
 
@@ -274,25 +312,27 @@ const wearableSubject = subjectRefSchema
 const wearableWindow = {
   subject_ref: wearableSubject,
   source: wearableSource,
-  start: windowStart,
-  end: windowEnd,
+  ...windowFields,
 };
 
 export const sleepSummaryInput = z
   .object(wearableWindow)
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Main sleep per night from wearables in a window, per source");
 
 export const hrvTrendInput = z
   .object(wearableWindow)
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Trend of daily HRV from wearables in a window, per source");
 
 export const restingHrTrendInput = z
   .object(wearableWindow)
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Trend of daily resting heart rate from wearables in a window, per source");
 
@@ -308,6 +348,7 @@ export const trainingLoadInput = z
       .describe("day: one row per day; week: one row per week starting Monday (UTC)"),
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Workout minutes per day or week from wearables in a window, per source");
 
@@ -330,10 +371,10 @@ export const crossSourceCompareInput = z
       .describe("hrv, resting_hr, sleep_duration or sleep_efficiency"),
     source_a: singleWearable,
     source_b: singleWearable,
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .refine((input) => input.source_a !== input.source_b, {
     error: "source_a and source_b must be two different wearables",
@@ -449,7 +490,7 @@ export const showMyPeriodInput = z
       .describe(
         "week: the 7 UTC days ending on end; month: the 30 UTC days ending on end",
       ),
-    end: z.iso.date().describe("The last UTC day, YYYY-MM-DD"),
+    end: z.iso.date().optional().describe("The last UTC day, YYYY-MM-DD; default today"),
     profile: z
       .enum(["without_diabetes", "with_diabetes"])
       .describe("Which glucose range time in range uses"),

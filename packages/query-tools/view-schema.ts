@@ -3,7 +3,7 @@ import { z } from "zod";
 import { COMPARE_LAYOUTS, MAP_LEVELS } from "@/infrastructure/view-specs";
 import { TWIN_FOCUS_IDS } from "@/packages/anatomy/twin-focus";
 
-import { subjectRefSchema, windowSchema } from "./schemas";
+import { datedWindowSchema, subjectRefSchema } from "./schemas";
 
 /**
  * `show_view`: the model names a measure and a window, the server reads the
@@ -37,7 +37,7 @@ export const showViewInput = z
       .enum(TWIN_FOCUS_IDS)
       .optional()
       .describe("twin.body: the organ or body system to show"),
-    window: windowSchema
+    window: datedWindowSchema
       .optional()
       .describe(
         "Needed except for twin.body and map.choropleth; twin.body without it uses each marker's latest reading",
@@ -45,7 +45,7 @@ export const showViewInput = z
     subject: subjectRefSchema
       .optional()
       .describe("subject_ref for a LOINC code; leave out for wearable keys"),
-    compare_with: windowSchema
+    compare_with: datedWindowSchema
       .optional()
       .describe("chart.compare: the earlier window, such as the 4 weeks before it"),
     layout: z

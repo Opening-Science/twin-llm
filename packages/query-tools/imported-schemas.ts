@@ -12,8 +12,9 @@ import {
   loincSchema,
   START_BEFORE_END,
   startBeforeEnd,
-  windowEnd,
-  windowStart,
+  WINDOW_GIVEN,
+  windowFields,
+  windowGiven,
 } from "./schemas";
 
 /**
@@ -58,11 +59,11 @@ export const importedTrendInput = z
     dataset_id: datasetIdSchema,
     loinc: loincSchema.optional(),
     name: seriesNameSchema.optional(),
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
   .refine(oneSeriesGiven, { message: "give loinc or name" })
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Least-squares trend of one imported series in a window");
 

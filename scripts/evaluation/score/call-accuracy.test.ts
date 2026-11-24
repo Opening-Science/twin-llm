@@ -202,6 +202,27 @@ describe("classifyCall", () => {
     ).toBe("invented code");
   });
 
+  test("a period is scored by the dates the tool read it as (#901)", () => {
+    const byPeriod = (start: string, end: string) =>
+      toolResult(
+        "trend",
+        { subject_ref: SUBJECT_A, loinc: "4548-4", period: "last 2 years" },
+        {
+          ...TREND_OUTPUT,
+          resolved_window: {
+            period: "last 2 years",
+            start,
+            end,
+            first_day: start,
+            last_day: end,
+            time_zone: "UTC",
+          },
+        },
+      );
+    expect(classOf(byPeriod("2024-01-02", "2026-01-01"))).toBe("right call");
+    expect(classOf(byPeriod("2024-10-02", "2026-10-01"))).toBe("wrong window");
+  });
+
   test("wrong code: a cohort code that is not the key's", () => {
     const call = classifyCall(trendCall({ loinc: "2339-0" }), context());
     expect(call.class).toBe("wrong code");

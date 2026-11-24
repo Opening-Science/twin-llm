@@ -20,7 +20,8 @@
  * 4. **wrong subject**: every matching expected call names another
  *    `subject_ref`. A call or a key entry with no subject is not compared.
  * 5. **wrong window**: every matching expected call with the right subject
- *    reads another window. Windows are compared by UTC day, each bound within
+ *    reads another window. A `period` counts as the dates the tool said it
+ *    read (`resolved_window`, #901). Windows are compared by UTC day, each bound within
  *    one day (an end of `2025-12-31` matches `2026-01-01T00:00:00Z`); every
  *    window of the key call (`start`/`end`, `window_a`, `window_b`,
  *    `baseline`, `target`, `date`) needs a matching window in the call. A
@@ -145,6 +146,28 @@ const eventOf = (args: unknown): string | null =>
 
 const sameWindow = (a: DayWindow, b: DayWindow): boolean =>
   Math.abs(a.start - b.start) <= 1 && Math.abs(a.end - b.end) <= 1;
+
+/**
+ * A call's arguments with the dates a `period` was read as (#901): the tool
+ * says them back in `resolved_window` (or `resolved_windows` for its two
+ * windows), so a relative window is compared like dates the model wrote.
+ */
+export const argsRead = (result: ToolResultLine): unknown => {
+  if (!isRecord(result.input) || !isRecord(result.output)) return result.input;
+  const dates = (value: unknown) =>
+    isRecord(value) ? { start: value.start, end: value.end } : {};
+  const top = result.output.resolved_window;
+  const nested = result.output.resolved_windows;
+  return {
+    ...result.input,
+    ...(top === undefined ? {} : dates(top)),
+    ...(isRecord(nested)
+      ? Object.fromEntries(
+          Object.entries(nested).map(([key, value]) => [key, dates(value)]),
+        )
+      : {}),
+  };
+};
 
 export const windowsMatch = (keyArgs: unknown, callArgs: unknown): boolean => {
   const want = windowsOf(keyArgs);
@@ -271,10 +294,11 @@ export const classifyCall = (
         .join(", ")}`,
     );
   }
-  if (!sameSubject.some((call) => windowsMatch(call.args, result.input))) {
+  const read = argsRead(result);
+  if (!sameSubject.some((call) => windowsMatch(call.args, read))) {
     return verdict(
       "wrong window",
-      `${windowText(result.input)} where the key reads ${sameSubject
+      `${windowText(read)} where the key reads ${sameSubject
         .map((call) => windowText(call.args))
         .join("; ")}`,
     );

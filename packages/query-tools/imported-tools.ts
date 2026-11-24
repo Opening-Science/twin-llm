@@ -56,6 +56,7 @@ import {
 import { windowEndDate, windowStartDate } from "./schemas";
 import type { SessionScope } from "./scope";
 import { olsSlopePerDay } from "./stats";
+import { withWindow } from "./window-input";
 
 /**
  * The chat tools over a person's own imported data (#181,
@@ -260,61 +261,63 @@ export const runImportedTrend = (
   deps: ImportedToolDeps,
   input: z.infer<typeof importedTrendInput>,
 ): Promise<ImportedTrendResult | ImportedRefusal | RowCapExceeded> =>
-  auditedImported<ImportedTrendResult | ImportedRefusal | RowCapExceeded>(
-    deps,
-    IMPORTED_TREND_TOOL,
-    {
-      dataset_id: input.dataset_id,
-      by: input.loinc === undefined ? "name" : "loinc",
-      start: input.start,
-      end: input.end,
-    },
-    async () => {
-      const refused = refusedByPolicy(deps);
-      if (refused !== null) return refused;
-      if (input.loinc !== undefined && input.name !== undefined) {
-        return seriesNotCombined(input.loinc, input.name);
-      }
-      if (!(await datasetExists(deps, input.dataset_id))) {
-        return datasetNotFound(input.dataset_id);
-      }
-      const series = { loinc: input.loinc ?? null, name: input.name ?? null };
-      const rows = await deps.ports.findSeries({
-        datasetId: input.dataset_id,
-        code: series.loinc,
-        name: series.loinc === null ? series.name : null,
-        start: windowStartDate(input.start),
-        end: windowEndDate(input.end),
-        take: ANALYTICS_ROW_CAP + 1,
-      });
-      if (rows.length > ANALYTICS_ROW_CAP) return ROW_CAP_EXCEEDED;
-      const units = storedUnits(rows);
-      if (units.length > 1) return importedMixedUnits(series, units);
-      const nPartial = partialDateCount(rows);
-      if (nPartial > 0) return partialDates(series, nPartial);
-      const unit = units[0] ?? null;
-      const fit = olsSlopePerDay(
-        rows.map((row) => ({ at: row.effectiveAt, value: row.value })),
-      );
-      const first = rows.at(0);
-      const last = rows.at(-1);
-      const names = [...new Set(rows.map((row) => row.display))].sort();
-      return {
+  withWindow(deps.scope, input, (input) =>
+    auditedImported<ImportedTrendResult | ImportedRefusal | RowCapExceeded>(
+      deps,
+      IMPORTED_TREND_TOOL,
+      {
         dataset_id: input.dataset_id,
-        loinc: series.loinc,
-        name: series.name ?? names[0] ?? null,
-        unit,
-        n: rows.length,
-        first_at: first ? first.effectiveAt.toISOString() : null,
-        last_at: last ? last.effectiveAt.toISOString() : null,
-        slope_per_day: fit?.slopePerDay ?? null,
-        slope_unit: unit === null ? null : `${unit}/d`,
-        fitted_first: fit?.fittedFirst ?? null,
-        fitted_last: fit?.fittedLast ?? null,
-      };
-    },
-    (result) =>
-      "n" in result ? { result: { n: result.n }, rowCount: result.n } : NOTHING_READ,
+        by: input.loinc === undefined ? "name" : "loinc",
+        start: input.start,
+        end: input.end,
+      },
+      async () => {
+        const refused = refusedByPolicy(deps);
+        if (refused !== null) return refused;
+        if (input.loinc !== undefined && input.name !== undefined) {
+          return seriesNotCombined(input.loinc, input.name);
+        }
+        if (!(await datasetExists(deps, input.dataset_id))) {
+          return datasetNotFound(input.dataset_id);
+        }
+        const series = { loinc: input.loinc ?? null, name: input.name ?? null };
+        const rows = await deps.ports.findSeries({
+          datasetId: input.dataset_id,
+          code: series.loinc,
+          name: series.loinc === null ? series.name : null,
+          start: windowStartDate(input.start),
+          end: windowEndDate(input.end),
+          take: ANALYTICS_ROW_CAP + 1,
+        });
+        if (rows.length > ANALYTICS_ROW_CAP) return ROW_CAP_EXCEEDED;
+        const units = storedUnits(rows);
+        if (units.length > 1) return importedMixedUnits(series, units);
+        const nPartial = partialDateCount(rows);
+        if (nPartial > 0) return partialDates(series, nPartial);
+        const unit = units[0] ?? null;
+        const fit = olsSlopePerDay(
+          rows.map((row) => ({ at: row.effectiveAt, value: row.value })),
+        );
+        const first = rows.at(0);
+        const last = rows.at(-1);
+        const names = [...new Set(rows.map((row) => row.display))].sort();
+        return {
+          dataset_id: input.dataset_id,
+          loinc: series.loinc,
+          name: series.name ?? names[0] ?? null,
+          unit,
+          n: rows.length,
+          first_at: first ? first.effectiveAt.toISOString() : null,
+          last_at: last ? last.effectiveAt.toISOString() : null,
+          slope_per_day: fit?.slopePerDay ?? null,
+          slope_unit: unit === null ? null : `${unit}/d`,
+          fitted_first: fit?.fittedFirst ?? null,
+          fitted_last: fit?.fittedLast ?? null,
+        };
+      },
+      (result) =>
+        "n" in result ? { result: { n: result.n }, rowCount: result.n } : NOTHING_READ,
+    ),
   );
 
 export type ImportedTableResult = Readonly<{

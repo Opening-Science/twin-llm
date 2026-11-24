@@ -14,6 +14,7 @@ import { type showMyPeriodInput } from "./schemas";
 import { SUBJECT_SCOPE_VIOLATION, type SessionScope } from "./scope";
 import { type GlucoseSpecimen } from "./day-beat";
 import { GLUCOSE_LOINCS, SENSOR_GLUCOSE_LOINC, SENSOR_LAG_NOTE } from "./show-my-day";
+import { todayOf } from "./relative-window";
 import { addDays, utcDay } from "./stats";
 import { audited, distinctUnits, readWindow, subjectInScope } from "./tool-core";
 import { wearableTrend, type WearableTrendResult } from "./wearable-analytics";
@@ -23,6 +24,7 @@ import {
   type TrendMeasure,
 } from "./wearable-readings";
 import { comparedRead, spanOf } from "./wearable-tools";
+import { clockOf } from "./window-input";
 
 /**
  * `show_my_period`: one synthetic subject's week or month. Glucose as average
@@ -114,12 +116,21 @@ const trendOf = (
   ]);
 };
 
+/**
+ * Left out, `end` is today on the session's clock (#901): the pinned
+ * reference now in the eval, the real day otherwise, as a UTC day. The audit
+ * entry records the day it was read as.
+ */
 export const runShowMyPeriod = (
   scope: SessionScope,
-  input: ShowMyPeriodInput,
+  given: ShowMyPeriodInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
-): Promise<ShowMyPeriodResult | ToolRefusal> =>
-  audited<ShowMyPeriodResult | ToolRefusal>(
+): Promise<ShowMyPeriodResult | ToolRefusal> => {
+  const input = {
+    ...given,
+    end: given.end ?? todayOf({ ...clockOf(scope), timeZone: "UTC" }),
+  };
+  return audited<ShowMyPeriodResult | ToolRefusal>(
     scope,
     "show_my_period",
     input,
@@ -185,3 +196,4 @@ export const runShowMyPeriod = (
     (result) => ("n" in result ? result.n : 0),
     ports,
   );
+};
