@@ -1,6 +1,13 @@
 "use client";
 
-import { Dumbbell, PersonStanding, type LucideIcon } from "lucide-react";
+import {
+  Droplet,
+  Dumbbell,
+  HeartPulse,
+  Moon,
+  PersonStanding,
+  type LucideIcon,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import { localClock } from "@/packages/query-tools/replay/local-time";
@@ -19,34 +26,21 @@ import styles from "./your-day-replay.module.css";
 const STYLES = {
   workout: { label: "Workout", icon: Dumbbell, color: "text-chart-2" },
   activity: { label: "Activity", icon: PersonStanding, color: "text-chart-1" },
-  sleep: { label: "Sleep", icon: "☾", color: "text-chart-4" },
-  heart: { label: "Heart rate", icon: "♥", color: "text-chart-3" },
-  glucose: { label: "Glucose", icon: "◆", color: "text-chart-2" },
-} satisfies Record<
-  TimelineKind,
-  { label: string; icon: string | LucideIcon; color: string }
->;
+  sleep: { label: "Sleep", icon: Moon, color: "text-chart-4" },
+  heart: { label: "Heart rate", icon: HeartPulse, color: "text-chart-3" },
+  glucose: { label: "Glucose", icon: Droplet, color: "text-chart-2" },
+} satisfies Record<TimelineKind, { label: string; icon: LucideIcon; color: string }>;
 
 const timeAt = (ms: number, zone: string) => localClock(new Date(ms), zone).time;
 const control =
   "border-input hover:bg-muted focus-visible:outline-ring rounded-md border px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2";
+const iconSize = "block size-3.5 shrink-0";
+const clockBadge =
+  "bg-card grid size-5 shrink-0 place-items-center rounded-full border border-current";
 
 function EventIcon({ kind }: Readonly<{ kind: TimelineKind }>) {
   const { icon: Icon, color } = STYLES[kind];
-  if (typeof Icon === "string") {
-    return (
-      <span aria-hidden="true" className={color}>
-        {Icon}
-      </span>
-    );
-  }
-  return (
-    <Icon
-      aria-hidden="true"
-      focusable="false"
-      className={`inline-block size-3.5 align-middle ${color}`}
-    />
-  );
+  return <Icon aria-hidden="true" focusable="false" className={`${iconSize} ${color}`} />;
 }
 
 export function YourDayReplayClock({
@@ -63,8 +57,12 @@ export function YourDayReplayClock({
       </h2>
       <span aria-hidden="true" className="flex w-13 shrink-0 items-center justify-start">
         {activeKinds.length === 0 && (
-          <span className="bg-card text-muted-foreground grid size-5 place-items-center rounded-full border border-current">
-            <svg viewBox="0 0 16 16" className="size-3 fill-none stroke-current">
+          <span className={`${clockBadge} text-muted-foreground`}>
+            <svg
+              viewBox="0 0 16 16"
+              focusable="false"
+              className={`${iconSize} fill-none stroke-current`}
+            >
               <circle cx="8" cy="8" r="6" />
               <path d="M8 4.5V8l2.5 1.5" strokeLinecap="round" />
             </svg>
@@ -73,14 +71,14 @@ export function YourDayReplayClock({
         {activeKinds.map((kind) => (
           <span
             key={kind}
-            className={`bg-card relative grid size-5 shrink-0 place-items-center rounded-full border border-current text-xs leading-none not-first:-ml-3 ${STYLES[kind].color}`}
+            className={`${clockBadge} relative not-first:-ml-3 ${STYLES[kind].color}`}
           >
             <EventIcon kind={kind} />
           </span>
         ))}
       </span>
       <span
-        className={`font-mono text-xl font-semibold whitespace-nowrap tabular-nums ${primary ? STYLES[primary.kind].color : "text-foreground"}`}
+        className={`w-[5ch] font-mono text-xl font-semibold whitespace-nowrap tabular-nums ${primary ? STYLES[primary.kind].color : "text-foreground"}`}
       >
         {data ? timeAt(cursorMs, selection.time_zone) : "--:--"}
       </span>
@@ -271,7 +269,7 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
                       type="button"
                       aria-label={eventLabel(event)}
                       title={eventLabel(event)}
-                      className="focus-visible:outline-ring hover:bg-muted absolute inset-y-0 min-w-4 -translate-x-1/2 rounded-sm text-xs leading-4 focus-visible:z-20 focus-visible:outline-2"
+                      className="focus-visible:outline-ring hover:bg-muted absolute top-0 grid size-4 -translate-x-1/2 place-items-center rounded-sm focus-visible:z-20 focus-visible:outline-2"
                       style={{ left: `${position(event.start)}%` }}
                       onClick={() => jump(event)}
                     >
@@ -284,30 +282,32 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
         )}
       </div>
       {events.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <div className="mt-3 grid items-start gap-x-4 gap-y-2 @2xl:grid-cols-[minmax(0,1fr)_auto]">
           {active ? (
             <button
               type="button"
-              className="focus-visible:outline-ring flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-sm text-left text-xs hover:underline focus-visible:outline-2"
+              className="focus-visible:outline-ring flex h-4 max-w-xs min-w-0 items-center gap-2 rounded-sm text-left text-xs hover:underline focus-visible:outline-2"
               aria-label={eventLabel(active)}
+              title={`${active.label} · ${eventRange(active)}`}
               onClick={() => jump(active)}
             >
               <EventIcon kind={active.kind} />
-              <span className="font-medium">{active.label}</span>
-              <span className="text-muted-foreground tabular-nums">
+              <span className="min-w-0 flex-1 truncate font-medium">{active.label}</span>
+              <span className="text-muted-foreground shrink-0 text-right tabular-nums">
                 {eventRange(active)}
               </span>
             </button>
           ) : (
-            <p className="text-muted-foreground text-xs">No active event</p>
+            <p className="text-muted-foreground text-xs/4">No active event</p>
           )}
           <ul
             aria-label="Event types"
-            className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs"
+            className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs/4"
           >
             {EVENT_KINDS.map((kind) => (
-              <li key={kind}>
-                <EventIcon kind={kind} /> {STYLES[kind].label}
+              <li key={kind} className="flex items-center gap-1">
+                <EventIcon kind={kind} />
+                <span>{STYLES[kind].label}</span>
               </li>
             ))}
           </ul>

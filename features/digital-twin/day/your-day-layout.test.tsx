@@ -45,12 +45,19 @@ test("renders replay controls and events before playback begins", () => {
     expect(html).toContain(`aria-label="Seek to ${kind}:`);
   }
   expect(html).toContain('aria-label="Event types"');
-  expect(html).toMatch(
-    /<li><svg[^>]*class="[^"]*lucide-dumbbell[^"]*"[^>]*>.*?<\/svg> Workout<\/li>/,
-  );
-  expect(html).toMatch(
-    /<li><svg[^>]*class="[^"]*lucide-person-standing[^"]*"[^>]*>.*?<\/svg> Activity<\/li>/,
-  );
+  for (const [icon, label] of [
+    ["dumbbell", "Workout"],
+    ["person-standing", "Activity"],
+    ["moon", "Sleep"],
+    ["heart-pulse", "Heart rate"],
+    ["droplet", "Glucose"],
+  ]) {
+    expect(html).toMatch(
+      new RegExp(
+        `<li[^>]*class="[^"]*items-center[^"]*"[^>]*><svg[^>]*class="[^"]*lucide-${icon}[^"]*"[^>]*>.*?</svg><span>${label}</span></li>`,
+      ),
+    );
+  }
   expect(html).toContain(">Demo data</span>");
   expect(html).not.toMatch(/Event details|Synthetic demonstration/);
   expect(html).not.toMatch(/Add biomarker|Remove (Heart rate|chart)/);
