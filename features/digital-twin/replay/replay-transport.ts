@@ -51,7 +51,6 @@ export function createReplayTransport(selection: ReplayKey, clock: ReplayFrameCl
   const initialSnapshot = snapshot;
   let connected = false;
   let replayCursorMs = dayStartMs;
-  let allowHoldAtCursor = true;
   let lastClockMs = 0;
   let holdRemainingMs = 0;
   let storyStartTimesMs: number[] = [];
@@ -95,18 +94,15 @@ export function createReplayTransport(selection: ReplayKey, clock: ReplayFrameCl
       (elapsedMs * (dayEndMs - dayStartMs)) / playbackBudgetWithoutHoldsMs;
     if (!isFastPlayback) {
       const nextStoryStartMs = storyStartTimesMs.find(
-        (startMs) =>
-          startMs > replayCursorMs || (allowHoldAtCursor && startMs === replayCursorMs),
+        (startMs) => startMs > replayCursorMs,
       );
       if (nextStoryStartMs !== undefined && nextStoryStartMs <= targetCursorMs) {
         replayCursorMs = nextStoryStartMs;
-        allowHoldAtCursor = false;
         // Start the hold when consumers see the card, even if the frame arrived late.
         holdRemainingMs = STORY_HOLD_DURATION_MS;
         return "playing";
       }
     }
-    if (targetCursorMs > replayCursorMs) allowHoldAtCursor = false;
     replayCursorMs = Math.min(lastCursorMs, targetCursorMs);
     return replayCursorMs === lastCursorMs ? "ended" : "playing";
   }
@@ -136,7 +132,6 @@ export function createReplayTransport(selection: ReplayKey, clock: ReplayFrameCl
       lastCursorMs,
       Math.max(dayStartMs, Math.trunc(requestedCursorMs)),
     );
-    allowHoldAtCursor = false;
     holdRemainingMs = 0;
     lastClockMs = clock.now();
     publish(
@@ -155,7 +150,6 @@ export function createReplayTransport(selection: ReplayKey, clock: ReplayFrameCl
   function replay() {
     if (!connected) return;
     replayCursorMs = dayStartMs;
-    allowHoldAtCursor = true;
     holdRemainingMs = 0;
     start();
   }
@@ -183,7 +177,8 @@ export function createReplayTransport(selection: ReplayKey, clock: ReplayFrameCl
       const updatedStoryStartTimesMs =
         story !== null && belongsTo(story.selection, snapshot.selection)
           ? [...new Set(story.phases.map(({ from }) => Date.parse(from)))]
-              .filter((startMs) => startMs >= dayStartMs && startMs < dayEndMs)
+              // Don't hold at midnight: Play and Replay should move on the first frame.
+              .filter((startMs) => startMs > dayStartMs && startMs < dayEndMs)
               .sort((a, b) => a - b)
           : [];
       if (
