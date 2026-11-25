@@ -6,7 +6,7 @@ The Body twin viewer can slide from the BodyLoop scan into stacked reference ana
 
 The full viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/digital-twin/your-day`) shows the BodyParts3D reference atlas at the Organs stop, without a scan or part selection. Left-drag to rotate, right-drag to pan, and scroll to zoom. On touchscreens, drag with one finger to rotate, drag with two fingers to pan, or pinch to zoom. The header shows the Replay Clock beside the date picker. Use the date arrows to step one day or select the displayed date to open the compact, Monday-first calendar built with React DayPicker. The month arrows slide the calendar left for the next month and right for the previous month, unless reduced motion is enabled. **Your 10-Days** (`/digital-twin/your-10-days`) remains a placeholder. All three pages use the same vault gate. Moving between these tabs keeps the chosen person in memory, without storing personal IDs in the URL or browser storage.
 
-On **Your Day**, the viewport fills its card without an inset. In the two-column layout, the two chart cards share the viewer's height; in the stacked layout, the charts keep their own height.
+On **Your Day**, the viewport fills its card without an inset. When side by side, the viewer gets one quarter of the available width and the chart area gets three quarters, excluding the gap. Six charts can fill two rows of three when the chart area is wide enough. On narrower screens, the grid uses fewer columns, and the viewer stacks above it when there is no room to sit beside it.
 
 The Replay Clock uses a 20 px time readout at the default text size.
 
@@ -14,7 +14,7 @@ The replay legend stays in place as the active event changes. It sits beside the
 
 Daily replay opens the October 27, 2026 synthetic fixture in its local time zone and labels it as demo data. Play, pause, replay, or choose Fast. A single segmented track shows sleep, activity, and workouts, with heart and glucose markers below. Drag the playhead, press the seek bar's arrow keys to move 15 elapsed minutes, or select a marker or the active event summary to jump to its start. Pointer seeks snap near event starts and still allow times in between. Active event icons overlap from the left edge of a fixed-width space beside the time. The foremost icon sets the time color; when no event is active, a neutral clock icon takes its place. Screen readers can still read each active event label. Dates outside the demo range show an empty state; personal recordings are not loaded.
 
-On demo dates, the Heart rate and Heart rate variability cards still show independent, labeled sample data. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. The replay clock is not connected to the charts or anatomy yet.
+Heart rate and Glucose are the default replay charts. They use the same local-day timeline and cursor as the Replay Clock, including on daylight-saving days. Click or tap a plot to seek, or use the shared seek bar with the keyboard. Each card shows the current value and unit, daily range, and plot. The cursor dot follows the plotted line and disappears over gaps; the numeric readout still shows a recorded sample, not an interpolated value. The replay section labels demo data; the cards retain source, timestamp, and gap details as screen-reader text. Missing or stale readings show **No data**, and missing intervals break the plotted line. Removing a card does not reset replay. The chart picker and anatomy replay effects are separate work.
 
 ## Atlases
 

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChevronDown,
   Droplet,
   Dumbbell,
   HeartPulse,
@@ -12,6 +13,7 @@ import { useMemo } from "react";
 
 import { localClock } from "@/packages/query-tools/replay/local-time";
 import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
+import { stepReplayOnArrow } from "../replay/replay-seek-keys";
 import {
   activeTimelineEvents,
   EVENT_KINDS,
@@ -32,8 +34,6 @@ const STYLES = {
 } satisfies Record<TimelineKind, { label: string; icon: LucideIcon; color: string }>;
 
 const timeAt = (ms: number, zone: string) => localClock(new Date(ms), zone).time;
-const control =
-  "border-input hover:bg-muted focus-visible:outline-ring rounded-md border px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-offset-2";
 const iconSize = "block size-3.5 shrink-0";
 const clockBadge =
   "bg-card grid size-5 shrink-0 place-items-center rounded-full border border-current";
@@ -164,17 +164,23 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
               )}
             </svg>
           </button>
-          <select
-            aria-label="Replay speed"
-            className={`bg-card ${control}`}
-            value={speed}
-            onChange={(event) =>
-              setSpeed(event.currentTarget.value === "fast" ? "fast" : "default")
-            }
-          >
-            <option value="default">1×</option>
-            <option value="fast">Fast</option>
-          </select>
+          <div className="relative">
+            <select
+              aria-label="Replay speed"
+              className="bg-card border-input hover:bg-muted focus-visible:outline-ring block appearance-none rounded-md border py-1.5 ps-3 pe-9 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 forced-colors:appearance-auto forced-colors:pe-3"
+              value={speed}
+              onChange={(event) =>
+                setSpeed(event.currentTarget.value === "fast" ? "fast" : "default")
+              }
+            >
+              <option value="default">Slow</option>
+              <option value="fast">Fast</option>
+            </select>
+            <ChevronDown
+              aria-hidden="true"
+              className="text-muted-foreground pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 forced-colors:hidden"
+            />
+          </div>
         </div>
       </div>
       <div className="mt-3 px-1.5">
@@ -214,17 +220,7 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
                 ),
               )
             }
-            onKeyDown={(event) => {
-              if (
-                event.key === "ArrowLeft" ||
-                event.key === "ArrowDown" ||
-                event.key === "ArrowRight" ||
-                event.key === "ArrowUp"
-              ) {
-                event.preventDefault();
-                step(event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 1);
-              }
-            }}
+            onKeyDown={(event) => stepReplayOnArrow(event, step)}
           />
           <span
             aria-hidden="true"

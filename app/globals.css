@@ -303,6 +303,7 @@
   --page-form: 34rem;
   --page-reading: 53rem;
   --page-wide: 61rem;
+  --page-extra-wide: 75rem;
   --page-gutter: 1rem;
   --page-block: 2.5rem;
   --page-section: 2rem;
@@ -317,7 +318,8 @@
 @layer components {
   .page-form,
   .page-reading,
-  .page-wide {
+  .page-wide,
+  .page-extra-wide {
     @apply mx-auto w-full min-w-0 px-(--page-gutter) py-(--page-block);
   }
   .page-form {
@@ -328,6 +330,9 @@
   }
   .page-wide {
     max-width: calc(var(--page-wide) + 2 * var(--page-gutter));
+  }
+  .page-extra-wide {
+    max-width: calc(var(--page-extra-wide) + 2 * var(--page-gutter));
   }
   /* A page's parts, one under the other, a section gap apart. */
   .page-stack {

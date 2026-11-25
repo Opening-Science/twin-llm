@@ -13,7 +13,7 @@ export default async function YourDayPage() {
   const locked = await lockedScreen();
   if (locked) return locked;
   return (
-    <DigitalTwinFrame>
+    <DigitalTwinFrame extraWide>
       <YourDayLayout
         initialDate={DEMO_REFERENCE_DAY}
         demoDays={yourDayReplayFixtures()}

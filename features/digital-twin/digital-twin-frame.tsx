@@ -3,8 +3,11 @@ import { type ReactNode } from "react";
 import { DigitalTwinNav } from "./digital-twin-tabs";
 import { PAGE_TITLE } from "./twin-page-copy";
 
-export const DigitalTwinFrame = ({ children }: Readonly<{ children: ReactNode }>) => (
-  <div className="page-wide">
+export const DigitalTwinFrame = ({
+  children,
+  extraWide = false,
+}: Readonly<{ children: ReactNode; extraWide?: boolean }>) => (
+  <div className={extraWide ? "page-extra-wide" : "page-wide"}>
     <header className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <h1 className="text-display">{PAGE_TITLE}</h1>
       <DigitalTwinNav />

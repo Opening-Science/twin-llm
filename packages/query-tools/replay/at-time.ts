@@ -82,7 +82,14 @@ export const readingAt = (
       text: `That time is not on ${day.day}.`,
     };
   }
-  const series = seriesOf(day, selector);
+  return readingInSeriesAt(seriesOf(day, selector), cursor.getTime());
+};
+
+/** Look up a cursor already known to be in the local day, using a sorted series. */
+export const readingInSeriesAt = (
+  series: readonly ReplayReading[],
+  cursorMs: number,
+): ReadingState => {
   if (series.length === 0) {
     return {
       state: "unavailable",
@@ -90,9 +97,7 @@ export const readingAt = (
       text: "Not recorded on this day.",
     };
   }
-  const latest = series
-    .filter((reading) => Date.parse(reading.at) <= cursor.getTime())
-    .at(-1);
+  const latest = series.findLast((reading) => Date.parse(reading.at) <= cursorMs);
   if (latest === undefined) {
     return { state: "unavailable", why: "not_yet", text: "No reading yet at this time." };
   }
@@ -103,7 +108,7 @@ export const readingAt = (
       text: `No reading: ${latest.missing_reason ?? "the source sent none"}.`,
     };
   }
-  const age = minutesBetween(new Date(latest.at), cursor);
+  const age = minutesBetween(new Date(latest.at), new Date(cursorMs));
   const limit = staleAfterMin(latest);
   return age > limit
     ? { state: "stale", reading: latest, age_min: age, stale_after_min: limit }
