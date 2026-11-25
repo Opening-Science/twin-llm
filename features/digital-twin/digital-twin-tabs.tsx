@@ -12,7 +12,7 @@ const TABS = [
 ] as const;
 
 export const DigitalTwinTabs = ({ pathname }: Readonly<{ pathname: string }>) => (
-  <nav aria-label={PAGE_TITLE} className="segmented mt-4">
+  <nav aria-label={PAGE_TITLE} className="segmented">
     {TABS.map(({ href, label }) => (
       <Link
         key={href}

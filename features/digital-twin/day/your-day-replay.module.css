@@ -1,0 +1,18 @@
+.seek {
+  appearance: none;
+  background: transparent;
+}
+
+.seek::-webkit-slider-thumb {
+  appearance: none;
+  width: 2px;
+  height: 2rem;
+  background: transparent;
+}
+
+.seek::-moz-range-thumb {
+  width: 2px;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+}

@@ -56,12 +56,13 @@ function Arrow({
   );
 }
 
-export function YourDayDatePicker() {
+export function YourDayDatePicker({
+  selected,
+  onSelect,
+}: Readonly<{ selected: string; onSelect: (date: string) => void }>) {
   const reducedMotion = useReducedMotion();
   const today = useSyncExternalStore(subscribe, isoLocalDate, serverToday);
-  const [picked, setPicked] = useState<string | null>(null);
   const [isOpen, setOpen] = useState(false);
-  const selected = picked ?? today;
   const picker = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -94,11 +95,11 @@ export function YourDayDatePicker() {
     setOpen(false);
   };
   const select = (day: string) => {
-    setPicked(day);
+    onSelect(day);
     close();
   };
   const step = (days: number) => {
-    if (selected) setPicked(addDays(selected, days));
+    onSelect(addDays(selected, days));
     setOpen(false);
   };
 

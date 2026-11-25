@@ -5,8 +5,10 @@ import { PAGE_TITLE } from "./twin-page-copy";
 
 export const DigitalTwinFrame = ({ children }: Readonly<{ children: ReactNode }>) => (
   <div className="page-wide">
-    <h1 className="text-display">{PAGE_TITLE}</h1>
-    <DigitalTwinNav />
+    <header className="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <h1 className="text-display">{PAGE_TITLE}</h1>
+      <DigitalTwinNav />
+    </header>
     {children}
   </div>
 );
