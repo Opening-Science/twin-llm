@@ -2,7 +2,11 @@
 
 The Body twin viewer can slide from the BodyLoop scan into stacked reference anatomy: **Scan → Muscle → Skeleton → Organs**. The anatomy is a donor atlas fitted to the scan's height and hips. It is not the scanned person's anatomy, and the viewer says so next to the slider.
 
-The viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/digital-twin/your-day`) and **Your 10-Days** (`/digital-twin/your-10-days`) are placeholders and do not read replay data. All three pages use the same vault gate. Moving between these tabs keeps the chosen person in memory, without storing personal IDs in the URL or browser storage.
+The full viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/digital-twin/your-day`) shows the BodyParts3D reference atlas at the Organs stop, without a scan or part selection. Left-drag to rotate, right-drag to pan, and scroll to zoom. On touchscreens, drag with one finger to rotate, drag with two fingers to pan, or pinch to zoom. The header shows the Replay Clock placeholder beside the date picker. Use the date arrows to step one day or select the displayed date to open the compact, Monday-first calendar built with React DayPicker. The month arrows slide the calendar left for the next month and right for the previous month, unless reduced motion is enabled. The selection does not load readings or start replay yet. **Your 10-Days** (`/digital-twin/your-10-days`) remains a placeholder. All three pages use the same vault gate. Moving between these tabs keeps the chosen person in memory, without storing personal IDs in the URL or browser storage.
+
+On **Your Day**, the viewport fills its card without an inset. It is 30 rem tall on small screens and 36 rem tall from the `sm` breakpoint.
+
+The Heart rate and Heart rate variability cards show labeled sample data, with a daily range and a value at the selected time. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. Each chart has its own cursor; the date picker and replay clock are not connected to the charts yet.
 
 ## Atlases
 

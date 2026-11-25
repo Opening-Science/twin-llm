@@ -6,13 +6,14 @@ import {
   type Box3,
   Color,
   type Material,
+  Matrix4,
   type Object3D,
   Quaternion,
   Vector3,
 } from "three";
 
 import { type DemoBodyId } from "@/packages/anatomy/demo-bodies";
-import { fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
+import { type AtlasFit, fitAtlasToScan, placeFittedAtlas } from "@/packages/anatomy/fit";
 import { fittedAtlasApiUrl } from "@/packages/anatomy/fitted-atlases";
 import { partsFor, type Highlight } from "@/packages/anatomy/highlight";
 import {
@@ -61,6 +62,12 @@ type ScanSurface = Readonly<{ material: Material; uniforms: LayerUniforms }>;
 const NO_PARTS: PreparedAtlas["parts"] = [];
 const NO_GROUPS: PreparedAtlas["groups"] = [];
 const ignorePick = (): void => undefined;
+const STANDALONE_FIT: AtlasFit = {
+  matrix: new Matrix4(),
+  scale: 1,
+  anchor: "bbox",
+  ok: true,
+};
 
 /**
  * The reference-anatomy layers inside the Body twin canvas. Loads the atlas the
@@ -84,6 +91,7 @@ export const AnatomyLayers = ({
   onLoad,
   onPick,
   onHeartFocus,
+  onStandaloneBounds,
   visualization = null,
   moving = false,
 }: Readonly<{
@@ -108,6 +116,8 @@ export const AnatomyLayers = ({
   /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
   onPick?: (picked: Picked | null) => void;
   onHeartFocus?: (box: Box3) => void;
+  /** Render the reference atlas in its own frame, without a body scan. */
+  onStandaloneBounds?: (box: Box3) => void;
   visualization?: AtlasVisualization | null;
   moving?: boolean;
 }>) => {
@@ -213,7 +223,9 @@ export const AnatomyLayers = ({
   }, [scanRoot, requested, invalidate]);
 
   const fit = useMemo(() => {
-    if (!prepared || !scanRoot) return null;
+    if (!prepared) return null;
+    if (onStandaloneBounds) return STANDALONE_FIT;
+    if (!scanRoot) return null;
     const entry = ATLASES[atlasId];
     if (fittedBody !== null) {
       // Blender fitted it in the body's own frame at its bind pose.
@@ -224,7 +236,7 @@ export const AnatomyLayers = ({
       { box: prepared.box, hipAnchor: entry.hipAnchor, mirrorX: entry.mirrorX },
       readScanFrame(scanRoot, statureM),
     );
-  }, [prepared, scanRoot, statureM, atlasId, fittedBody]);
+  }, [prepared, scanRoot, statureM, atlasId, fittedBody, onStandaloneBounds]);
 
   const transform = useMemo(() => {
     if (!fit?.ok) return null;
@@ -238,6 +250,7 @@ export const AnatomyLayers = ({
   useEffect(() => {
     fitOkRef.current = fit?.ok === true;
     if (!prepared || !fit) return;
+    onStandaloneBounds?.(prepared.box);
     onLoad({
       kind: "ready",
       presentLayers: [...prepared.presentLayers],
@@ -254,7 +267,7 @@ export const AnatomyLayers = ({
       );
     }
     invalidate();
-  }, [prepared, fit, onLoad, invalidate]);
+  }, [prepared, fit, onLoad, onStandaloneBounds, invalidate]);
 
   // The glow is per material and set only when the highlight or the atlas
   // changes; the frame loop never touches it.
