@@ -6,7 +6,7 @@ The full viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/di
 
 On **Your Day**, the viewport fills its card without an inset. It is 30 rem tall on small screens and 36 rem tall from the `sm` breakpoint.
 
-The Heart rate and Heart rate variability cards show labeled sample data, with a daily range and a value at the selected time. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. Each chart has its own cursor; the date picker and replay clock are not connected to the charts yet.
+The Heart rate and Sensor glucose cards show labelled sample data from one synthetic demo replay day (`packages/query-tools/replay/demo-days.ts`), with a daily range and a value at the selected time. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. Each chart has its own cursor; the date picker and replay clock are not connected to the charts yet.
 
 ## Atlases
 

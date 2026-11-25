@@ -67,3 +67,38 @@ export const EMPTY_TEXT = {
   biomarkersFailed: "Could not load biomarker values.",
   vitals: "No vitals for this subject.",
 } as const;
+
+/** Your Day: the replay clock, date picker, viewer and chart placeholders. */
+export const YOUR_DAY_COPY = {
+  clock: "Replay Clock",
+  clockUnavailable: "Not yet available",
+  replayTitle: "Daily replay",
+  replayUnavailable: "Replay is not yet available.",
+  viewerRegion: "Anatomy viewer",
+  chartsTitle: "Biomarker charts",
+  picker: {
+    group: "Replay date picker",
+    dialog: "Choose replay date",
+    current: "Replay date: ",
+    empty: "Choose date",
+    selected: "Selected date",
+    today: "Today",
+    previousDay: "Previous day",
+    nextDay: "Next day",
+  },
+  chart: {
+    heartRate: "Heart rate",
+    glucose: "Sensor glucose",
+    noReadings: "No readings for this day.",
+    sample: "Sample data",
+    dailyRange: "Daily range",
+    cursor: "time cursor",
+  },
+  viewer: {
+    label: "Organ-level 3D reference anatomy",
+    noWebgl: "The reference atlas needs WebGL.",
+    contextLost: "The 3D view lost its WebGL context.",
+    failed: "The reference atlas could not be loaded.",
+    loading: "Loading reference atlas…",
+  },
+} as const;

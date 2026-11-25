@@ -5,6 +5,9 @@ import { type PointerEvent, useMemo, useState } from "react";
 import { extent, nearestIndex, niceTicks } from "@/infrastructure/charts/chart-geometry";
 import { formatClock, formatNumber } from "@/infrastructure/format-measure";
 
+import { YOUR_DAY_COPY } from "../twin-page-copy";
+
+const COPY = YOUR_DAY_COPY.chart;
 const DAY_END = 23 * 60 + 59;
 const TIME_TICKS = [0, 360, 720, 1080, DAY_END];
 const x = (minute: number) => (minute / DAY_END) * 100;
@@ -54,7 +57,7 @@ export function YourDayChart({
         <h4 className="text-sm font-semibold">{label}</h4>
         {series && (
           <p className="text-muted-foreground text-xs tabular-nums">
-            Daily range{" "}
+            {COPY.dailyRange}{" "}
             <span className="ml-1 whitespace-nowrap">
               {showValue(series.min)}–{showValue(series.max)} {unit}
             </span>
@@ -69,7 +72,7 @@ export function YourDayChart({
               <span className="text-muted-foreground text-xs font-normal">{unit}</span>
             </p>
             <p className="text-muted-foreground text-xs tabular-nums">
-              {sample ? "Sample data · " : null}
+              {sample ? `${COPY.sample} · ` : null}
               {formatClock(active.minute)}
             </p>
           </div>
@@ -78,7 +81,7 @@ export function YourDayChart({
               <input
                 type="range"
                 className="sr-only"
-                aria-label={`${label} time cursor`}
+                aria-label={`${label} ${COPY.cursor}`}
                 aria-valuetext={`${formatClock(active.minute)}, ${showValue(active.value)} ${unit}`}
                 min={0}
                 max={series.points.length - 1}
@@ -174,7 +177,7 @@ export function YourDayChart({
           </div>
         </>
       ) : (
-        <p className="text-muted-foreground mt-3 text-xs">No readings for this day.</p>
+        <p className="text-muted-foreground mt-3 text-xs">{COPY.noReadings}</p>
       )}
     </div>
   );

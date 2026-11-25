@@ -20,7 +20,9 @@ test("lays out the replay slots and sample charts without playback controls", ()
   expect(html.indexOf("Existing viewer")).toBeLessThan(html.indexOf("Biomarker charts"));
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
-  expect(html).toContain(">Heart rate variability</h4>");
+  expect(html).toContain(">Sensor glucose</h4>");
+  expect(html).not.toContain("Heart rate variability");
+  expect(html).toContain("mg/dL");
   expect(html.match(/Sample data/g)).toHaveLength(2);
   expect(html.match(/Daily range/g)).toHaveLength(2);
   expect(html.match(/type="range"/g)).toHaveLength(2);

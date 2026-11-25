@@ -91,6 +91,7 @@ export const AnatomyLayers = ({
   onLoad,
   onPick,
   onHeartFocus,
+  frame = "scan",
   onStandaloneBounds,
   visualization = null,
   moving = false,
@@ -116,7 +117,12 @@ export const AnatomyLayers = ({
   /** A tap on the body or a part, inline and in the environment; absent, nothing picks. */
   onPick?: (picked: Picked | null) => void;
   onHeartFocus?: (box: Box3) => void;
-  /** Render the reference atlas in its own frame, without a body scan. */
+  /**
+   * `scan` fits the atlas to the body scan; `standalone` shows the reference
+   * atlas in its own frame, without a scan.
+   */
+  frame?: "scan" | "standalone";
+  /** In the standalone frame, the atlas bounds once it is ready, to fit a camera to. */
   onStandaloneBounds?: (box: Box3) => void;
   visualization?: AtlasVisualization | null;
   moving?: boolean;
@@ -224,7 +230,7 @@ export const AnatomyLayers = ({
 
   const fit = useMemo(() => {
     if (!prepared) return null;
-    if (onStandaloneBounds) return STANDALONE_FIT;
+    if (frame === "standalone") return STANDALONE_FIT;
     if (!scanRoot) return null;
     const entry = ATLASES[atlasId];
     if (fittedBody !== null) {
@@ -236,7 +242,7 @@ export const AnatomyLayers = ({
       { box: prepared.box, hipAnchor: entry.hipAnchor, mirrorX: entry.mirrorX },
       readScanFrame(scanRoot, statureM),
     );
-  }, [prepared, scanRoot, statureM, atlasId, fittedBody, onStandaloneBounds]);
+  }, [prepared, scanRoot, statureM, atlasId, fittedBody, frame]);
 
   const transform = useMemo(() => {
     if (!fit?.ok) return null;
@@ -250,7 +256,7 @@ export const AnatomyLayers = ({
   useEffect(() => {
     fitOkRef.current = fit?.ok === true;
     if (!prepared || !fit) return;
-    onStandaloneBounds?.(prepared.box);
+    if (frame === "standalone") onStandaloneBounds?.(prepared.box);
     onLoad({
       kind: "ready",
       presentLayers: [...prepared.presentLayers],
@@ -267,7 +273,7 @@ export const AnatomyLayers = ({
       );
     }
     invalidate();
-  }, [prepared, fit, onLoad, onStandaloneBounds, invalidate]);
+  }, [prepared, fit, frame, onLoad, onStandaloneBounds, invalidate]);
 
   // The glow is per material and set only when the highlight or the atlas
   // changes; the frame loop never touches it.
