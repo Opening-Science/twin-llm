@@ -14,7 +14,7 @@ The replay legend stays in place as the active event changes. It sits beside the
 
 Daily replay opens the October 27, 2026 synthetic fixture in its local time zone and labels it as demo data. Play and Replay advance from midnight without an opening hold. Slow playback still holds at later story phases; Fast skips those holds. A single segmented track shows sleep, activity, and workouts, with heart and glucose markers below. Drag the playhead, press the seek bar's arrow keys to move 15 elapsed minutes, or select a marker or the active event summary to jump to its start. Pointer seeks snap near event starts and still allow times in between. Active event icons overlap from the left edge of a fixed-width space beside the time. The foremost icon sets the time color; when no event is active, a neutral clock icon takes its place. Screen readers can still read each active event label. Dates outside the demo range show an empty state; personal recordings are not loaded.
 
-On demo dates, the Heart rate and Heart rate variability cards still show independent, labeled sample data. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. The replay clock is not connected to the charts or anatomy yet.
+On demo dates, the Heart rate and Sensor glucose cards show labeled sample data from one synthetic demo replay day (`packages/query-tools/replay/demo-days.ts`), with a daily range and a value at the selected time. Each chart has its own cursor. Hover or tap the plot, or tab to the chart and use the arrow keys to inspect readings. The replay clock is not connected to the charts or anatomy yet.
 
 ## Atlases
 

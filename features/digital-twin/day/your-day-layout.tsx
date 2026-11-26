@@ -5,10 +5,11 @@ import { useState, type ReactNode } from "react";
 import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
+import { ReplayProvider } from "../replay/replay-provider";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import { YourDayChart } from "./your-day-chart";
 import { SAMPLE_CHARTS, SAMPLE_CURSOR_MINUTE } from "./your-day-chart-samples";
 import { YourDayDatePicker } from "./your-day-date-picker";
-import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
 import { type YourDayReplayData } from "./your-day-replay-events";
 
@@ -39,7 +40,7 @@ export function YourDayLayout({
           <YourDayDatePicker selected={date} onSelect={setDate} />
         </header>
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <section aria-label="Anatomy viewer" className="surface min-w-0">
+          <section aria-label={YOUR_DAY_COPY.viewerRegion} className="surface min-w-0">
             {children}
           </section>
           <section
@@ -47,7 +48,7 @@ export function YourDayLayout({
             className="grid min-w-0 gap-3 @2xl/replay:auto-rows-fr @2xl/replay:contain-size"
           >
             <h3 id="your-day-charts" className="sr-only">
-              Biomarker charts
+              {YOUR_DAY_COPY.chartsTitle}
             </h3>
             {SAMPLE_CHARTS.map((chart) => (
               <YourDayChart

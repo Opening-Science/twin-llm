@@ -2,41 +2,29 @@
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/style.css";
 
 import { addDays } from "@/features/wearables/local-clock";
-import { isoLocalDate } from "@/infrastructure/format-measure";
+import { formatDate, formatWeekday, isoLocalDate } from "@/infrastructure/format-measure";
 import { cn } from "@/infrastructure/ui";
 import { ChevronIcon } from "@/infrastructure/ui-kit/icons";
 import { useReducedMotion } from "@/infrastructure/ui-kit/use-reduced-motion";
 
-const FULL_DATE = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  weekday: "short",
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-const SHORT_DATE = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "UTC",
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
-const format = (formatter: Intl.DateTimeFormat, day: string) =>
-  formatter.format(new Date(`${day}T00:00:00Z`));
+import { YOUR_DAY_COPY } from "../twin-page-copy";
+
+const COPY = YOUR_DAY_COPY.picker;
 const localDate = (day: string) => new Date(`${day}T12:00:00`);
-const WEEKDAY = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 const subscribe = () => () => undefined;
 const serverToday = () => null;
 const ARROW_CLASS = "grid size-8 shrink-0 place-items-center rounded-md hover:bg-muted";
 const MONTH_ARROW_CLASS = `${ARROW_CLASS} bg-muted hover:bg-accent/70`;
 
 function Arrow({
+  direction,
   label,
   onClick,
   disabled = false,
 }: Readonly<{
+  direction: -1 | 1;
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -49,9 +37,7 @@ function Arrow({
       disabled={disabled}
       onClick={onClick}
     >
-      <ChevronIcon
-        className={cn("size-4", label.startsWith("Previous") && "rotate-180")}
-      />
+      <ChevronIcon className={cn("size-4", direction === -1 && "rotate-180")} />
     </button>
   );
 }
@@ -107,11 +93,11 @@ export function YourDayDatePicker({
     <div
       ref={picker}
       role="group"
-      aria-label="Replay date picker"
+      aria-label={COPY.group}
       className="dark text-foreground relative z-20 ml-auto w-full max-w-60"
     >
       <div className="border-input bg-card flex items-center rounded-[10px] border p-0.5">
-        <Arrow label="Previous day" onClick={() => step(-1)} disabled={!selected} />
+        <Arrow direction={-1} label={COPY.previousDay} onClick={() => step(-1)} />
         <button
           ref={trigger}
           type="button"
@@ -120,19 +106,18 @@ export function YourDayDatePicker({
           aria-controls={isOpen ? panelId : undefined}
           aria-haspopup="dialog"
           aria-live="polite"
-          disabled={!selected}
           onClick={() => setOpen(!isOpen)}
         >
-          <span className="sr-only">Replay date: </span>
-          {selected ? format(FULL_DATE, selected) : "Choose date"}
+          <span className="sr-only">{COPY.current}</span>
+          {formatDate(selected, "weekday")}
         </button>
-        <Arrow label="Next day" onClick={() => step(1)} disabled={!selected} />
+        <Arrow direction={1} label={COPY.nextDay} onClick={() => step(1)} />
       </div>
-      {isOpen && selected ? (
+      {isOpen ? (
         <div
           id={panelId}
           role="dialog"
-          aria-label="Choose replay date"
+          aria-label={COPY.dialog}
           className="border-border bg-popover text-popover-foreground absolute top-full right-0 mt-2 w-[min(100cqw,19rem)] rounded-xl border p-3 shadow-xl"
         >
           <DayPicker
@@ -148,7 +133,7 @@ export function YourDayDatePicker({
             selected={localDate(selected)}
             today={today ? localDate(today) : undefined}
             onSelect={(day) => select(isoLocalDate(day))}
-            formatters={{ formatWeekdayName: (day) => WEEKDAY.format(day) }}
+            formatters={{ formatWeekdayName: formatWeekday }}
             components={{
               Chevron: ({ orientation }) => (
                 <ChevronIcon
@@ -180,15 +165,15 @@ export function YourDayDatePicker({
           />
           <div className="border-border mt-2 flex items-center justify-between gap-2 border-t pt-2">
             <div>
-              <p className="text-muted-foreground text-xs">Selected date</p>
-              <p className="mt-0.5 text-xs font-medium">{format(SHORT_DATE, selected)}</p>
+              <p className="text-muted-foreground text-xs">{COPY.selected}</p>
+              <p className="mt-0.5 text-xs font-medium">{formatDate(selected)}</p>
             </div>
             <button
               type="button"
               onClick={() => select(isoLocalDate())}
               className="border-input hover:bg-muted min-h-8 rounded-md border px-3 text-xs font-medium"
             >
-              Today
+              {COPY.today}
             </button>
           </div>
         </div>

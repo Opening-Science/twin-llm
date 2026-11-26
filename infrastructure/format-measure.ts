@@ -188,6 +188,9 @@ const EN_GB_MONTHS = [
   "Dec",
 ] as const;
 
+/** Weekday abbreviations for `DISPLAY_LOCALE`, Sunday first as `getUTCDay` counts. */
+const EN_GB_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
 /** `16 Oct 2026`, or `16 Oct` without a year. `month` is 1 to 12. */
 const dayLabel = (day: number, month: number, year?: number): string =>
   year === undefined
@@ -195,7 +198,8 @@ const dayLabel = (day: number, month: number, year?: number): string =>
     : `${day} ${EN_GB_MONTHS[month - 1]} ${year}`;
 
 /**
- * A calendar day as `16 Oct 2026` (or `16 Oct`). Takes YYYY-MM-DD, which is
+ * A calendar day as `16 Oct 2026` (or `16 Oct`, or `Fri 16 Oct 2026` with the
+ * weekday). Takes YYYY-MM-DD, which is
  * how every metric date is stored, and reads it as that day in UTC so the
  * label never shifts with the viewer's time zone. A `Date` is a moment, so
  * it shows the viewer's own calendar day (`isoLocalDate`): a consent given
@@ -203,7 +207,7 @@ const dayLabel = (day: number, month: number, year?: number): string =>
  */
 export const formatDate = (
   day: string | Date | null | undefined,
-  style: "long" | "short" = "long",
+  style: "long" | "short" | "weekday" = "long",
 ): string => {
   if (day instanceof Date) {
     return Number.isNaN(day.getTime())
@@ -216,8 +220,17 @@ export const formatDate = (
   const date = new Date(Date.UTC(y!, m! - 1, d!));
   // Reject days that roll over (2026-02-31 would quietly become 3 Mar).
   if (date.getUTCMonth() !== m! - 1 || date.getUTCDate() !== d) return EMPTY_VALUE;
-  return style === "long" ? dayLabel(d!, m!, y!) : dayLabel(d!, m!);
+  if (style === "short") return dayLabel(d!, m!);
+  const label = dayLabel(d!, m!, y!);
+  return style === "weekday" ? `${EN_GB_WEEKDAYS[date.getUTCDay()]} ${label}` : label;
 };
+
+/**
+ * A day's weekday as `Mon`, from the same table as `formatDate`. A `Date` is
+ * read on the viewer's own calendar, as `formatDate` reads it.
+ */
+export const formatWeekday = (day: Date): string =>
+  Number.isNaN(day.getTime()) ? EMPTY_VALUE : EN_GB_WEEKDAYS[day.getDay()]!;
 
 /** A moment's UTC day and clock, or null when it is missing or invalid. */
 const utcParts = (
