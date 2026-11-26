@@ -2,6 +2,7 @@ import { listBiomarkers } from "@/packages/biomarkers/catalogue";
 import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
 
 import { SYSTEM_LABEL } from "../anatomy/anatomy-copy";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import { chartUnit, YOUR_DAY_CHARTS, type YourDayChartId } from "./your-day-charts";
 
 type PickerEntry = Readonly<{
@@ -48,7 +49,7 @@ export const BIOMARKER_PICKER_CATALOG: readonly PickerEntry[] = [
       label: marker.loincDisplay.split(" [")[0]!.trim() || marker.nameDe,
       unit: marker.unitSource || marker.unitUcum,
       category: SYSTEM_LABEL[marker.systemId],
-      provider: "Lab result (Anchor catalog)",
+      provider: YOUR_DAY_COPY.chartPicker.labProvider,
       description: marker.loincDisplay,
       search: `${marker.nameDe} ${marker.loincCode} ${marker.id} ${marker.unitUcum}`,
     }))

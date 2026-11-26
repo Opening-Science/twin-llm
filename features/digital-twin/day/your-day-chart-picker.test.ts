@@ -72,7 +72,7 @@ test("includes every Anchor biomarker without offering an unsupported replay cha
   );
   expect(ferritin).toMatchObject({
     chartId: null,
-    provider: "Lab result (Anchor catalog)",
+    provider: "Lab result (Anchor catalogue)",
   });
 });
 

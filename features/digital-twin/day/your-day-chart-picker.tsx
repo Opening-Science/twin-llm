@@ -25,6 +25,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/infrastructure/ui-kit/popover";
 import { useReducedMotion } from "@/infrastructure/ui-kit/use-reduced-motion";
 
+import { YOUR_DAY_COPY } from "../twin-page-copy";
+
 import {
   MAX_YOUR_DAY_CHARTS,
   toggleYourDayChart,
@@ -36,6 +38,7 @@ import {
   paginatePickerCatalog,
 } from "./your-day-picker-catalog";
 
+const COPY = YOUR_DAY_COPY.chartPicker;
 const outline =
   "focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2";
 const button = `rounded-md px-3 py-2 text-sm font-medium ${outline}`;
@@ -71,12 +74,12 @@ export function YourDayChartPicker({
     paginatePickerCatalog(results, page);
   const remaining = MAX_YOUR_DAY_CHARTS - draft.length;
   const backward = [
-    { label: "Go to first page", target: 0, icon: ChevronsLeft },
-    { label: "Go to previous page", target: page - 1, icon: ChevronLeft },
+    { label: COPY.firstPage, target: 0, icon: ChevronsLeft },
+    { label: COPY.previousPage, target: page - 1, icon: ChevronLeft },
   ];
   const forward = [
-    { label: "Go to next page", target: page + 1, icon: ChevronRight },
-    { label: "Go to last page", target: pageCount - 1, icon: ChevronsRight },
+    { label: COPY.nextPage, target: page + 1, icon: ChevronRight },
+    { label: COPY.lastPage, target: pageCount - 1, icon: ChevronsRight },
   ];
 
   useLayoutEffect(() => {
@@ -151,7 +154,7 @@ export function YourDayChartPicker({
         onClick={open}
       >
         <Plus aria-hidden="true" className="size-4" />
-        Add biomarkers
+        {COPY.open}
       </button>
       <dialog
         ref={setDialog}
@@ -177,24 +180,24 @@ export function YourDayChartPicker({
             id={`${id}-title`}
             className="me-auto min-w-0 text-lg font-semibold sm:text-xl"
           >
-            Add biomarkers
+            {COPY.title}
           </h2>
           <span
             aria-hidden="true"
             className="bg-muted text-foreground mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums"
           >
-            {draft.length}/{MAX_YOUR_DAY_CHARTS} selected
+            {COPY.selectedBadge(draft.length, MAX_YOUR_DAY_CHARTS)}
           </span>
           <button
             type="button"
-            aria-label="Close biomarker picker"
+            aria-label={COPY.close}
             onClick={close}
             className={`hover:bg-muted grid size-8 shrink-0 place-items-center rounded-md ${outline}`}
           >
             <X aria-hidden="true" className="size-4" />
           </button>
           <p id={`${id}-intro`} className="text-muted-foreground w-full text-sm">
-            Choose up to {MAX_YOUR_DAY_CHARTS} charts to personalise your daily replay.
+            {COPY.intro(MAX_YOUR_DAY_CHARTS)}
           </p>
         </header>
         <div
@@ -202,7 +205,7 @@ export function YourDayChartPicker({
           className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-2 pb-3 sm:px-6"
         >
           <label className="relative block">
-            <span className="sr-only">Search biomarkers</span>
+            <span className="sr-only">{COPY.search}</span>
             <Search
               aria-hidden="true"
               className="text-muted-foreground pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2"
@@ -222,13 +225,13 @@ export function YourDayChartPicker({
                 setQuery(event.currentTarget.value);
                 setPage(0);
               }}
-              placeholder="Search biomarkers"
+              placeholder={COPY.search}
               className={`bg-card border-input w-full rounded-md border py-2 ps-9 pe-3 text-sm ${outline}`}
             />
           </label>
           <div
             role="group"
-            aria-label="Biomarker category"
+            aria-label={COPY.category}
             className="mt-2 mb-4 flex flex-wrap items-center gap-x-1.5 gap-y-1"
           >
             {["", ...BIOMARKER_CATEGORIES].map((item) => (
@@ -249,13 +252,13 @@ export function YourDayChartPicker({
                   setPage(0);
                 }}
               >
-                {item || "All biomarkers"}
+                {item || COPY.allCategories}
               </Button>
             ))}
           </div>
           {results.length === 0 ? (
             <p role="status" className="text-muted-foreground py-6 text-center text-sm">
-              No biomarkers match your search.
+              {COPY.noMatches}
             </p>
           ) : (
             <ul
@@ -285,9 +288,11 @@ export function YourDayChartPicker({
                       {label}
                     </span>
                     <span id={detailsId} className="mt-1 block text-xs">
-                      <span className="text-muted-foreground block">Unit: {unit}</span>
                       <span className="text-muted-foreground block">
-                        Provider: {provider}
+                        {COPY.unit} {unit}
+                      </span>
+                      <span className="text-muted-foreground block">
+                        {COPY.provider} {provider}
                       </span>
                       <span className="mt-1 line-clamp-2 leading-snug">
                         {description}
@@ -296,10 +301,7 @@ export function YourDayChartPicker({
                   </span>
                 );
                 if (chartId === null || (!checked && remaining === 0)) {
-                  const reason =
-                    chartId === null
-                      ? "This biomarker has no time series in Your Day replay."
-                      : "Remove a chart from the selection to free up a slot.";
+                  const reason = chartId === null ? COPY.noSeries : COPY.full;
                   return (
                     <li key={entryId} className={`${card} text-muted-foreground`}>
                       <div
@@ -313,7 +315,7 @@ export function YourDayChartPicker({
                       </div>
                       <Popover>
                         <PopoverTrigger
-                          aria-label={`Why is ${label} unavailable?`}
+                          aria-label={COPY.whyUnavailable(label)}
                           className={`${indicator} ${outline} border-input text-foreground hover:bg-muted size-7 cursor-pointer`}
                         >
                           <Info aria-hidden="true" className="size-3.5" />
@@ -323,7 +325,7 @@ export function YourDayChartPicker({
                             container={dialog}
                             align="end"
                             collisionPadding={12}
-                            aria-label={`${label} availability`}
+                            aria-label={COPY.availability(label)}
                             className="max-w-[calc(100vw-2.5rem)] p-3 text-xs shadow-lg"
                           >
                             {reason}
@@ -374,7 +376,7 @@ export function YourDayChartPicker({
         {results.length > 0 && (
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-2 sm:px-6">
             {pageCount > 1 && (
-              <Pagination aria-label="Biomarker results pages">
+              <Pagination aria-label={COPY.pages}>
                 <PaginationContent>
                   {backward.map(({ label, target, icon: Icon }) => (
                     <PaginationItem key={label}>
@@ -391,7 +393,7 @@ export function YourDayChartPicker({
                     <PaginationItem key={target}>
                       <PaginationButton
                         isActive={target === page}
-                        aria-label={`Page ${target + 1}`}
+                        aria-label={COPY.page(target + 1)}
                         className={cn("transition-none", target !== page && "bg-muted")}
                         onClick={() => changePage(target)}
                       >
@@ -417,25 +419,22 @@ export function YourDayChartPicker({
               role="status"
               className="text-muted-foreground ms-auto text-xs tabular-nums"
             >
-              Showing {firstResult}&ndash;{lastResult} of {results.length}{" "}
-              {results.length === 1 ? "biomarker" : "biomarkers"}
+              {COPY.showing(firstResult, lastResult, results.length)}
             </p>
           </div>
         )}
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-2 pb-4 sm:px-6 sm:pb-5">
           <p aria-live="polite" className="text-xs">
             <span className="block font-medium">
-              {draft.length} of {MAX_YOUR_DAY_CHARTS} charts selected
+              {COPY.selected(draft.length, MAX_YOUR_DAY_CHARTS)}
             </span>
             <span className="text-muted-foreground mt-0.5 block">
-              {remaining === 0
-                ? "You’ve reached the chart limit."
-                : `You can add ${remaining} more ${remaining === 1 ? "biomarker" : "biomarkers"}.`}
+              {remaining === 0 ? COPY.limitReached : COPY.remaining(remaining)}
             </span>
           </p>
           <div className="ms-auto flex flex-wrap items-center gap-2">
             <Button onClick={close} className={outline}>
-              Cancel
+              {COPY.cancel}
             </Button>
             <Button
               variant="primary"
@@ -447,7 +446,7 @@ export function YourDayChartPicker({
               className={`bg-foreground text-background hover:bg-foreground/85 ${outline}`}
             >
               <Check aria-hidden="true" className="size-4" />
-              Apply selection
+              {COPY.apply}
             </Button>
           </div>
         </footer>
