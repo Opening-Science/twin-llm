@@ -48,8 +48,8 @@ export const CONNECTOR_SETUP: Readonly<Record<ConnectorId, SetupSpec>> = {
     steps: [
       ENCRYPTION_KEY,
       {
-        text: "Keep the local redirect proxy running while you link",
-        command: "bun run oura:proxy",
+        text: "Start TwinLLM with bun run dev, which also starts the local redirect proxy (bun run oura:proxy runs it on its own)",
+        command: "bun run dev",
       },
       OPEN_LOCALHOST,
     ],
@@ -75,8 +75,8 @@ export const CONNECTOR_SETUP: Readonly<Record<ConnectorId, SetupSpec>> = {
           "mkcert -cert-file certificates/localhost.pem -key-file certificates/localhost-key.pem localhost",
       },
       {
-        text: "Keep the HTTPS redirect proxy running while you link",
-        command: "bun run whoop:proxy",
+        text: "Start TwinLLM with bun run dev, which also starts the HTTPS redirect proxy once the certificate is there (bun run whoop:proxy runs it on its own)",
+        command: "bun run dev",
       },
       {
         text: "Open https://localhost:8788/api/whoop/callback once and accept the certificate.",
