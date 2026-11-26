@@ -68,12 +68,33 @@ export const EMPTY_TEXT = {
   vitals: "No vitals for this subject.",
 } as const;
 
-/** Your Day: the replay clock, date picker, viewer and chart placeholders. */
+/** Your Day: the replay clock and seek bar, date picker, viewer and charts. */
 export const YOUR_DAY_COPY = {
   clock: "Replay Clock",
-  clockUnavailable: "Not yet available",
   replayTitle: "Daily replay",
-  replayUnavailable: "Replay is not yet available.",
+  replay: {
+    noDemoDay: "No demo replay data for this date.",
+    noData: "No replay data",
+    demoData: "Demo data",
+    play: "Play",
+    pause: "Pause",
+    replay: "Replay",
+    speed: "Replay speed",
+    speedDefault: "1×",
+    speedFast: "Fast",
+    seek: "Seek replay time",
+    seekTo: "Seek to",
+    noActiveEvent: "No active event",
+    eventTypes: "Event types",
+    noEvents: "No events for this day.",
+    kinds: {
+      workout: "Workout",
+      activity: "Activity",
+      sleep: "Sleep",
+      heart: "Heart rate",
+      glucose: "Glucose",
+    },
+  },
   viewerRegion: "Anatomy viewer",
   chartsTitle: "Biomarker charts",
   picker: {
