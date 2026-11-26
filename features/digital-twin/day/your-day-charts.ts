@@ -12,24 +12,51 @@ export const YOUR_DAY_CHARTS = {
   heart_rate: {
     label: YOUR_DAY_COPY.chart.heartRate,
     selector: { stream: "heart_rate" },
+    ...YOUR_DAY_COPY.chartInfo.heart_rate,
   },
   glucose: {
     label: YOUR_DAY_COPY.chart.glucose,
     selector: { stream: "glucose", specimen: "sensor" },
+    ...YOUR_DAY_COPY.chartInfo.glucose,
   },
   blood_glucose: {
     label: YOUR_DAY_COPY.chart.bloodGlucose,
     selector: { stream: "glucose", specimen: "blood" },
+    ...YOUR_DAY_COPY.chartInfo.blood_glucose,
   },
-  steps: { label: YOUR_DAY_COPY.chart.steps, selector: { stream: "steps" } },
+  steps: {
+    label: YOUR_DAY_COPY.chart.steps,
+    selector: { stream: "steps" },
+    ...YOUR_DAY_COPY.chartInfo.steps,
+  },
   resting_heart_rate: {
     label: YOUR_DAY_COPY.chart.restingHeartRate,
     selector: { stream: "resting_heart_rate" },
+    ...YOUR_DAY_COPY.chartInfo.resting_heart_rate,
   },
-  hrv_rmssd: { label: YOUR_DAY_COPY.chart.hrv, selector: { stream: "hrv_rmssd" } },
-} as const satisfies Record<string, { label: string; selector: SeriesSelector }>;
+  hrv_rmssd: {
+    label: YOUR_DAY_COPY.chart.hrv,
+    selector: { stream: "hrv_rmssd" },
+    ...YOUR_DAY_COPY.chartInfo.hrv_rmssd,
+  },
+} as const satisfies Record<
+  string,
+  {
+    label: string;
+    selector: SeriesSelector;
+    category: string;
+    provider: string;
+    description: string;
+  }
+>;
 
 export type YourDayChartId = keyof typeof YOUR_DAY_CHARTS;
+export const MAX_YOUR_DAY_CHARTS = 6;
+
+export function toggleYourDayChart(draft: readonly YourDayChartId[], id: YourDayChartId) {
+  if (draft.includes(id)) return draft.filter((chartId) => chartId !== id);
+  return draft.length < MAX_YOUR_DAY_CHARTS ? [...draft, id] : draft;
+}
 
 /** Interpolate within a plotted run only, never across a gap. */
 export function plottedValueAt(

@@ -13,7 +13,13 @@
 
 ## Interaction patterns
 
-The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` were written from scratch in this repository. No third-party UI component code is included.
+The ui-kit's `StepTrace`, `UndoButton`, `HoldToConfirm`, `StatusLattice` and `Rating` were written from scratch in this repository. Apart from the pagination below, no third-party UI component code is included.
+
+## shadcn/ui Pagination
+
+- Upstream: https://github.com/shadcn-ui/ui (Pagination component)
+- License: MIT, Copyright (c) 2023 shadcn
+- `infrastructure/ui-kit/pagination.tsx` (added in #961) is adapted from it. Attribution: `NOTICE`.
 
 ## open-twin pins
 

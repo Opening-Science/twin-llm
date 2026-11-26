@@ -128,6 +128,72 @@ export const YOUR_DAY_COPY = {
     to: "to",
     endOfDay: "end of day",
   },
+  /** Picker details for each replay chart: category chip, source and one line on what it shows. */
+  chartInfo: {
+    heart_rate: {
+      category: "Heart",
+      provider: "Wearable import",
+      description: "Beats per minute throughout the day.",
+    },
+    glucose: {
+      category: "Glucose",
+      provider: "Continuous glucose monitor",
+      description: "Glucose readings from a continuous sensor.",
+    },
+    blood_glucose: {
+      category: "Glucose",
+      provider: "Blood glucose measurements",
+      description: "Individual readings of glucose in blood.",
+    },
+    steps: {
+      category: "Activity",
+      provider: "Wearable import",
+      description: "Step counts recorded throughout the day.",
+    },
+    resting_heart_rate: {
+      category: "Heart",
+      provider: "Wearable import",
+      description: "The resting heart rate reported for the night.",
+    },
+    hrv_rmssd: {
+      category: "Heart",
+      provider: "Wearable import",
+      description: "Nightly variation in the time between heartbeats, reported as RMSSD.",
+    },
+  },
+  chartPicker: {
+    open: "Add biomarkers",
+    title: "Add biomarkers",
+    selectedBadge: (count: number, max: number) => `${count}/${max} selected`,
+    close: "Close biomarker picker",
+    intro: (max: number) =>
+      `Choose up to ${max} charts to personalise your daily replay.`,
+    search: "Search biomarkers",
+    category: "Biomarker category",
+    allCategories: "All biomarkers",
+    noMatches: "No biomarkers match your search.",
+    unit: "Unit:",
+    provider: "Provider:",
+    noSeries: "This biomarker has no time series in Your Day replay.",
+    full: "Remove a chart from the selection to free up a slot.",
+    whyUnavailable: (label: string) => `Why is ${label} unavailable?`,
+    availability: (label: string) => `${label} availability`,
+    pages: "Biomarker results pages",
+    firstPage: "Go to first page",
+    previousPage: "Go to previous page",
+    nextPage: "Go to next page",
+    lastPage: "Go to last page",
+    page: (number: number) => `Page ${number}`,
+    showing: (first: number, last: number, total: number) =>
+      `Showing ${first}–${last} of ${total} ${total === 1 ? "biomarker" : "biomarkers"}`,
+    selected: (count: number, max: number) => `${count} of ${max} charts selected`,
+    limitReached: "You’ve reached the chart limit.",
+    remaining: (count: number) =>
+      `You can add ${count} more ${count === 1 ? "biomarker" : "biomarkers"}.`,
+    cancel: "Cancel",
+    apply: "Apply selection",
+    labProvider: "Lab result (Anchor catalogue)",
+  },
   viewer: {
     label: "Organ-level 3D reference anatomy",
     noWebgl: "The reference atlas needs WebGL.",
