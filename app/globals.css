@@ -1922,6 +1922,78 @@
 }
 /* --- Chart kit motion (end) -------------------------------------------------- */
 
+/* --- Date picker (react-day-picker) ------------------------------------------
+   The Your Day picker styles every part through `classNames`, so the
+   library's style.css is not loaded. These are the only rules it needs from
+   it: the root anchors the month arrows, and the month change slides the
+   weeks and fades the caption. Reduced motion turns `animate` off. */
+.rdp-root {
+  position: relative;
+}
+
+@keyframes rdp-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes rdp-slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rdp-slide-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes rdp-slide-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rdp-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rdp-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.rdp-weeks_before_enter {
+  animation: rdp-slide-in-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.rdp-weeks_before_exit {
+  animation: rdp-slide-out-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.rdp-weeks_after_enter {
+  animation: rdp-slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.rdp-weeks_after_exit {
+  animation: rdp-slide-out-right 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.rdp-caption_before_enter,
+.rdp-caption_after_enter {
+  animation: rdp-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.rdp-caption_before_exit,
+.rdp-caption_after_exit {
+  animation: rdp-fade-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+/* --- Date picker (end) ------------------------------------------------------- */
+
 /* --- Kiosk (/kiosk) ----------------------------------------------------------
    One portrait screen (an 85-inch panel, 1080 × 1920 and up) seen from a few
    metres away, so type is sized from the screen's height, not the root size.

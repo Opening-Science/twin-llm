@@ -5,10 +5,11 @@ import { useRef, useState, type ReactNode } from "react";
 import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
+import { ReplayProvider } from "../replay/replay-provider";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import { YourDayChart } from "./your-day-chart";
 import { DEFAULT_CHART_IDS, type YourDayChartId } from "./your-day-charts";
 import { YourDayDatePicker } from "./your-day-date-picker";
-import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
 import { type YourDayDemo } from "./your-day-replay-demo";
 
@@ -45,7 +46,7 @@ export function YourDayLayout({
           <YourDayDatePicker selected={date} onSelect={setDate} />
         </header>
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-          <section aria-label="Anatomy viewer" className="surface min-w-0">
+          <section aria-label={YOUR_DAY_COPY.viewerRegion} className="surface min-w-0">
             {children}
           </section>
           <section
@@ -53,7 +54,7 @@ export function YourDayLayout({
             className="@container/charts min-w-0"
           >
             <h3 id="your-day-charts" ref={chartsTitle} tabIndex={-1} className="sr-only">
-              Biomarker charts
+              {YOUR_DAY_COPY.chartsTitle}
             </h3>
             <div
               className={`grid h-full min-w-0 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}

@@ -11,7 +11,9 @@ import { DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 import { AnatomyLayers } from "../anatomy/anatomy-layers";
 import { type AnatomyLoad } from "../anatomy/anatomy-state";
 import { ContextLossWatcher, useWebglAvailable } from "../scan-scene";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 
+const COPY = YOUR_DAY_COPY.viewer;
 const LAYERS = { muscle: true, skeleton: true, organs: true } as const;
 const NO_HIDDEN_SYSTEMS = [] as const;
 
@@ -72,6 +74,7 @@ function ReferenceAtlas({ onLoad }: Readonly<{ onLoad: (load: AnatomyLoad) => vo
       highlight={null}
       reducedMotion
       onLoad={onLoad}
+      frame="standalone"
       onStandaloneBounds={setBox}
     />
   );
@@ -85,19 +88,19 @@ export function YourDayViewer() {
   const onLost = useCallback(() => setContextLost(true), []);
   const onFresh = useCallback(() => setContextLost(false), []);
   const message = !webgl
-    ? "The reference atlas needs WebGL."
+    ? COPY.noWebgl
     : contextLost
-      ? "The 3D view lost its WebGL context."
+      ? COPY.contextLost
       : status === "error"
-        ? "The reference atlas could not be loaded."
+        ? COPY.failed
         : status === "ready"
           ? null
-          : "Loading reference atlas…";
+          : COPY.loading;
   return (
     <div className="wearables-hero relative h-full min-h-98 overflow-hidden rounded-xl sm:min-h-130">
       <div
         role="img"
-        aria-label="Organ-level 3D reference anatomy"
+        aria-label={COPY.label}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
       >
         {webgl && !contextLost && status !== "error" ? (

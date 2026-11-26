@@ -6,9 +6,17 @@ import {
   type Unavailable,
 } from "@/packages/query-tools/replay/nights";
 
+import { YOUR_DAY_COPY } from "../twin-page-copy";
+
 export const YOUR_DAY_CHARTS = {
-  heart_rate: { label: "Heart rate", selector: { stream: "heart_rate" } },
-  glucose: { label: "Glucose", selector: { stream: "glucose", specimen: "sensor" } },
+  heart_rate: {
+    label: YOUR_DAY_COPY.chart.heartRate,
+    selector: { stream: "heart_rate" },
+  },
+  glucose: {
+    label: YOUR_DAY_COPY.chart.glucose,
+    selector: { stream: "glucose", specimen: "sensor" },
+  },
   blood_glucose: {
     label: "Blood glucose",
     selector: { stream: "glucose", specimen: "blood" },
