@@ -129,6 +129,14 @@ export type QueryToolPorts = Readonly<{
   findCohortConditions?: (
     query: CohortRecordQuery & Readonly<{ codes: readonly string[] }>,
   ) => Promise<readonly CohortConditionRow[]>;
+  /**
+   * Which of `codes` one subject has a reading of (#900): asked only when a
+   * measure name fits several codes. Optional as above.
+   */
+  findSubjectCodes?: (
+    subjectRef: string,
+    codes: readonly string[],
+  ) => Promise<readonly string[]>;
   /** Which of `cohortIds` hold `is_synthetic` subjects. Optional as above. */
   findLoadedCohorts?: (cohortIds: readonly string[]) => Promise<readonly string[]>;
   appendAudit: (input: AppendInput) => Promise<unknown>;
@@ -237,6 +245,19 @@ export const findCohortConditionsInDatabase = async (
   );
 };
 
+export const findSubjectCodesInDatabase = async (
+  subjectRef: string,
+  codes: readonly string[],
+): Promise<readonly string[]> =>
+  (
+    await database().observation.findMany({
+      where: { subjectRef, loinc: { in: [...codes] } },
+      select: { loinc: true },
+      distinct: ["loinc"],
+      orderBy: { loinc: "asc" },
+    })
+  ).map((row) => row.loinc);
+
 export const findLoadedCohortsInDatabase = async (
   cohortIds: readonly string[],
 ): Promise<readonly string[]> =>
@@ -300,5 +321,6 @@ export const defaultQueryToolPorts = (): QueryToolPorts => ({
   findCohortSubjects: findCohortSubjectsInDatabase,
   findCohortConditions: findCohortConditionsInDatabase,
   findLoadedCohorts: findLoadedCohortsInDatabase,
+  findSubjectCodes: findSubjectCodesInDatabase,
   appendAudit: (input) => append(database(), input),
 });

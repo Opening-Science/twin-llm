@@ -25,6 +25,7 @@ import type {
 import { windowEndDate, windowStartDate } from "./schemas";
 import { type WindowSummary } from "./stats";
 import { eventWindows, firstDated } from "./event-windows";
+import { withMeasure } from "./measure-input";
 import type { z } from "zod";
 import {
   CLINICAL_ROW_CAP,
@@ -186,84 +187,97 @@ export const runValuesAroundEvent = (
   input: ValuesAroundEventInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<ValuesAroundEventResult | ToolRefusal> =>
-  audited<ValuesAroundEventResult | ToolRefusal>(
+  withMeasure(
     scope,
     "values_around_event",
     input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const query = clinicalQuery({
-        subject_ref: input.subject_ref,
-        ...ALL_TIME,
-        code: input.event_code,
-      });
-      type EventRecord = Readonly<{
-        id: string;
-        codeSystem: string;
-        code: string;
-        display: string;
-        when: Date | null;
-      }>;
-      const records: readonly EventRecord[] =
-        input.event_kind === "condition"
-          ? (await (ports.findConditions ?? findConditionsInDatabase)(query)).map(
-              (row) => ({ ...row, when: row.onsetAt }),
-            )
-          : (
-              await (ports.findMedicationRequests ?? findMedicationRequestsInDatabase)(
-                query,
-              )
-            ).map((row) => ({ ...row, when: row.authoredAt }));
-      if (records.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
-      const first = firstDated(records, (record) => record.when);
-      if (first === null) {
-        return noEvent(
-          input.event_kind === "condition" ? "condition" : "medication request",
-          input.event_code,
-        );
-      }
-      const windows = eventWindows(first.at, input.days_before, input.days_after);
-      const codes = [input.loinc];
-      const rowsBefore = await readWindow(
-        ports,
+    (input) =>
+      audited<ValuesAroundEventResult | ToolRefusal>(
+        scope,
+        "values_around_event",
+        input,
         input.subject_ref,
-        codes,
-        windows.before,
-      );
-      if (isToolRefusal(rowsBefore)) return rowsBefore;
-      const rowsAfter = await readWindow(ports, input.subject_ref, codes, windows.after);
-      if (isToolRefusal(rowsAfter)) return rowsAfter;
-      if (rowsBefore.length + rowsAfter.length === 0) {
-        return noRows(input.loinc, null);
-      }
-      const units = distinctUnits([...rowsBefore, ...rowsAfter]);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const before = summarise(windows.before, rowsBefore);
-      const after = summarise(windows.after, rowsAfter);
-      return {
-        loinc: input.loinc,
-        unit: units[0] ?? null,
-        event: {
-          kind: input.event_kind,
-          code_system: first.codeSystem,
-          code: first.code,
-          display: first.display,
-          at: first.at.toISOString(),
-          n_records: records.filter((record) => record.when !== null).length,
+        async () => {
+          if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+            return SUBJECT_SCOPE_VIOLATION;
+          }
+          const query = clinicalQuery({
+            subject_ref: input.subject_ref,
+            ...ALL_TIME,
+            code: input.event_code,
+          });
+          type EventRecord = Readonly<{
+            id: string;
+            codeSystem: string;
+            code: string;
+            display: string;
+            when: Date | null;
+          }>;
+          const records: readonly EventRecord[] =
+            input.event_kind === "condition"
+              ? (await (ports.findConditions ?? findConditionsInDatabase)(query)).map(
+                  (row) => ({ ...row, when: row.onsetAt }),
+                )
+              : (
+                  await (
+                    ports.findMedicationRequests ?? findMedicationRequestsInDatabase
+                  )(query)
+                ).map((row) => ({ ...row, when: row.authoredAt }));
+          if (records.length > CLINICAL_ROW_CAP)
+            return recordCapExceeded(CLINICAL_ROW_CAP);
+          const first = firstDated(records, (record) => record.when);
+          if (first === null) {
+            return noEvent(
+              input.event_kind === "condition" ? "condition" : "medication request",
+              input.event_code,
+            );
+          }
+          const windows = eventWindows(first.at, input.days_before, input.days_after);
+          const codes = [input.loinc];
+          const rowsBefore = await readWindow(
+            ports,
+            input.subject_ref,
+            codes,
+            windows.before,
+          );
+          if (isToolRefusal(rowsBefore)) return rowsBefore;
+          const rowsAfter = await readWindow(
+            ports,
+            input.subject_ref,
+            codes,
+            windows.after,
+          );
+          if (isToolRefusal(rowsAfter)) return rowsAfter;
+          if (rowsBefore.length + rowsAfter.length === 0) {
+            return noRows(input.loinc, null);
+          }
+          const units = distinctUnits([...rowsBefore, ...rowsAfter]);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const before = summarise(windows.before, rowsBefore);
+          const after = summarise(windows.after, rowsAfter);
+          return {
+            loinc: input.loinc,
+            unit: units[0] ?? null,
+            event: {
+              kind: input.event_kind,
+              code_system: first.codeSystem,
+              code: first.code,
+              display: first.display,
+              at: first.at.toISOString(),
+              n_records: records.filter((record) => record.when !== null).length,
+            },
+            before,
+            after,
+            delta_after_minus_before: {
+              mean: delta(before.mean, after.mean),
+              median: delta(before.median, after.median),
+              min: delta(before.min, after.min),
+              max: delta(before.max, after.max),
+            },
+          };
         },
-        before,
-        after,
-        delta_after_minus_before: {
-          mean: delta(before.mean, after.mean),
-          median: delta(before.median, after.median),
-          min: delta(before.min, after.min),
-          max: delta(before.max, after.max),
-        },
-      };
-    },
-    (result) => ("before" in result ? result.before.n + result.after.n : 0),
+        (result) => ("before" in result ? result.before.n + result.after.n : 0),
+        ports,
+      ),
     ports,
   );

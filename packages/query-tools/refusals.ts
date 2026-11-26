@@ -1,5 +1,6 @@
 import { GBD_REFUSAL_CODES, type GbdRefusal } from "./gbd-refusals";
 import { IMPORTED_REFUSAL_CODES, type ImportedRefusal } from "./imported-refusals";
+import { MEASURE_REFUSAL_CODES, type MeasureRefusal } from "./measure-refusals";
 import { SUBJECT_SCOPE_VIOLATION, type SubjectScopeViolation } from "./scope";
 
 /**
@@ -88,6 +89,7 @@ export type ToolRefusal =
   | CohortNotSupported
   | DesignNotSupported
   | CohortRecordCapExceeded
+  | MeasureRefusal
   | ImportedRefusal
   | GbdRefusal;
 
@@ -108,6 +110,7 @@ const REFUSAL_CODES: readonly string[] = [
   "COHORT_NOT_SUPPORTED",
   "DESIGN_NOT_SUPPORTED",
   "COHORT_RECORD_CAP_EXCEEDED",
+  ...MEASURE_REFUSAL_CODES,
   ...IMPORTED_REFUSAL_CODES,
   ...GBD_REFUSAL_CODES,
 ];

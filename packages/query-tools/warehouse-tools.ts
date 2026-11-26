@@ -61,6 +61,8 @@ import {
   latestPerSubject,
   midRankPercentile,
 } from "./stats";
+import { withMeasure, withMeasures } from "./measure-input";
+import { type MeasureRefusal } from "./measure-refusals";
 import { placeReading, type RangePlacement, rangeRefusalFor } from "./range-position";
 import { applyConversion, findConversion, supportedPairs } from "./unit-conversions";
 import type { z } from "zod";
@@ -164,31 +166,33 @@ export const runSubjectWindow = (
 export const runObservationsForSubject = (
   scope: SessionScope,
   input: ObservationsInput,
-): Promise<{ rows: ObservationRow[] } | SubjectScopeViolation> =>
-  audited(
-    scope,
-    "observations_for_subject",
-    input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const rows = await database().observation.findMany({
-        where: {
-          subjectRef: input.subject_ref,
-          loinc: { in: input.loinc },
-          effectiveAt: {
-            gte: windowStartDate(input.start),
-            lte: windowEndDate(input.end),
+): Promise<{ rows: ObservationRow[] } | SubjectScopeViolation | MeasureRefusal> =>
+  withMeasures(scope, "observations_for_subject", input, (input) =>
+    audited(
+      scope,
+      "observations_for_subject",
+      input,
+      input.subject_ref,
+      async () => {
+        if (!(await subjectInScope(scope, input.subject_ref))) {
+          return SUBJECT_SCOPE_VIOLATION;
+        }
+        const rows = await database().observation.findMany({
+          where: {
+            subjectRef: input.subject_ref,
+            loinc: { in: input.loinc },
+            effectiveAt: {
+              gte: windowStartDate(input.start),
+              lte: windowEndDate(input.end),
+            },
           },
-        },
-        orderBy: { effectiveAt: "asc" },
-        take: input.limit,
-      });
-      return { rows: rows.map(mapRow) };
-    },
-    (result) => ("rows" in result ? result.rows.length : 0),
+          orderBy: { effectiveAt: "asc" },
+          take: input.limit,
+        });
+        return { rows: rows.map(mapRow) };
+      },
+      (result) => ("rows" in result ? result.rows.length : 0),
+    ),
   );
 
 export const runLatestByLoinc = (
@@ -198,36 +202,39 @@ export const runLatestByLoinc = (
   | { rows: ObservationRow[]; codes_without_rows: string[] }
   | NoReadingForCodes
   | SubjectScopeViolation
+  | MeasureRefusal
 > =>
-  audited(
-    scope,
-    "latest_by_loinc",
-    input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      // One newest row per code: at most 20 rows, however long the history.
-      const codes = [...new Set(input.loinc)];
-      const newest = await Promise.all(
-        codes.map((loinc) =>
-          database().observation.findMany({
-            where: { subjectRef: input.subject_ref, loinc },
-            orderBy: { effectiveAt: "desc" },
-            take: 1,
-          }),
-        ),
-      );
-      const latest: ObservationRow[] = newest.flat().map(mapRow);
-      const seen = new Set(latest.map((row) => row.loinc));
-      if (latest.length === 0) return noReadingForCodes(input.loinc);
-      return {
-        rows: latest,
-        codes_without_rows: input.loinc.filter((code) => !seen.has(code)),
-      };
-    },
-    (result) => ("rows" in result ? result.rows.length : 0),
+  withMeasures(scope, "latest_by_loinc", input, (input) =>
+    audited(
+      scope,
+      "latest_by_loinc",
+      input,
+      input.subject_ref,
+      async () => {
+        if (!(await subjectInScope(scope, input.subject_ref))) {
+          return SUBJECT_SCOPE_VIOLATION;
+        }
+        // One newest row per code: at most 20 rows, however long the history.
+        const codes = [...new Set(input.loinc)];
+        const newest = await Promise.all(
+          codes.map((loinc) =>
+            database().observation.findMany({
+              where: { subjectRef: input.subject_ref, loinc },
+              orderBy: { effectiveAt: "desc" },
+              take: 1,
+            }),
+          ),
+        );
+        const latest: ObservationRow[] = newest.flat().map(mapRow);
+        const seen = new Set(latest.map((row) => row.loinc));
+        if (latest.length === 0) return noReadingForCodes(input.loinc);
+        return {
+          rows: latest,
+          codes_without_rows: input.loinc.filter((code) => !seen.has(code)),
+        };
+      },
+      (result) => ("rows" in result ? result.rows.length : 0),
+    ),
   );
 
 export const runSummaryStats = (
@@ -243,50 +250,56 @@ export const runSummaryStats = (
     }
   | SubjectScopeViolation
   | MixedUnits
+  | MeasureRefusal
 > =>
-  audited(
-    scope,
-    "summary_stats",
-    input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const range = {
-        subjectRef: input.subject_ref,
-        loinc: input.loinc,
-        effectiveAt: { gte: windowStartDate(input.start), lte: windowEndDate(input.end) },
-      };
-      const stats = await database().observation.aggregate({
-        where: range,
-        _count: { _all: true },
-        _min: { value: true },
-        _max: { value: true },
-        _avg: { value: true },
-      });
-      const n = stats._count._all;
-      if (n === 0) {
-        return { n: 0, min: null, max: null, mean: null, unit: null };
-      }
-      // The aggregate would happily average kg with lb; check the units first.
-      const units = distinctUnits(
-        await database().observation.findMany({
+  withMeasure(scope, "summary_stats", input, (input) =>
+    audited(
+      scope,
+      "summary_stats",
+      input,
+      input.subject_ref,
+      async () => {
+        if (!(await subjectInScope(scope, input.subject_ref))) {
+          return SUBJECT_SCOPE_VIOLATION;
+        }
+        const range = {
+          subjectRef: input.subject_ref,
+          loinc: input.loinc,
+          effectiveAt: {
+            gte: windowStartDate(input.start),
+            lte: windowEndDate(input.end),
+          },
+        };
+        const stats = await database().observation.aggregate({
           where: range,
-          select: { unitUcum: true },
-          distinct: ["unitUcum"],
-        }),
-      );
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      return {
-        n,
-        min: stats._min.value === null ? null : toNumber(stats._min.value),
-        max: stats._max.value === null ? null : toNumber(stats._max.value),
-        mean: stats._avg.value === null ? null : toNumber(stats._avg.value),
-        unit: units[0] ?? null,
-      };
-    },
-    (result) => ("n" in result ? result.n : 0),
+          _count: { _all: true },
+          _min: { value: true },
+          _max: { value: true },
+          _avg: { value: true },
+        });
+        const n = stats._count._all;
+        if (n === 0) {
+          return { n: 0, min: null, max: null, mean: null, unit: null };
+        }
+        // The aggregate would happily average kg with lb; check the units first.
+        const units = distinctUnits(
+          await database().observation.findMany({
+            where: range,
+            select: { unitUcum: true },
+            distinct: ["unitUcum"],
+          }),
+        );
+        if (units.length > 1) return mixedUnits(input.loinc, units);
+        return {
+          n,
+          min: stats._min.value === null ? null : toNumber(stats._min.value),
+          max: stats._max.value === null ? null : toNumber(stats._max.value),
+          mean: stats._avg.value === null ? null : toNumber(stats._avg.value),
+          unit: units[0] ?? null,
+        };
+      },
+      (result) => ("n" in result ? result.n : 0),
+    ),
   );
 
 export type TrendResult = Readonly<{
@@ -306,38 +319,45 @@ export const runTrend = (
   input: TrendInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<TrendResult | ToolRefusal> =>
-  audited<TrendResult | ToolRefusal>(
+  withMeasure(
     scope,
     "trend",
     input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
-      if (isToolRefusal(rows)) return rows;
-      const units = distinctUnits(rows);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const unit = units[0] ?? null;
-      const fit = olsSlopePerDay(
-        rows.map((row) => ({ at: row.effectiveAt, value: row.value })),
-      );
-      const first = rows.at(0);
-      const last = rows.at(-1);
-      return {
-        loinc: input.loinc,
-        unit,
-        n: rows.length,
-        first_at: first ? asIso(first.effectiveAt) : null,
-        last_at: last ? asIso(last.effectiveAt) : null,
-        slope_per_day: fit?.slopePerDay ?? null,
-        slope_unit: unit === null ? null : `${unit}/d`,
-        fitted_first: fit?.fittedFirst ?? null,
-        fitted_last: fit?.fittedLast ?? null,
-      };
-    },
-    (result) => ("n" in result ? result.n : 0),
+    (input) =>
+      audited<TrendResult | ToolRefusal>(
+        scope,
+        "trend",
+        input,
+        input.subject_ref,
+        async () => {
+          if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+            return SUBJECT_SCOPE_VIOLATION;
+          }
+          const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
+          if (isToolRefusal(rows)) return rows;
+          const units = distinctUnits(rows);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const unit = units[0] ?? null;
+          const fit = olsSlopePerDay(
+            rows.map((row) => ({ at: row.effectiveAt, value: row.value })),
+          );
+          const first = rows.at(0);
+          const last = rows.at(-1);
+          return {
+            loinc: input.loinc,
+            unit,
+            n: rows.length,
+            first_at: first ? asIso(first.effectiveAt) : null,
+            last_at: last ? asIso(last.effectiveAt) : null,
+            slope_per_day: fit?.slopePerDay ?? null,
+            slope_unit: unit === null ? null : `${unit}/d`,
+            fitted_first: fit?.fittedFirst ?? null,
+            fitted_last: fit?.fittedLast ?? null,
+          };
+        },
+        (result) => ("n" in result ? result.n : 0),
+        ports,
+      ),
     ports,
   );
 
@@ -360,49 +380,61 @@ export const runBaselineDeviation = (
   input: BaselineDeviationInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<BaselineDeviationResult | ToolRefusal> =>
-  audited<BaselineDeviationResult | ToolRefusal>(
+  withMeasure(
     scope,
     "baseline_deviation",
     input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const codes = [input.loinc];
-      const baselineRows = await readWindow(
-        ports,
+    (input) =>
+      audited<BaselineDeviationResult | ToolRefusal>(
+        scope,
+        "baseline_deviation",
+        input,
         input.subject_ref,
-        codes,
-        input.baseline,
-      );
-      if (isToolRefusal(baselineRows)) return baselineRows;
-      const targetRows = await readWindow(ports, input.subject_ref, codes, input.target);
-      if (isToolRefusal(targetRows)) return targetRows;
-      const units = distinctUnits([...baselineRows, ...targetRows]);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const baseline = valuesOf(baselineRows);
-      const target = valuesOf(targetRows);
-      return {
-        loinc: input.loinc,
-        unit: units[0] ?? null,
-        baseline: {
-          start: input.baseline.start,
-          end: input.baseline.end,
-          n: baseline.length,
-          median: median(baseline),
-          mad: mad(baseline),
+        async () => {
+          if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+            return SUBJECT_SCOPE_VIOLATION;
+          }
+          const codes = [input.loinc];
+          const baselineRows = await readWindow(
+            ports,
+            input.subject_ref,
+            codes,
+            input.baseline,
+          );
+          if (isToolRefusal(baselineRows)) return baselineRows;
+          const targetRows = await readWindow(
+            ports,
+            input.subject_ref,
+            codes,
+            input.target,
+          );
+          if (isToolRefusal(targetRows)) return targetRows;
+          const units = distinctUnits([...baselineRows, ...targetRows]);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const baseline = valuesOf(baselineRows);
+          const target = valuesOf(targetRows);
+          return {
+            loinc: input.loinc,
+            unit: units[0] ?? null,
+            baseline: {
+              start: input.baseline.start,
+              end: input.baseline.end,
+              n: baseline.length,
+              median: median(baseline),
+              mad: mad(baseline),
+            },
+            target: {
+              start: input.target.start,
+              end: input.target.end,
+              n: target.length,
+              median: median(target),
+            },
+            robust_z: robustZ(baseline, target),
+          };
         },
-        target: {
-          start: input.target.start,
-          end: input.target.end,
-          n: target.length,
-          median: median(target),
-        },
-        robust_z: robustZ(baseline, target),
-      };
-    },
-    (result) => ("baseline" in result ? result.baseline.n + result.target.n : 0),
+        (result) => ("baseline" in result ? result.baseline.n + result.target.n : 0),
+        ports,
+      ),
     ports,
   );
 
@@ -427,49 +459,56 @@ export const runCoverage = (
   input: CoverageInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<CoverageResult | ToolRefusal> =>
-  audited<CoverageResult | ToolRefusal>(
+  withMeasures(
     scope,
     "coverage",
     input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const codes = [...new Set(input.loinc)];
-      const rows = await readWindow(ports, input.subject_ref, codes, input);
-      if (isToolRefusal(rows)) return rows;
-      const perCode = codes.map((loinc) => {
-        const own = rows.filter((row) => row.loinc === loinc);
-        return { loinc, rows: own, units: distinctUnits(own) };
-      });
-      const mixed = perCode.find((code) => code.units.length > 1);
-      if (mixed) return mixedUnits(mixed.loinc, mixed.units);
-      const start = windowStartDate(input.start);
-      const end = windowEndDate(input.end);
-      return {
-        start: input.start,
-        end: input.end,
-        days_in_window: daysInWindow(start, end),
-        codes: perCode.map((code) => {
-          const days = coverage(
-            code.rows.map((row) => row.effectiveAt),
-            start,
-            end,
-          );
+    (input) =>
+      audited<CoverageResult | ToolRefusal>(
+        scope,
+        "coverage",
+        input,
+        input.subject_ref,
+        async () => {
+          if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+            return SUBJECT_SCOPE_VIOLATION;
+          }
+          const codes = [...new Set(input.loinc)];
+          const rows = await readWindow(ports, input.subject_ref, codes, input);
+          if (isToolRefusal(rows)) return rows;
+          const perCode = codes.map((loinc) => {
+            const own = rows.filter((row) => row.loinc === loinc);
+            return { loinc, rows: own, units: distinctUnits(own) };
+          });
+          const mixed = perCode.find((code) => code.units.length > 1);
+          if (mixed) return mixedUnits(mixed.loinc, mixed.units);
+          const start = windowStartDate(input.start);
+          const end = windowEndDate(input.end);
           return {
-            loinc: code.loinc,
-            unit: code.units[0] ?? null,
-            n: code.rows.length,
-            days_with_data: days.daysWithData,
-            coverage_ratio: days.coverageRatio,
-            longest_gap_days: days.longestGapDays,
+            start: input.start,
+            end: input.end,
+            days_in_window: daysInWindow(start, end),
+            codes: perCode.map((code) => {
+              const days = coverage(
+                code.rows.map((row) => row.effectiveAt),
+                start,
+                end,
+              );
+              return {
+                loinc: code.loinc,
+                unit: code.units[0] ?? null,
+                n: code.rows.length,
+                days_with_data: days.daysWithData,
+                coverage_ratio: days.coverageRatio,
+                longest_gap_days: days.longestGapDays,
+              };
+            }),
           };
-        }),
-      };
-    },
-    (result) =>
-      "codes" in result ? result.codes.reduce((total, code) => total + code.n, 0) : 0,
+        },
+        (result) =>
+          "codes" in result ? result.codes.reduce((total, code) => total + code.n, 0) : 0,
+        ports,
+      ),
     ports,
   );
 
@@ -499,38 +538,45 @@ export const runCompareWindows = (
   input: CompareWindowsInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<CompareWindowsResult | ToolRefusal> =>
-  audited<CompareWindowsResult | ToolRefusal>(
+  withMeasure(
     scope,
     "compare_windows",
     input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const codes = [input.loinc];
-      const rowsA = await readWindow(ports, input.subject_ref, codes, input.window_a);
-      if (isToolRefusal(rowsA)) return rowsA;
-      const rowsB = await readWindow(ports, input.subject_ref, codes, input.window_b);
-      if (isToolRefusal(rowsB)) return rowsB;
-      const units = distinctUnits([...rowsA, ...rowsB]);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const a = summarise(input.window_a, rowsA);
-      const b = summarise(input.window_b, rowsB);
-      return {
-        loinc: input.loinc,
-        unit: units[0] ?? null,
-        window_a: a,
-        window_b: b,
-        delta_b_minus_a: {
-          mean: delta(a.mean, b.mean),
-          median: delta(a.median, b.median),
-          min: delta(a.min, b.min),
-          max: delta(a.max, b.max),
+    (input) =>
+      audited<CompareWindowsResult | ToolRefusal>(
+        scope,
+        "compare_windows",
+        input,
+        input.subject_ref,
+        async () => {
+          if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+            return SUBJECT_SCOPE_VIOLATION;
+          }
+          const codes = [input.loinc];
+          const rowsA = await readWindow(ports, input.subject_ref, codes, input.window_a);
+          if (isToolRefusal(rowsA)) return rowsA;
+          const rowsB = await readWindow(ports, input.subject_ref, codes, input.window_b);
+          if (isToolRefusal(rowsB)) return rowsB;
+          const units = distinctUnits([...rowsA, ...rowsB]);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const a = summarise(input.window_a, rowsA);
+          const b = summarise(input.window_b, rowsB);
+          return {
+            loinc: input.loinc,
+            unit: units[0] ?? null,
+            window_a: a,
+            window_b: b,
+            delta_b_minus_a: {
+              mean: delta(a.mean, b.mean),
+              median: delta(a.median, b.median),
+              min: delta(a.min, b.min),
+              max: delta(a.max, b.max),
+            },
+          };
         },
-      };
-    },
-    (result) => ("window_a" in result ? result.window_a.n + result.window_b.n : 0),
+        (result) => ("window_a" in result ? result.window_a.n + result.window_b.n : 0),
+        ports,
+      ),
     ports,
   );
 
@@ -714,42 +760,49 @@ export const runRangePosition = (
   input: RangePositionInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<RangePositionResult | ToolRefusal> =>
-  audited<RangePositionResult | ToolRefusal>(
+  withMeasure(
     scope,
     "range_position",
     input,
-    input.subject_ref,
-    async () => {
-      if (scope.mode !== "synthetic") return SUBJECT_SCOPE_VIOLATION;
-      const subject = await ports.findSubject(input.subject_ref);
-      if (!subjectRowInScope(scope, subject)) return SUBJECT_SCOPE_VIOLATION;
-      const noRange = rangeRefusalFor(input.loinc);
-      if (noRange) return noRange;
-      const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
-      if (isToolRefusal(rows)) return rows;
-      const units = distinctUnits(rows);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const at = input.pick === "at" && input.at ? new Date(input.at) : null;
-      const reading = pickReading(rows, at);
-      if (!reading) return noRows(input.loinc, at === null ? null : asIso(at));
-      // Sex and birth year are stored for synthetic subjects only (#4).
-      const placed = placeReading(input.loinc, reading, {
-        sex: subject?.sex,
-        birthYear: subject?.birthYear,
-      });
-      if (isToolRefusal(placed)) return placed;
-      return {
-        loinc: input.loinc,
-        start: input.start,
-        end: input.end,
-        n: rows.length,
-        effective_at: asIso(reading.effectiveAt),
-        value: reading.value,
-        unit: reading.unitUcum,
-        ...placed,
-      };
-    },
-    (result) => ("n" in result ? result.n : 0),
+    (input) =>
+      audited<RangePositionResult | ToolRefusal>(
+        scope,
+        "range_position",
+        input,
+        input.subject_ref,
+        async () => {
+          if (scope.mode !== "synthetic") return SUBJECT_SCOPE_VIOLATION;
+          const subject = await ports.findSubject(input.subject_ref);
+          if (!subjectRowInScope(scope, subject)) return SUBJECT_SCOPE_VIOLATION;
+          const noRange = rangeRefusalFor(input.loinc);
+          if (noRange) return noRange;
+          const rows = await readWindow(ports, input.subject_ref, [input.loinc], input);
+          if (isToolRefusal(rows)) return rows;
+          const units = distinctUnits(rows);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const at = input.pick === "at" && input.at ? new Date(input.at) : null;
+          const reading = pickReading(rows, at);
+          if (!reading) return noRows(input.loinc, at === null ? null : asIso(at));
+          // Sex and birth year are stored for synthetic subjects only (#4).
+          const placed = placeReading(input.loinc, reading, {
+            sex: subject?.sex,
+            birthYear: subject?.birthYear,
+          });
+          if (isToolRefusal(placed)) return placed;
+          return {
+            loinc: input.loinc,
+            start: input.start,
+            end: input.end,
+            n: rows.length,
+            effective_at: asIso(reading.effectiveAt),
+            value: reading.value,
+            unit: reading.unitUcum,
+            ...placed,
+          };
+        },
+        (result) => ("n" in result ? result.n : 0),
+        ports,
+      ),
     ports,
   );
 
@@ -857,50 +910,58 @@ export const runCohortPosition = (
   input: CohortPositionInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<CohortPositionResult | ToolRefusal> =>
-  audited<CohortPositionResult | ToolRefusal>(
+  withMeasure(
     scope,
     "cohort_position",
     input,
-    input.subject_ref,
-    async () => {
-      const cohortId = await subjectCohort(scope, input.subject_ref, ports);
-      if (cohortId === null) return SUBJECT_SCOPE_VIOLATION;
-      const rows = await ports.findCohortObservations({
-        cohortId,
-        loinc: input.loinc,
-        start: windowStartDate(input.start),
-        end: windowEndDate(input.end),
-        take: COHORT_ROW_CAP + 1,
-      });
-      if (rows.length > COHORT_ROW_CAP) return COHORT_ROW_CAP_EXCEEDED;
-      const units = distinctUnits(rows);
-      if (units.length > 1) return mixedUnits(input.loinc, units);
-      const latest = latestPerSubject(rows);
-      const own = latest.get(input.subject_ref);
-      if (!own) return noRows(input.loinc, null);
-      if (latest.size < COHORT_MINIMUM) return cohortTooSmall(input.loinc, latest.size);
-      const rank = midRankPercentile(
-        own.value,
-        [...latest.values()].map((reading) => reading.value),
-      );
-      if (rank === null) return noRows(input.loinc, null);
-      return {
-        loinc: input.loinc,
-        unit: own.unitUcum,
-        start: input.start,
-        end: input.end,
-        cohort_id: cohortId,
-        effective_at: asIso(own.effectiveAt),
-        value: own.value,
-        n: rank.n,
-        n_lower: rank.nLower,
-        n_equal: rank.nEqual,
-        n_higher: rank.nHigher,
-        percentile: rank.percentile,
-        method: "mid-rank",
-        rows_read: rows.length,
-      };
-    },
-    (result) => ("rows_read" in result ? result.rows_read : 0),
+    (input) =>
+      audited<CohortPositionResult | ToolRefusal>(
+        scope,
+        "cohort_position",
+        input,
+        input.subject_ref,
+        async () => {
+          const cohortId = await subjectCohort(scope, input.subject_ref, ports);
+          if (cohortId === null) return SUBJECT_SCOPE_VIOLATION;
+          const rows = await ports.findCohortObservations({
+            cohortId,
+            loinc: input.loinc,
+            start: windowStartDate(input.start),
+            end: windowEndDate(input.end),
+            take: COHORT_ROW_CAP + 1,
+          });
+          if (rows.length > COHORT_ROW_CAP) return COHORT_ROW_CAP_EXCEEDED;
+          const units = distinctUnits(rows);
+          if (units.length > 1) return mixedUnits(input.loinc, units);
+          const latest = latestPerSubject(rows);
+          const own = latest.get(input.subject_ref);
+          if (!own) return noRows(input.loinc, null);
+          if (latest.size < COHORT_MINIMUM)
+            return cohortTooSmall(input.loinc, latest.size);
+          const rank = midRankPercentile(
+            own.value,
+            [...latest.values()].map((reading) => reading.value),
+          );
+          if (rank === null) return noRows(input.loinc, null);
+          return {
+            loinc: input.loinc,
+            unit: own.unitUcum,
+            start: input.start,
+            end: input.end,
+            cohort_id: cohortId,
+            effective_at: asIso(own.effectiveAt),
+            value: own.value,
+            n: rank.n,
+            n_lower: rank.nLower,
+            n_equal: rank.nEqual,
+            n_higher: rank.nHigher,
+            percentile: rank.percentile,
+            method: "mid-rank",
+            rows_read: rows.length,
+          };
+        },
+        (result) => ("rows_read" in result ? result.rows_read : 0),
+        ports,
+      ),
     ports,
   );

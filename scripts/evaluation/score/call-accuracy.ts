@@ -7,6 +7,9 @@
  * arguments are one expected call. Every tool call of the turn gets one class,
  * checked in this order:
  *
+ * A call's codes are its `loinc` argument and, for a measure named by name
+ * (#900), the code the tool read it as (`resolved_measures`).
+ *
  * 1. **invented code**: an argument `loinc` code that is not a valid LOINC
  *    code (shape `12345-6` and the LOINC mod-10 check digit), or that the
  *    pinned cohort holds no reading of (`evaluation/cohort-codes.v1.json`).
@@ -97,6 +100,21 @@ export const codesOf = (args: unknown): readonly string[] => {
   return Array.isArray(loinc)
     ? loinc.filter((code): code is string => typeof code === "string")
     : [];
+};
+
+/**
+ * The codes a call read: its `loinc` argument, and the code each measure
+ * name was read as (`resolved_measures` in the output, #900). A name the
+ * tool refused read no code, so the call counts as naming none.
+ */
+export const callCodesOf = (result: ToolResultLine): readonly string[] => {
+  const resolved =
+    isRecord(result.output) && Array.isArray(result.output.resolved_measures)
+      ? result.output.resolved_measures.flatMap((entry: unknown) =>
+          isRecord(entry) && typeof entry.loinc === "string" ? [entry.loinc] : [],
+        )
+      : [];
+  return [...new Set([...codesOf(result.input), ...resolved])];
 };
 
 const subjectOf = (args: unknown): string | null =>
@@ -218,7 +236,7 @@ export const classifyCall = (
   context: CallContext,
 ): CallVerdict => {
   const { expected, given, cohortCodes } = context;
-  const codes = codesOf(result.input);
+  const codes = callCodesOf(result);
   const verdict = (cls: CallClass, detail: string): CallVerdict => ({
     tool: result.tool,
     class: cls,

@@ -325,7 +325,7 @@ describe("the imported-data permit", () => {
     expect(audit).toEqual([
       auditRow(
         "imported_latest",
-        { codes: 1, dataset_id: null },
+        { codes: 1, measures: 0, dataset_id: null },
         { code: "IMPORTED_DATA_NOT_PERMITTED" },
         0,
       ),
@@ -527,7 +527,7 @@ describe("imported_latest", () => {
     expect(audit).toEqual([
       auditRow(
         "imported_latest",
-        { codes: 3, dataset_id: null },
+        { codes: 3, measures: 0, dataset_id: null },
         { rows: 2, without: 1 },
         2,
       ),
@@ -560,7 +560,7 @@ describe("imported_latest", () => {
     expect(audit).toEqual([
       auditRow(
         "imported_latest",
-        { codes: 1, dataset_id: "ds-someone-else" },
+        { codes: 1, measures: 0, dataset_id: "ds-someone-else" },
         { code: "DATASET_NOT_FOUND" },
         0,
       ),
@@ -598,6 +598,54 @@ describe("imported_trend", () => {
         3,
       ),
     ]);
+  });
+
+  test("by measure name: plain glucose is the code this dataset holds (#900)", async () => {
+    const { deps, audit } = harness();
+    const result = await runImportedTrend(deps, {
+      dataset_id: "ds-labs",
+      measure: "Glucose",
+      ...JANUARY,
+    });
+    expect(result).toMatchObject({ loinc: "2345-7", n: 3, slope_per_day: 2 });
+    // Counts only: never the name or the code.
+    expect(audit).toEqual([
+      auditRow(
+        "imported_trend",
+        { dataset_id: "ds-labs", by: "measure", start: "2026-01-01", end: "2026-01-31" },
+        { n: 3 },
+        3,
+      ),
+    ]);
+  });
+
+  test("by measure name: no held code among several is refused with the candidates", async () => {
+    const { deps } = harness();
+    const result = await runImportedTrend(deps, {
+      dataset_id: "ds-watch",
+      measure: "creatinine",
+      ...JANUARY,
+    });
+    expect(result).toMatchObject({
+      code: "AMBIGUOUS_MEASURE",
+      measure: "creatinine",
+      candidates: [
+        { loinc: "2160-0", has_readings: false },
+        { loinc: "38483-4", has_readings: false },
+      ],
+    });
+  });
+
+  test("by measure name and stored name together is refused as two series", async () => {
+    const { deps } = harness();
+    expect(
+      await runImportedTrend(deps, {
+        dataset_id: "ds-labs",
+        measure: "Glucose",
+        name: "HRV (RMSSD)",
+        ...JANUARY,
+      }),
+    ).toMatchObject({ code: "SERIES_NOT_COMBINED", loinc: "2345-7" });
   });
 
   test("a series stored by name: RMSSD 40 to 46, slope 2 ms per day", async () => {

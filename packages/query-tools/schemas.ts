@@ -9,6 +9,46 @@ export const loincSchema = z
   .regex(/^\d{1,5}-\d+$/)
   .describe("LOINC code");
 
+/**
+ * A measure by name (#900), looked up whole in `measure-names.ts`; the code
+ * comes from the table, never from the caller. 1 to 80 characters, no control
+ * characters; the length sits in the pattern, which models are not shown,
+ * because the prompt budget has no room for more (docs/query-layer.md).
+ */
+export const measureNameSchema = z
+  .string()
+  .regex(/^[^\u0000-\u001f]{1,80}$/)
+  .describe("e.g. LDL");
+
+/** One measure: by name or by code, exactly one of the two. */
+const oneMeasure = {
+  loinc: loincSchema.optional(),
+  measure: measureNameSchema.optional(),
+};
+
+const oneMeasureGiven = (input: { readonly loinc?: string; readonly measure?: string }) =>
+  (input.loinc === undefined) !== (input.measure === undefined);
+
+export const ONE_MEASURE = { message: "give measure (a name) or loinc, one of the two" };
+
+/** Up to 20 measures, by name, by code or both. */
+export const manyMeasures = {
+  loinc: z.array(loincSchema).min(1).max(20).optional(),
+  measure: z.array(measureNameSchema).min(1).max(20).optional(),
+};
+
+export const someMeasuresGiven = (input: {
+  readonly loinc?: readonly string[];
+  readonly measure?: readonly string[];
+}) => {
+  const n = (input.loinc?.length ?? 0) + (input.measure?.length ?? 0);
+  return n >= 1 && n <= 20;
+};
+
+export const SOME_MEASURES = {
+  message: "give 1 to 20 measures in measure (names) and loinc (codes) together",
+};
+
 export const subjectRefSchema = z.string().min(1).max(128).describe("Opaque subject_ref");
 
 export const cohortIdSchema = z.string().min(1).max(128).describe("Cohort id");
@@ -50,28 +90,31 @@ export const subjectWindowInput = z
 export const observationsForSubjectInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: z.array(loincSchema).min(1).max(20),
+    ...manyMeasures,
     start: windowStart,
     end: windowEnd,
     limit: z.number().int().min(1).max(500),
   })
-  .describe("Numeric observations for a subject, codes, and time range");
+  .refine(someMeasuresGiven, SOME_MEASURES)
+  .describe("Numeric observations for a subject, measures, and time range");
 
 export const latestByLoincInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: z.array(loincSchema).min(1).max(20),
+    ...manyMeasures,
   })
-  .describe("Latest numeric row per LOINC for a subject");
+  .refine(someMeasuresGiven, SOME_MEASURES)
+  .describe("Latest numeric row per measure for a subject");
 
 export const summaryStatsInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     start: windowStart,
     end: windowEnd,
   })
-  .describe("n / min / max / mean for one LOINC in a window");
+  .refine(oneMeasureGiven, ONE_MEASURE)
+  .describe("n / min / max / mean for one measure in a window");
 
 export const startBeforeEnd = (window: {
   readonly start: string;
@@ -92,44 +135,48 @@ export const windowSchema = z
 export const trendInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     start: windowStart,
     end: windowEnd,
   })
   .strict()
+  .refine(oneMeasureGiven, ONE_MEASURE)
   .refine(startBeforeEnd, START_BEFORE_END)
-  .describe("Least-squares trend for one LOINC in a window");
+  .describe("Least-squares trend for one measure in a window");
 
 export const baselineDeviationInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     baseline: windowSchema,
     target: windowSchema,
   })
   .strict()
+  .refine(oneMeasureGiven, ONE_MEASURE)
   .describe("Target-window median against a baseline window, as a robust z");
 
 export const coverageInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: z.array(loincSchema).min(1).max(20),
+    ...manyMeasures,
     start: windowStart,
     end: windowEnd,
   })
   .strict()
+  .refine(someMeasuresGiven, SOME_MEASURES)
   .refine(startBeforeEnd, START_BEFORE_END)
-  .describe("How much data there is per LOINC in a window");
+  .describe("How much data there is per measure in a window");
 
 export const compareWindowsInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     window_a: windowSchema,
     window_b: windowSchema,
   })
   .strict()
-  .describe("One LOINC in two windows, and B minus A");
+  .refine(oneMeasureGiven, ONE_MEASURE)
+  .describe("One measure in two windows, and B minus A");
 
 export const RANGE_POSITION_PICKS = ["latest", "at"] as const;
 
@@ -139,7 +186,7 @@ const pickAtAgree = (input: { readonly pick: string; readonly at?: string }) =>
 export const rangePositionInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     start: windowStart,
     end: windowEnd,
     pick: z
@@ -155,9 +202,10 @@ export const rangePositionInput = z
       ),
   })
   .strict()
+  .refine(oneMeasureGiven, ONE_MEASURE)
   .refine(startBeforeEnd, START_BEFORE_END)
   .refine(pickAtAgree, { message: "at is required with pick at, and only then" })
-  .describe("One reading of one LOINC against its Anchor v3 published range");
+  .describe("One reading of one measure against its Anchor v3 published range");
 
 const conversionUnit = z.enum(CONVERSION_UNITS);
 
@@ -174,14 +222,15 @@ export const convertUnitInput = z
 export const cohortPositionInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     start: windowStart,
     end: windowEnd,
   })
   .strict()
+  .refine(oneMeasureGiven, ONE_MEASURE)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe(
-    "A subject's latest value of one LOINC in a window, as a percentile among its synthetic cohort",
+    "A subject's latest value of one measure in a window, as a percentile among its synthetic cohort",
   );
 
 /** FHIR R4 Condition.clinicalStatus codes. */
@@ -343,7 +392,7 @@ export const crossSourceCompareInput = z
 export const valuesAroundEventInput = z
   .object({
     subject_ref: subjectRefSchema,
-    loinc: loincSchema,
+    ...oneMeasure,
     event_kind: z
       .enum(["condition", "medication"])
       .describe("condition: its first recorded onset; medication: its first request"),
@@ -364,8 +413,9 @@ export const valuesAroundEventInput = z
       .describe("Days from the event on, 1 to 365"),
   })
   .strict()
+  .refine(oneMeasureGiven, ONE_MEASURE)
   .describe(
-    "One LOINC's readings before and after a subject's first recorded condition or medication",
+    "One measure's readings before and after a subject's first recorded condition or medication",
   );
 
 export const rhythmIrregularityInput = z
@@ -475,24 +525,25 @@ export const TOOL_DEFINITIONS = [
   {
     name: "observations_for_subject",
     description:
-      "Return numeric observation rows for a subject, LOINC list, and time range. limit is 1–500.",
+      "Return numeric observation rows for a subject, measures, and time range. limit is 1–500.",
     input: observationsForSubjectInput,
   },
   {
     name: "latest_by_loinc",
     description:
-      "Return the latest numeric row for each requested LOINC; codes with no reading are listed in codes_without_rows. NO_ROWS when none has a reading: check the code before saying there is no data.",
+      "Return the latest numeric row for each requested measure; codes with no reading are listed in codes_without_rows. NO_ROWS when none has a reading: check the code before saying there is no data.",
     input: latestByLoincInput,
   },
   {
     name: "summary_stats",
-    description: "Return n, min, max, mean, and unit_ucum for one LOINC in a time range.",
+    description:
+      "Return n, min, max, mean, and unit_ucum for one measure in a time range.",
     input: summaryStatsInput,
   },
   {
     name: "trend",
     description:
-      "Least-squares slope per day for one LOINC in a time range, with the fitted values at the first and last observation. slope_per_day is null when n < 3 or the rows span under 2 days. Reads up to 5000 rows; refuses mixed units.",
+      "Least-squares slope per day for one measure in a time range, with the fitted values at the first and last observation. slope_per_day is null when n < 3 or the rows span under 2 days. Reads up to 5000 rows; refuses mixed units.",
     input: trendInput,
   },
   {
@@ -504,19 +555,19 @@ export const TOOL_DEFINITIONS = [
   {
     name: "coverage",
     description:
-      "For up to 20 LOINC codes in a time range: rows, UTC days with data, days in the window, coverage ratio, and the longest run of days without data. Reads up to 5000 rows; refuses mixed units.",
+      "For up to 20 measures in a time range: rows, UTC days with data, days in the window, coverage ratio, and the longest run of days without data. Reads up to 5000 rows; refuses mixed units.",
     input: coverageInput,
   },
   {
     name: "compare_windows",
     description:
-      "n, mean, median, min, and max for one LOINC in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
+      "n, mean, median, min, and max for one measure in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
     input: compareWindowsInput,
   },
   {
     name: "range_position",
     description:
-      "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
+      "Where one reading of one measure sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
     input: rangePositionInput,
   },
   {
@@ -528,7 +579,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "cohort_position",
     description:
-      'Where a subject\'s latest value of one LOINC in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as "higher than about <percentile> % of the <n> synthetic people with a value", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).',
+      'Where a subject\'s latest value of one measure in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as "higher than about <percentile> % of the <n> synthetic people with a value", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).',
     input: cohortPositionInput,
   },
   {
@@ -576,7 +627,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "values_around_event",
     description:
-      "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+      "One subject's readings of one measure in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
     input: valuesAroundEventInput,
   },
   {
