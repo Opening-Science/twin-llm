@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 
+import { yourDayReplayFixtures } from "./your-day-replay-demo";
 import {
   activeTimelineEvents,
+  EVENT_KINDS,
   snapTimelineSeek,
   timelineSegments,
   type TimelineEvent,
@@ -64,4 +66,24 @@ test("snaps close to the nearest start but preserves free seeking and day bounda
   expect(seek(33)).toBe(35 * minute);
   expect(seek(25)).toBe(25 * minute);
   expect(seek(60)).toBe(60 * minute);
+});
+
+test("builds a sorted timeline with runs as workouts and one marker per story phase", () => {
+  const day = yourDayReplayFixtures().find(
+    ({ selection }) => selection.day === "2026-10-27",
+  )!;
+  const { events, phases } = day;
+  expect(events.some(({ kind }) => kind === "workout")).toBe(true);
+  expect(
+    events.filter(({ kind }) => kind === "heart" || kind === "glucose"),
+  ).toHaveLength(phases.length);
+  for (const [index, event] of events.entries()) {
+    const next = events[index + 1];
+    if (!next) break;
+    expect(
+      event.start < next.start ||
+        (event.start === next.start &&
+          EVENT_KINDS.indexOf(event.kind) <= EVENT_KINDS.indexOf(next.kind)),
+    ).toBe(true);
+  }
 });

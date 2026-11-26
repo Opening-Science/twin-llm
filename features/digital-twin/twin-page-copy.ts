@@ -68,12 +68,33 @@ export const EMPTY_TEXT = {
   vitals: "No vitals for this subject.",
 } as const;
 
-/** Your Day: the replay clock, date picker, viewer and chart placeholders. */
+/** Your Day: the replay clock and seek bar, date picker, viewer and charts. */
 export const YOUR_DAY_COPY = {
   clock: "Replay Clock",
-  clockUnavailable: "Not yet available",
   replayTitle: "Daily replay",
-  replayUnavailable: "Replay is not yet available.",
+  replay: {
+    noDemoDay: "No demo replay data for this date.",
+    noData: "No replay data",
+    demoData: "Demo data",
+    play: "Play",
+    pause: "Pause",
+    replay: "Replay",
+    speed: "Replay speed",
+    speedDefault: "Slow",
+    speedFast: "Fast",
+    seek: "Seek replay time",
+    seekTo: "Seek to",
+    noActiveEvent: "No active event",
+    eventTypes: "Event types",
+    noEvents: "No events for this day.",
+    kinds: {
+      workout: "Workout",
+      activity: "Activity",
+      sleep: "Sleep",
+      heart: "Heart rate",
+      glucose: "Glucose",
+    },
+  },
   viewerRegion: "Anatomy viewer",
   chartsTitle: "Biomarker charts",
   picker: {
@@ -89,10 +110,23 @@ export const YOUR_DAY_COPY = {
   chart: {
     heartRate: "Heart rate",
     glucose: "Glucose",
+    bloodGlucose: "Blood glucose",
+    steps: "Steps",
+    restingHeartRate: "Resting heart rate",
+    hrv: "Heart rate variability",
     noData: "No data",
+    noDataLower: "no data",
+    noReadings: "No readings for this day.",
+    empty: "Add charts to see biomarker readings here.",
     syntheticDemo: "Synthetic demo",
     dailyRange: "Daily range",
     cursor: "replay cursor",
+    remove: (label: string) => `Remove ${label} chart`,
+    stale: "Stale · last reading",
+    band: "Derived reference band:",
+    gaps: (count: number) => `${count} data ${count === 1 ? "gap" : "gaps"}`,
+    to: "to",
+    endOfDay: "end of day",
   },
   viewer: {
     label: "Organ-level 3D reference anatomy",

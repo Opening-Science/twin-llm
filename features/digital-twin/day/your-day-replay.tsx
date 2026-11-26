@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import { localClock } from "@/packages/query-tools/replay/local-time";
 import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
 import { stepReplayOnArrow } from "../replay/replay-seek-keys";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import {
   activeTimelineEvents,
   EVENT_KINDS,
@@ -25,12 +26,15 @@ import {
 } from "./your-day-replay-events";
 import styles from "./your-day-replay.module.css";
 
+const COPY = YOUR_DAY_COPY.replay;
+const KIND = COPY.kinds;
+
 const STYLES = {
-  workout: { label: "Workout", icon: Dumbbell, color: "text-chart-2" },
-  activity: { label: "Activity", icon: PersonStanding, color: "text-chart-1" },
-  sleep: { label: "Sleep", icon: Moon, color: "text-chart-4" },
-  heart: { label: "Heart rate", icon: HeartPulse, color: "text-chart-3" },
-  glucose: { label: "Glucose", icon: Droplet, color: "text-chart-2" },
+  workout: { label: KIND.workout, icon: Dumbbell, color: "text-chart-2" },
+  activity: { label: KIND.activity, icon: PersonStanding, color: "text-chart-1" },
+  sleep: { label: KIND.sleep, icon: Moon, color: "text-chart-4" },
+  heart: { label: KIND.heart, icon: HeartPulse, color: "text-chart-3" },
+  glucose: { label: KIND.glucose, icon: Droplet, color: "text-chart-2" },
 } satisfies Record<TimelineKind, { label: string; icon: LucideIcon; color: string }>;
 
 const timeAt = (ms: number, zone: string) => localClock(new Date(ms), zone).time;
@@ -53,7 +57,7 @@ export function YourDayReplayClock({
   return (
     <div className="bg-muted flex h-10 shrink-0 items-center gap-2 rounded-xl px-3">
       <h2 id="your-day-title" className="sr-only">
-        Replay Clock
+        {YOUR_DAY_COPY.clock}
       </h2>
       <span aria-hidden="true" className="flex w-13 shrink-0 items-center justify-start">
         {activeKinds.length === 0 && (
@@ -86,8 +90,8 @@ export function YourDayReplayClock({
         {active.length
           ? active.map(({ kind, label }) => `${STYLES[kind].label}: ${label}`).join("; ")
           : data
-            ? "No active event"
-            : "No replay data"}
+            ? COPY.noActiveEvent
+            : COPY.noData}
       </span>
     </div>
   );
@@ -104,11 +108,9 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
     return (
       <section aria-labelledby="your-day-replay" className="surface p-4">
         <h3 id="your-day-replay" className="font-medium">
-          Daily replay
+          {YOUR_DAY_COPY.replayTitle}
         </h3>
-        <p className="text-muted-foreground mt-2 text-sm">
-          No demo replay data for this date.
-        </p>
+        <p className="text-muted-foreground mt-2 text-sm">{COPY.noDemoDay}</p>
       </section>
     );
   }
@@ -120,12 +122,12 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
   const eventTime = (event: TimelineEvent) =>
     timeAt(Math.max(startMs, event.start), zone);
   const eventLabel = (event: TimelineEvent) =>
-    `Seek to ${STYLES[event.kind].label}: ${event.label}, ${eventTime(event)}`;
+    `${COPY.seekTo} ${STYLES[event.kind].label}: ${event.label}, ${eventTime(event)}`;
   const jump = (event: TimelineEvent) => seek(event.start);
   const active = activeTimelineEvents(events, cursorMs)[0];
   const eventRange = (event: TimelineEvent) =>
     `${eventTime(event)}${event.end > event.start ? `–${timeAt(Math.min(endMs - 1, event.end), zone)}` : ""}`;
-  const playLabel = status === "playing" ? "Pause" : atEnd ? "Replay" : "Play";
+  const playLabel = status === "playing" ? COPY.pause : atEnd ? COPY.replay : COPY.play;
 
   return (
     <section
@@ -135,11 +137,11 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <h3 id="your-day-replay" className="font-medium">
-            Daily replay
+            {YOUR_DAY_COPY.replayTitle}
           </h3>
           {notice && (
             <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
-              Demo data
+              {COPY.demoData}
             </span>
           )}
         </div>
@@ -155,9 +157,9 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
             onClick={status === "playing" ? pause : atEnd ? replay : play}
           >
             <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4 fill-current">
-              {playLabel === "Pause" ? (
+              {status === "playing" ? (
                 <path d="M4 3h3v10H4zm5 0h3v10H9z" />
-              ) : playLabel === "Replay" ? (
+              ) : atEnd ? (
                 <path d="M8 3a5 5 0 1 1-4.9 6h1.6A3.5 3.5 0 1 0 8 4.5H6.5l2 2H6.4L3.2 3.3 6.4 0h2.1l-3 3z" />
               ) : (
                 <path d="M5 2.5 13 8l-8 5.5z" />
@@ -166,15 +168,15 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
           </button>
           <div className="relative">
             <select
-              aria-label="Replay speed"
+              aria-label={COPY.speed}
               className="bg-card border-input hover:bg-muted focus-visible:outline-ring block appearance-none rounded-md border py-1.5 ps-3 pe-9 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 forced-colors:appearance-auto forced-colors:pe-3"
               value={speed}
               onChange={(event) =>
                 setSpeed(event.currentTarget.value === "fast" ? "fast" : "default")
               }
             >
-              <option value="default">Slow</option>
-              <option value="fast">Fast</option>
+              <option value="default">{COPY.speedDefault}</option>
+              <option value="fast">{COPY.speedFast}</option>
             </select>
             <ChevronDown
               aria-hidden="true"
@@ -204,7 +206,7 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
           </div>
           <input
             type="range"
-            aria-label="Seek replay time"
+            aria-label={COPY.seek}
             aria-valuetext={`${timeAt(cursorMs, zone)} (${localClock(new Date(cursorMs), zone).offset})`}
             className={`${styles.seek} focus-visible:outline-ring relative block h-8 w-full cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2`}
             min={0}
@@ -294,10 +296,10 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
               </span>
             </button>
           ) : (
-            <p className="text-muted-foreground text-xs/4">No active event</p>
+            <p className="text-muted-foreground text-xs/4">{COPY.noActiveEvent}</p>
           )}
           <ul
-            aria-label="Event types"
+            aria-label={COPY.eventTypes}
             className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs/4"
           >
             {EVENT_KINDS.map((kind) => (
@@ -309,7 +311,7 @@ export function YourDayReplay({ data }: Readonly<{ data: YourDayReplayData | nul
           </ul>
         </div>
       ) : (
-        <p className="text-muted-foreground mt-3 text-sm">No events for this day.</p>
+        <p className="text-muted-foreground mt-3 text-sm">{COPY.noEvents}</p>
       )}
     </section>
   );
