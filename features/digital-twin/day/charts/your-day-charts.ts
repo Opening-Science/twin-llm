@@ -10,7 +10,7 @@ import {
   type Unavailable,
 } from "@/packages/query-tools/replay/nights";
 
-import { YOUR_DAY_COPY } from "../twin-page-copy";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { chartPresentation } from "./your-day-chart-units";
 import { type DayObservation } from "./your-day-observations";
 

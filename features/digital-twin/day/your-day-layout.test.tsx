@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { YourDayLayout } from "./your-day-layout";
-import { discoverYourDayCharts, type YourDayChartId } from "./your-day-charts";
-import { observationCharts } from "./your-day-observations";
-import { yourDayReplayFixtures } from "./your-day-replay-demo";
+import { discoverYourDayCharts, type YourDayChartId } from "./charts/your-day-charts";
+import { observationCharts } from "./charts/your-day-observations";
+import { yourDayReplayFixtures } from "./data/your-day-replay-demo";
 import { YourDayViewer } from "./your-day-viewer";
 
 const demoDays = yourDayReplayFixtures();

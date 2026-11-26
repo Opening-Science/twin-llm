@@ -56,10 +56,10 @@ import { useAnatomyView } from "./anatomy/use-anatomy-view";
 import { BodyMotion } from "./motion/body-motion";
 import { motionLines } from "./motion/motion-copy";
 import { useBodyMotion } from "./motion/use-body-motion";
-import { BEAT_FOCUS_PREFIX, beatFocusMove } from "./day/beat-focus";
-import { DAY_FOCUS_FROM } from "./day/day-copy";
-import { MyDayPanel } from "./day/my-day-panel";
-import { useMyDay } from "./day/use-my-day";
+import { BEAT_FOCUS_PREFIX, beatFocusMove } from "./day/kiosk/beat-focus";
+import { DAY_FOCUS_FROM } from "./day/kiosk/day-copy";
+import { MyDayPanel } from "./day/kiosk/my-day-panel";
+import { useMyDay } from "./day/kiosk/use-my-day";
 import { DayMotionBar } from "./motion/day-motion-bar";
 import { useDayMotion } from "./motion/use-day-motion";
 import {

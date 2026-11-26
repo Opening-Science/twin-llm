@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { KIOSK_DAY_NOTICE } from "@/packages/query-tools/kiosk-day";
 
-import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type CohortRow } from "../../biomarkers/cohort-handler";
 import { dayList, demoDay, MOCK_DAY_REF, mockDay } from "./demo-day";
 
 const row = (

@@ -9,7 +9,7 @@ import {
   filterPickerCatalog,
   paginatePickerCatalog,
 } from "./your-day-picker-catalog";
-import { yourDayReplayFixtures } from "./your-day-replay-demo";
+import { yourDayReplayFixtures } from "../data/your-day-replay-demo";
 
 const days = yourDayReplayFixtures().map(({ chartData }) => chartData.day);
 const catalog = buildPickerCatalog(days);

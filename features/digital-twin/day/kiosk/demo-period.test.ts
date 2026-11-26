@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type CohortRow } from "../../biomarkers/cohort-handler";
 import { demoPeriod } from "./demo-period";
 
 const day = (offset: number) => {

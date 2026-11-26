@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { ReplayProvider } from "../replay/replay-provider";
+import { ReplayProvider } from "../../replay/replay-provider";
 import { YourDayChart } from "./your-day-chart";
 import { chartPresentation } from "./your-day-chart-units";
 import {
@@ -9,7 +9,7 @@ import {
   plottedValueAt,
   type YourDayChartId,
 } from "./your-day-charts";
-import { yourDayReplayFixtures } from "./your-day-replay-demo";
+import { yourDayReplayFixtures } from "../data/your-day-replay-demo";
 
 const fixtures = yourDayReplayFixtures();
 const charts = discoverYourDayCharts(fixtures.map(({ chartData }) => chartData.day));

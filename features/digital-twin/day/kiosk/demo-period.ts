@@ -26,7 +26,7 @@ import {
 } from "@/packages/query-tools/wearable-readings";
 import { comparedRead, spanOf } from "@/packages/query-tools/wearable-tools";
 
-import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type CohortRow } from "../../biomarkers/cohort-handler";
 import { periodSummary, type PeriodSummary } from "./period-summary";
 
 /**

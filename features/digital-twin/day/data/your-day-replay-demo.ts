@@ -8,9 +8,9 @@ import { storyPhases } from "@/packages/query-tools/replay/phases";
 import { bandOf } from "@/packages/query-tools/replay/nights";
 import { localInstant } from "@/packages/query-tools/replay/local-time";
 
-import { replayTimeline } from "./your-day-replay-events";
-import { type YourDayChartData } from "./your-day-charts";
-import { type DayObservation } from "./your-day-observations";
+import { replayTimeline } from "../replay/your-day-replay-events";
+import { type YourDayChartData } from "../charts/your-day-charts";
+import { type DayObservation } from "../charts/your-day-observations";
 
 export type YourDayDemo = ReturnType<typeof replayTimeline> &
   Readonly<{ chartData: YourDayChartData; observations?: readonly DayObservation[] }>;

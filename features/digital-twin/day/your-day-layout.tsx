@@ -9,13 +9,13 @@ import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
 import { ReplayProvider } from "../replay/replay-provider";
 import { YOUR_DAY_COPY } from "../twin-page-copy";
-import { YourDayChart } from "./your-day-chart";
-import { YourDayChartPicker } from "./your-day-chart-picker";
-import { MAX_YOUR_DAY_CHARTS, type YourDayChartId } from "./your-day-charts";
+import { YourDayChart } from "./charts/your-day-chart";
+import { YourDayChartPicker } from "./charts/your-day-chart-picker";
+import { MAX_YOUR_DAY_CHARTS, type YourDayChartId } from "./charts/your-day-charts";
 import { YourDayDatePicker } from "./your-day-date-picker";
-import { buildPickerCatalog } from "./your-day-picker-catalog";
-import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
-import { type YourDayDemo } from "./your-day-replay-demo";
+import { buildPickerCatalog } from "./charts/your-day-picker-catalog";
+import { YourDayReplay, YourDayReplayClock } from "./replay/your-day-replay";
+import { type YourDayDemo } from "./data/your-day-replay-demo";
 
 const atlas = ATLASES[DEFAULT_ATLAS_ID];
 

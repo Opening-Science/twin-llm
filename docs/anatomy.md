@@ -20,11 +20,15 @@ The shared chart unit registry defines display units, numeric conversions, and a
 
 Day Replay follows the system's `DATA_MODE` setting. Synthetic mode uses demo fixtures, including an example ferritin draw on October 27. Personal mode requires an unlocked vault and reads numeric lab and wearable imports for the selected date and numeric observations from the latest stored Oura, WHOOP, and Google Health syncs. It never substitutes demo values or starts a provider sync. Date-only records appear as summaries, precise observations as dots, and supported step intervals as bars. Personal replay defaults to UTC; the `zone` query parameter can name a different IANA time zone.
 
+To add a synthetic lab reading to Your Day, follow the ferritin example in [the demo fixtures](../features/digital-twin/day/data/your-day-replay-demo.ts). [Charts and the biomarker picker](../features/digital-twin/day/charts/) are separate from [the replay clock and timeline](../features/digital-twin/day/replay/).
+
 Use **Add biomarkers**, to the right of the date picker, to browse the Anchor lab catalog and the full wearable measurement registry together by body system. A wearable measurement with an exact LOINC and unit match shares its Anchor entry. Selectable charts come from the available time series across the replay days, so a chart stays selected when a particular date has no readings. Sensor glucose and blood glucose are replay-only entries and stay separate from Anchor's fasting serum/plasma glucose. Sleep intervals are listed separately from sleep duration and appear on the timeline rather than as a chart. Entries without a replay series are listed but not selectable; use the card's **Info** button to see why.
 
 Changing the category or search returns the results to page one. The dialog shows up to nine equal-height cards per page, with numbered, first, previous, next, and last controls when there are multiple pages. The picker starts with the visible charts checked and keeps up to six selections across pages and filters. **Apply selection** updates the grid, while **Cancel**, Escape, or the close button discards the draft. Chart cards animate in and out unless reduced motion is enabled. Changing the selection or removing a card does not reset replay. Saved panels and anatomy replay effects are separate work.
 
 The biomarker picker opens and closes with a short fade and scale. Using the pagination controls slides and fades in the next set of cards without moving the controls. Both animations are skipped when the system's reduced-motion preference is enabled.
+
+The [picker dialog](../features/digital-twin/day/charts/your-day-chart-picker.tsx) owns draft selection, filters, and page transitions; its [child components](../features/digital-twin/day/charts/picker/) render the search and category controls, biomarker cards, and pagination.
 
 The picker fills the viewport height with a top and bottom margin, even when a search returns few or no matches. The results area scrolls independently, with pagination pinned above the footer actions.
 

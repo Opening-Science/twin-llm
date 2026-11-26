@@ -3,7 +3,7 @@ import { connectorSetupViews } from "@/features/connectors/connector-setup";
 import { threadsForViewer } from "@/features/app-shell/load-threads";
 import { DashboardScreen } from "@/features/dashboard/dashboard-screen";
 import { RecentChats } from "@/features/dashboard/recent-chats";
-import { DayGlanceCard } from "@/features/digital-twin/day/day-glance-card";
+import { DayGlanceCard } from "@/features/digital-twin/day/glance/day-glance-card";
 import {
   getGoogleHealthConnectionStatus,
   getLatestGoogleHealthSummary,

@@ -1,6 +1,6 @@
 import { YourDayLayout } from "@/features/digital-twin/day/your-day-layout";
-import { readPersonalReplay } from "@/features/digital-twin/day/your-day-personal";
-import { yourDayReplayFixtures } from "@/features/digital-twin/day/your-day-replay-demo";
+import { readPersonalReplay } from "@/features/digital-twin/day/data/your-day-personal";
+import { yourDayReplayFixtures } from "@/features/digital-twin/day/data/your-day-replay-demo";
 import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
 import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
 import { lockedScreen } from "@/features/vault/page-gate";

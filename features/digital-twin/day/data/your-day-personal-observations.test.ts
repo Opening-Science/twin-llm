@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { buildPickerCatalog } from "./your-day-picker-catalog";
+import { buildPickerCatalog } from "../charts/your-day-picker-catalog";
 import {
   connectedDayObservations,
   importedDayObservations,

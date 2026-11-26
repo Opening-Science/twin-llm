@@ -7,7 +7,7 @@ import {
 } from "@/packages/query-tools/imported-ports";
 import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
 
-import { type DayObservation } from "./your-day-observations";
+import { type DayObservation } from "../charts/your-day-observations";
 
 export function importedDayObservations(
   rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],

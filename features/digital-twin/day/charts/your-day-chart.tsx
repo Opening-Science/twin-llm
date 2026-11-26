@@ -12,10 +12,10 @@ import {
 } from "@/packages/query-tools/replay/at-time";
 import { isAvailable } from "@/packages/query-tools/replay/items";
 import { localClock } from "@/packages/query-tools/replay/local-time";
-import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
-import { stepReplayOnArrow } from "../replay/replay-seek-keys";
-import { YOUR_DAY_COPY } from "../twin-page-copy";
-import styles from "./your-day-replay.module.css";
+import { useReplayActions, useReplaySnapshot } from "../../replay/replay-provider";
+import { stepReplayOnArrow } from "../../replay/replay-seek-keys";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
+import styles from "../replay/your-day-replay.module.css";
 import {
   intervalEndMs,
   plottedValueAt,

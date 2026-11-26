@@ -5,9 +5,9 @@ import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
 import { MEASURES, type Measure } from "@/packages/personal-data/wearable-measure-codes";
 import { type ReplayDay } from "@/packages/query-tools/replay/replay-day";
 
-import { SYSTEM_LABEL } from "../anatomy/anatomy-copy";
-import { VITAL_LABEL } from "../biomarkers/biomarker-copy";
-import { YOUR_DAY_COPY } from "../twin-page-copy";
+import { SYSTEM_LABEL } from "../../anatomy/anatomy-copy";
+import { VITAL_LABEL } from "../../biomarkers/biomarker-copy";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { chartUnitFor } from "./your-day-chart-units";
 import { type DayObservation, observationCharts } from "./your-day-observations";
 import {
@@ -16,7 +16,7 @@ import {
   type YourDayChartId,
 } from "./your-day-charts";
 
-type PickerEntry = Readonly<{
+export type PickerEntry = Readonly<{
   id: string;
   chartId: YourDayChartId | null;
   label: string;
