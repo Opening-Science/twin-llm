@@ -43,7 +43,7 @@
     "type": "function",
     "function": {
       "name": "observations_for_subject",
-      "description": "Return numeric observation rows for a subject, LOINC list, and time range. limit is 1–500.",
+      "description": "Return numeric observation rows for a subject, measures, and time range. limit is 1–500.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -53,13 +53,13 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "minItems": 1,
             "maxItems": 20,
             "type": "array",
             "items": {
               "type": "string",
-              "description": "LOINC code"
+              "description": "e.g. LDL"
             }
           },
           "start": {
@@ -76,7 +76,7 @@
             "maximum": 500
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end", "limit"],
+        "required": ["subject_ref", "start", "end", "limit", "measure"],
         "additionalProperties": false
       }
     }
@@ -85,7 +85,7 @@
     "type": "function",
     "function": {
       "name": "latest_by_loinc",
-      "description": "Return the latest numeric row for each requested LOINC; codes with no reading are listed in codes_without_rows. NO_ROWS when none has a reading: check the code before saying there is no data.",
+      "description": "Return the latest numeric row for each requested measure; codes with no reading are listed in codes_without_rows. NO_ROWS when none has a reading: check the code before saying there is no data.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -95,17 +95,17 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "minItems": 1,
             "maxItems": 20,
             "type": "array",
             "items": {
               "type": "string",
-              "description": "LOINC code"
+              "description": "e.g. LDL"
             }
           }
         },
-        "required": ["subject_ref", "loinc"],
+        "required": ["subject_ref", "measure"],
         "additionalProperties": false
       }
     }
@@ -114,7 +114,7 @@
     "type": "function",
     "function": {
       "name": "summary_stats",
-      "description": "Return n, min, max, mean, and unit_ucum for one LOINC in a time range.",
+      "description": "Return n, min, max, mean, and unit_ucum for one measure in a time range.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -124,9 +124,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "start": {
             "type": "string",
@@ -137,7 +137,7 @@
             "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end"],
+        "required": ["subject_ref", "start", "end", "measure"],
         "additionalProperties": false
       }
     }
@@ -146,7 +146,7 @@
     "type": "function",
     "function": {
       "name": "trend",
-      "description": "Least-squares slope per day for one LOINC in a time range, with the fitted values at the first and last observation. slope_per_day is null when n < 3 or the rows span under 2 days. Reads up to 5000 rows; refuses mixed units.",
+      "description": "Least-squares slope per day for one measure in a time range, with the fitted values at the first and last observation. slope_per_day is null when n < 3 or the rows span under 2 days. Reads up to 5000 rows; refuses mixed units.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -156,9 +156,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "start": {
             "type": "string",
@@ -169,7 +169,7 @@
             "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end"],
+        "required": ["subject_ref", "start", "end", "measure"],
         "additionalProperties": false
       }
     }
@@ -188,9 +188,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "baseline": {
             "type": "object",
@@ -225,7 +225,7 @@
             "description": "Time window, start before end"
           }
         },
-        "required": ["subject_ref", "loinc", "baseline", "target"],
+        "required": ["subject_ref", "baseline", "target", "measure"],
         "additionalProperties": false
       }
     }
@@ -234,7 +234,7 @@
     "type": "function",
     "function": {
       "name": "coverage",
-      "description": "For up to 20 LOINC codes in a time range: rows, UTC days with data, days in the window, coverage ratio, and the longest run of days without data. Reads up to 5000 rows; refuses mixed units.",
+      "description": "For up to 20 measures in a time range: rows, UTC days with data, days in the window, coverage ratio, and the longest run of days without data. Reads up to 5000 rows; refuses mixed units.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -244,13 +244,13 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "minItems": 1,
             "maxItems": 20,
             "type": "array",
             "items": {
               "type": "string",
-              "description": "LOINC code"
+              "description": "e.g. LDL"
             }
           },
           "start": {
@@ -262,7 +262,7 @@
             "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end"],
+        "required": ["subject_ref", "start", "end", "measure"],
         "additionalProperties": false
       }
     }
@@ -271,7 +271,7 @@
     "type": "function",
     "function": {
       "name": "compare_windows",
-      "description": "n, mean, median, min, and max for one LOINC in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
+      "description": "n, mean, median, min, and max for one measure in window A and window B, and B minus A for each. Deltas are null when a window has no rows. Up to 5000 rows per window; refuses mixed units.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -281,9 +281,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "window_a": {
             "type": "object",
@@ -318,7 +318,7 @@
             "description": "Time window, start before end"
           }
         },
-        "required": ["subject_ref", "loinc", "window_a", "window_b"],
+        "required": ["subject_ref", "window_a", "window_b", "measure"],
         "additionalProperties": false
       }
     }
@@ -327,7 +327,7 @@
     "type": "function",
     "function": {
       "name": "range_position",
-      "description": "Where one reading of one LOINC sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
+      "description": "Where one reading of one measure sits against its Anchor v3 published range: below, within or above it, bounds inclusive. pick latest takes the newest reading in the window, pick at the reading at `at`. A sex- or age-specific range is chosen from the subject's stored sex and birth year; facts_used names them, and the age is approximate (birth year only: one of two ages). When a fact is not stored (timing never is) or the age band changes within the reading's year, position is null and depends_on names the facts; nothing is guessed. Reads up to 5000 rows; refuses no rows, mixed units, no published range, and a unit other than the range's (nothing is converted). Neutral position only.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -337,9 +337,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "start": {
             "type": "string",
@@ -359,7 +359,7 @@
             "description": "With pick at only: the reading's effective_at as observations_for_subject returns it"
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end", "pick"],
+        "required": ["subject_ref", "start", "end", "pick", "measure"],
         "additionalProperties": false
       }
     }
@@ -412,7 +412,7 @@
     "type": "function",
     "function": {
       "name": "cohort_position",
-      "description": "Where a subject's latest value of one LOINC in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as \"higher than about <percentile> % of the <n> synthetic people with a value\", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).",
+      "description": "Where a subject's latest value of one measure in a time range sits among the latest values, in the same window, of everyone in its synthetic cohort (one value per person, the subject included). percentile is the mid-rank percentile, 100 × (n_lower + n_equal / 2) / n, where n is the people with a value and n_equal counts the subject; say it as \"higher than about <percentile> % of the <n> synthetic people with a value\", never better, worse or normal. Synthetic cohorts only. Refuses no value for the subject, fewer than 10 people with a value, mixed units across the cohort, and more than 20000 cohort rows (narrow the window).",
       "parameters": {
         "type": "object",
         "properties": {
@@ -422,9 +422,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "start": {
             "type": "string",
@@ -435,7 +435,7 @@
             "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
           }
         },
-        "required": ["subject_ref", "loinc", "start", "end"],
+        "required": ["subject_ref", "start", "end", "measure"],
         "additionalProperties": false
       }
     }
@@ -713,7 +713,7 @@
     "type": "function",
     "function": {
       "name": "values_around_event",
-      "description": "One subject's readings of one LOINC in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
+      "description": "One subject's readings of one measure in the days_before days before and the days_after days from the first recorded onset of a condition (event_kind condition) or the first request of a medication (event_kind medication), found by its code: n, mean, median, min and max on each side and after minus before. Says what was recorded before and after the date, never that the event caused a change. Refuses SUBJECT_SCOPE_VIOLATION, NO_ROWS (no dated record of that code, or no reading on either side), MIXED_UNITS and ROW_CAP_EXCEEDED.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -723,9 +723,9 @@
             "maxLength": 128,
             "description": "Opaque subject_ref"
           },
-          "loinc": {
+          "measure": {
             "type": "string",
-            "description": "LOINC code"
+            "description": "e.g. LDL"
           },
           "event_kind": {
             "type": "string",
@@ -751,11 +751,11 @@
         },
         "required": [
           "subject_ref",
-          "loinc",
           "event_kind",
           "event_code",
           "days_before",
-          "days_after"
+          "days_after",
+          "measure"
         ],
         "additionalProperties": false
       }

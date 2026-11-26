@@ -309,17 +309,79 @@ describe("query tools against constructed patient-2", () => {
     const { runLatestByLoinc } = await import("./tools");
     const some = await runLatestByLoinc(synthetic, {
       subject_ref: SUBJECT,
-      loinc: ["8302-2", "88678-4"],
+      loinc: ["8302-2", "2093-3"],
     });
-    expect("rows" in some && some.codes_without_rows).toEqual(["88678-4"]);
+    expect("rows" in some && some.codes_without_rows).toEqual(["2093-3"]);
     expect(
-      await runLatestByLoinc(synthetic, { subject_ref: SUBJECT, loinc: ["88678-4"] }),
+      await runLatestByLoinc(synthetic, { subject_ref: SUBJECT, loinc: ["2093-3"] }),
     ).toEqual({
       code: "NO_ROWS",
       error:
         "none of these LOINC codes has a reading for this subject; check each code is the one meant before saying there is no data",
+      loinc: ["2093-3"],
+    });
+  });
+
+  test("an invented code (bad check digit) is refused before any read, and audited", async () => {
+    const { runLatestByLoinc } = await import("./tools");
+    const args = { subject_ref: SUBJECT, loinc: ["8302-2", "88678-4"] };
+    expect(await runLatestByLoinc(synthetic, args)).toEqual({
+      code: "INVALID_LOINC",
+      error:
+        "not a LOINC code (its check digit is wrong), so nothing was read; name the measure in measure instead",
       loinc: ["88678-4"],
     });
+    expect(store.events).toHaveLength(1);
+    expect(store.events[0]?.tool).toBe("latest_by_loinc");
+    expect(store.events[0]?.rowCount).toBe(0);
+    expect(store.events[0]?.argsSha256).toBe(sha256Hex(toCanonicalJson(args)));
+  });
+
+  test("latest_by_loinc by name: codes from the table, names said back, the code audited", async () => {
+    const { runLatestByLoinc } = await import("./tools");
+    const result = await runLatestByLoinc(synthetic, {
+      subject_ref: SUBJECT,
+      measure: ["Body height", "BMI"],
+    });
+    expect("rows" in result && result.rows.map((row) => row.loinc)).toEqual([
+      "8302-2",
+      "39156-5",
+    ]);
+    expect(Reflect.get(result, "resolved_measures")).toEqual([
+      { measure: "Body height", loinc: "8302-2", name: "Body height" },
+      { measure: "BMI", loinc: "39156-5", name: "Body mass index" },
+    ]);
+    const audited = {
+      subject_ref: SUBJECT,
+      measure: ["Body height", "BMI"],
+      loinc: ["8302-2", "39156-5"],
+    };
+    expect(store.events.at(-1)?.argsSha256).toBe(sha256Hex(toCanonicalJson(audited)));
+  });
+
+  test("summary_stats by name reads the same rows as by code", async () => {
+    const { runSummaryStats } = await import("./tools");
+    const byName = await runSummaryStats(synthetic, {
+      subject_ref: SUBJECT,
+      measure: "Körpergewicht",
+      ...RANGE,
+    });
+    expect(byName).toMatchObject({ n: 1, min: 85.2, max: 85.2, mean: 85.2, unit: "kg" });
+    expect(Reflect.get(byName, "resolved_measures")).toEqual([
+      { measure: "Körpergewicht", loinc: "29463-7", name: "Body weight" },
+    ]);
+  });
+
+  test("an unknown name is refused with suggestions, never guessed", async () => {
+    const { runSummaryStats } = await import("./tools");
+    const result = await runSummaryStats(synthetic, {
+      subject_ref: SUBJECT,
+      measure: "skin temperature",
+      ...RANGE,
+    });
+    expect(Reflect.get(result, "code")).toBe("UNKNOWN_MEASURE");
+    expect(Reflect.get(result, "measure")).toBe("skin temperature");
+    expect(store.events.at(-1)?.rowCount).toBe(0);
   });
 
   test("summary_stats for 29463-7 is n=1 min=max=mean=85.2 kg", async () => {

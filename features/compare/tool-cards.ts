@@ -95,6 +95,8 @@ const CODE_SENTENCES: Readonly<Record<string, string>> = {
   NOTHING_TO_MAP: "Nothing to draw on a map",
   DATASET_NOT_FOUND: "No such imported dataset",
   UNKNOWN_MEASURE: "Unknown measure",
+  AMBIGUOUS_MEASURE: "This name fits more than one measure",
+  INVALID_LOINC: "That is not a LOINC code",
   MEASURE_REQUIRED: "No measure was named",
   LOINC_REQUIRED: "No measure code was named",
   SUBJECT_REQUIRED: "No person was named",
