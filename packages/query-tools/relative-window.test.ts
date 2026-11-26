@@ -217,6 +217,13 @@ describe("the window schemas", () => {
     expect(trendInput.safeParse({ ...base, period: "recently" }).success).toBe(false);
   });
 
+  test("a period of another form is refused with the forms it may take", () => {
+    const parsed = trendInput.safeParse({ ...base, period: "past 3 months" });
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain(
+      "period is last N days, weeks, months or years (N 1 to 999), this year or all",
+    );
+  });
+
   test("windowSchema takes a period too, and still checks start before end", () => {
     expect(windowSchema.safeParse({ period: "this year" }).success).toBe(true);
     expect(

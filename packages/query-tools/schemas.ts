@@ -40,7 +40,9 @@ export const windowEnd = windowBound().describe("YYYY-MM-DD (whole day) or UTC d
  */
 export const periodSchema = z
   .string()
-  .regex(PERIOD_PATTERN)
+  .regex(PERIOD_PATTERN, {
+    error: "period is last N days, weeks, months or years (N 1 to 999), this year or all",
+  })
   .describe("Or: last N days|weeks|months|years, this year, all");
 
 /** A window: `start` and `end`, or `period`. */
