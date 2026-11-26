@@ -108,7 +108,7 @@ export function YourDayDatePicker({
       ref={picker}
       role="group"
       aria-label="Replay date picker"
-      className="dark text-foreground relative z-20 ml-auto w-full max-w-60"
+      className="dark text-foreground relative z-20 w-60 min-w-0"
     >
       <div className="border-input bg-card flex items-center rounded-[10px] border p-0.5">
         <Arrow label="Previous day" onClick={() => step(-1)} disabled={!selected} />
@@ -133,7 +133,7 @@ export function YourDayDatePicker({
           id={panelId}
           role="dialog"
           aria-label="Choose replay date"
-          className="border-border bg-popover text-popover-foreground absolute top-full right-0 mt-2 w-[min(100cqw,19rem)] rounded-xl border p-3 shadow-xl"
+          className="border-border bg-popover text-popover-foreground absolute top-full left-0 mt-2 w-[min(100cqw,19rem)] rounded-xl border p-3 shadow-xl @lg/replay:right-0 @lg/replay:left-auto"
         >
           <DayPicker
             mode="single"

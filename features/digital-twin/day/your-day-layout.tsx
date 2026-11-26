@@ -6,7 +6,12 @@ import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
 import { YourDayChart } from "./your-day-chart";
-import { DEFAULT_CHART_IDS, type YourDayChartId } from "./your-day-charts";
+import { YourDayChartPicker } from "./your-day-chart-picker";
+import {
+  DEFAULT_CHART_IDS,
+  MAX_YOUR_DAY_CHARTS,
+  type YourDayChartId,
+} from "./your-day-charts";
 import { YourDayDatePicker } from "./your-day-date-picker";
 import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
@@ -28,8 +33,8 @@ export function YourDayLayout({
   initialChartIds?: readonly YourDayChartId[];
 }>) {
   const [date, setDate] = useState(initialDate);
-  const [chartIds, setChartIds] = useState(() =>
-    [...new Set(initialChartIds)].slice(0, 6),
+  const [chartIds, setChartIds] = useState<readonly YourDayChartId[]>(() =>
+    [...new Set(initialChartIds)].slice(0, MAX_YOUR_DAY_CHARTS),
   );
   const chartsTitle = useRef<HTMLHeadingElement>(null);
   const data = demoDays.find(({ selection }) => selection.day === date) ?? null;
@@ -40,9 +45,12 @@ export function YourDayLayout({
         aria-labelledby="your-day-title"
         className="@container/replay mt-6 space-y-2"
       >
-        <header className="flex flex-wrap items-end justify-between gap-3">
+        <header className="flex flex-wrap items-center justify-between gap-3">
           <YourDayReplayClock data={data} />
-          <YourDayDatePicker selected={date} onSelect={setDate} />
+          <div className="ml-auto flex max-w-full min-w-0 items-center gap-2">
+            <YourDayDatePicker selected={date} onSelect={setDate} />
+            <YourDayChartPicker active={chartIds} onApply={setChartIds} />
+          </div>
         </header>
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
           <section aria-label="Anatomy viewer" className="surface min-w-0">
@@ -50,13 +58,13 @@ export function YourDayLayout({
           </section>
           <section
             aria-labelledby="your-day-charts"
-            className="@container/charts min-w-0"
+            className="@container/charts flex min-w-0 flex-col gap-3"
           >
             <h3 id="your-day-charts" ref={chartsTitle} tabIndex={-1} className="sr-only">
               Biomarker charts
             </h3>
             <div
-              className={`grid h-full min-w-0 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
+              className={`grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
             >
               {chartIds.length === 0 && (
                 <p className="surface text-muted-foreground grid place-items-center p-4 text-center text-sm">

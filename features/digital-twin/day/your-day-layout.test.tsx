@@ -40,9 +40,9 @@ test("renders replay controls and events before playback begins", () => {
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
-  expect(html.match(/Synthetic demo/g)).toHaveLength(2);
-  expect(html.match(/Daily range/g)).toHaveLength(2);
-  expect(html.match(/type="range"/g)).toHaveLength(3);
+  expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(DEFAULT_CHART_IDS.length);
+  expect(html.match(/Daily range/g)).toHaveLength(DEFAULT_CHART_IDS.length);
+  expect(html.match(/type="range"/g)).toHaveLength(DEFAULT_CHART_IDS.length + 1);
   expect(html).toContain('aria-label="Play"');
   expect(html.match(/data-replay-track/g)).toHaveLength(1);
   expect(html).toContain('aria-label="Replay speed"');
@@ -66,7 +66,9 @@ test("renders replay controls and events before playback begins", () => {
   expect(html).toContain(">Demo data</span>");
   expect(html).not.toMatch(/Event details|Synthetic demonstration/);
   expect(html).toContain('aria-label="Remove Heart rate chart"');
-  expect(html).not.toContain("Add biomarker");
+  expect(html).toMatch(
+    /<header[^>]*>.*Replay date.*aria-haspopup="dialog"[^>]*>.*?Add biomarkers<\/button>/,
+  );
   expect(html).not.toContain(">Anatomy</h3>");
 });
 
@@ -103,6 +105,18 @@ test("supports zero or six distinct cards independently of the replay controls",
   const empty = render([]);
   expect(empty).toContain("Add charts to see biomarker readings here.");
   expect(empty).toContain('aria-label="Seek replay time"');
+  expect(empty).toContain("0 of 6 charts selected");
+  expect(empty).toContain('aria-disabled="true"');
+  expect(empty).toMatch(
+    /<button(?=[^>]*aria-label="Why is Alanine aminotransferase unavailable\?")(?=[^>]*aria-expanded="false")[^>]*>/,
+  );
+  expect(empty).toContain('aria-label="Biomarker results pages"');
+  expect(empty).toContain('aria-current="page"');
+  expect(empty).toContain('aria-label="Go to first page"');
+  expect(empty).toContain('aria-label="Go to last page"');
+  const two = render(["heart_rate", "glucose"]);
+  expect(two).toContain("2 of 6 charts selected");
+  expect(two.match(/<input[^>]*type="checkbox"[^>]*checked=""/g)).toHaveLength(2);
   expect(
     render([
       ...Object.keys(YOUR_DAY_CHARTS).filter((id): id is YourDayChartId =>
