@@ -1,8 +1,6 @@
-import {
-  DigitalTwinFrame,
-  DigitalTwinPlaceholder,
-} from "@/features/digital-twin/digital-twin-frame";
-import { YOUR_DAY } from "@/features/digital-twin/twin-page-copy";
+import { YourDayLayout } from "@/features/digital-twin/day/your-day-layout";
+import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
+import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
 import { lockedScreen } from "@/features/vault/page-gate";
 
 export default async function YourDayPage() {
@@ -10,7 +8,9 @@ export default async function YourDayPage() {
   if (locked) return locked;
   return (
     <DigitalTwinFrame>
-      <DigitalTwinPlaceholder title={YOUR_DAY} />
+      <YourDayLayout>
+        <YourDayViewer />
+      </YourDayLayout>
     </DigitalTwinFrame>
   );
 }
