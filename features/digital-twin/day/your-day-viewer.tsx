@@ -97,7 +97,7 @@ export function YourDayViewer() {
           ? null
           : COPY.loading;
   return (
-    <div className="wearables-hero relative h-98 overflow-hidden rounded-xl sm:h-130">
+    <div className="wearables-hero relative h-full min-h-98 overflow-hidden rounded-xl sm:min-h-130">
       <div
         role="img"
         aria-label={COPY.label}

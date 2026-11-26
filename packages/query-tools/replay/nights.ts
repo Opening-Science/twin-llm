@@ -141,7 +141,7 @@ const nightly = (
 
 const BAND_RULE = `The baseline median ± ${MAD_SCALE} × MAD of the person's nights in the 28 days before (demo only).`;
 
-const bandOf = (baseline: Baseline): ReferenceBand | Unavailable =>
+export const bandOf = (baseline: Baseline): ReferenceBand | Unavailable =>
   baseline.state !== "available"
     ? unavailable(`No reference band: ${baseline.text}`)
     : {

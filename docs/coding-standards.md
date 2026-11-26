@@ -135,14 +135,15 @@ missing; never turn it into `0`.
 **Repeated styling.** When the same group of Tailwind classes turns up in a third place,
 make it a component in `infrastructure/ui-kit/` or a class in `app/globals.css`.
 
-**Page widths and spacing.** A page's outer column is one of three classes from
+**Page widths and spacing.** A page's outer column uses one of these classes from
 `app/globals.css`, never its own `max-w-*` and padding:
 
-| Class           | Text column | For                                                     |
-| --------------- | ----------- | ------------------------------------------------------- |
-| `.page-form`    | 34rem       | One task on its own (the first-run card)                |
-| `.page-reading` | 53rem       | Running text (the docs, the Synthea generator)          |
-| `.page-wide`    | 61rem       | Everything else: chat, Customize, the Lab, models, twin |
+| Class              | Text column | For                                                       |
+| ------------------ | ----------- | --------------------------------------------------------- |
+| `.page-form`       | 34rem       | One task on its own (the first-run card)                  |
+| `.page-reading`    | 53rem       | Running text (the docs, the Synthea generator)            |
+| `.page-wide`       | 61rem       | Everything else: chat, Customize, the Lab, models, twin   |
+| `.page-extra-wide` | 75rem       | Dashboards that need wider side-by-side panels (Your Day) |
 
 Each class adds the gutter at the sides (`--page-gutter`: 1rem on a phone, 1.5rem from
 640px) and the block above and below (`--page-block`: 2.5rem). Add `.page-stack` for a
