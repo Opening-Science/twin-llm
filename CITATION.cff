@@ -18,8 +18,8 @@ authors:
     orcid: "https://orcid.org/0000-0003-1928-3904"
 repository-code: "https://github.com/Opening-Science/twin-llm"
 license: Apache-2.0
-version: 0.1.0
-date-released: "2026-10-25"
+version: 0.2.0
+date-released: "2026-11-26"
 keywords:
   - digital twin
   - open models
