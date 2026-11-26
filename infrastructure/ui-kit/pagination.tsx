@@ -4,7 +4,7 @@ import { cn } from "@/infrastructure/ui";
 
 import { Button } from "./button";
 
-// Adapted from shadcn/ui Pagination (MIT) for in-place navigation with buttons.
+// Adapted from shadcn/ui Pagination (MIT, see NOTICE) for in-place navigation with buttons.
 export function Pagination({ className, ...props }: ComponentProps<"nav">) {
   return (
     <nav
