@@ -50,7 +50,7 @@ export const ambiguousMeasure = (
 ): AmbiguousMeasure => ({
   code: "AMBIGUOUS_MEASURE",
   error: candidates.some((candidate) => candidate.has_readings)
-    ? "this name fits more than one code with readings; call again with the loinc of the one meant, or ask which is meant"
+    ? "this name fits more than one code with readings; call again with the meant candidate's loinc as measure, or ask which is meant"
     : "this name fits more than one code and none has a reading here; say there is no reading under this name",
   measure,
   candidates: [...candidates],

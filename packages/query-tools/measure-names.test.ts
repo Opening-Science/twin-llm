@@ -148,7 +148,7 @@ describe("resolveMeasures", () => {
     ).toEqual({
       code: "AMBIGUOUS_MEASURE",
       error:
-        "this name fits more than one code with readings; call again with the loinc of the one meant, or ask which is meant",
+        "this name fits more than one code with readings; call again with the meant candidate's loinc as measure, or ask which is meant",
       measure: "glucose",
       candidates: [
         {
