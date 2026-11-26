@@ -18,15 +18,15 @@ export const YOUR_DAY_CHARTS = {
     selector: { stream: "glucose", specimen: "sensor" },
   },
   blood_glucose: {
-    label: "Blood glucose",
+    label: YOUR_DAY_COPY.chart.bloodGlucose,
     selector: { stream: "glucose", specimen: "blood" },
   },
-  steps: { label: "Steps", selector: { stream: "steps" } },
+  steps: { label: YOUR_DAY_COPY.chart.steps, selector: { stream: "steps" } },
   resting_heart_rate: {
-    label: "Resting heart rate",
+    label: YOUR_DAY_COPY.chart.restingHeartRate,
     selector: { stream: "resting_heart_rate" },
   },
-  hrv_rmssd: { label: "Heart rate variability", selector: { stream: "hrv_rmssd" } },
+  hrv_rmssd: { label: YOUR_DAY_COPY.chart.hrv, selector: { stream: "hrv_rmssd" } },
 } as const satisfies Record<string, { label: string; selector: SeriesSelector }>;
 
 export type YourDayChartId = keyof typeof YOUR_DAY_CHARTS;

@@ -83,7 +83,7 @@ export function YourDayChart({
   const cursorTime = timestamp(cursorMs, zone);
   const detail =
     current?.state === "stale"
-      ? `Stale · last reading ${timestamp(Date.parse(current.reading.at), zone)}`
+      ? `${COPY.stale} ${timestamp(Date.parse(current.reading.at), zone)}`
       : current?.state === "unavailable"
         ? current.text
         : null;
@@ -110,7 +110,7 @@ export function YourDayChart({
         <button
           type="button"
           className="bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-ring grid size-8 shrink-0 place-items-center rounded-md focus-visible:outline-2"
-          aria-label={`Remove ${label} chart`}
+          aria-label={COPY.remove(label)}
           onClick={onRemove}
         >
           <X aria-hidden="true" className="size-4" />
@@ -129,20 +129,19 @@ export function YourDayChart({
           </p>
         )}
         {detail && <p>{detail}</p>}
-        {!data && <p>No readings for this day.</p>}
+        {!data && <p>{COPY.noReadings}</p>}
         {band && (
           <p>
-            Derived reference band: {valueText(band.low)}–{valueText(band.high)} {unit}.{" "}
-            {band.rule}
+            {COPY.band} {valueText(band.low)}–{valueText(band.high)} {unit}. {band.rule}
           </p>
         )}
         {bandState?.state === "unavailable" && <p>{bandState.text}</p>}
         {model && model.gaps.length > 0 && (
           <p>
-            {model.gaps.length} data {model.gaps.length === 1 ? "gap" : "gaps"}
+            {COPY.gaps(model.gaps.length)}
             {model.gaps.map(
               ({ from, to }) =>
-                `; ${timestamp(Date.parse(from), zone)} to ${Date.parse(to) === endMs ? "end of day" : timestamp(Date.parse(to), zone)}`,
+                `; ${timestamp(Date.parse(from), zone)} ${COPY.to} ${Date.parse(to) === endMs ? COPY.endOfDay : timestamp(Date.parse(to), zone)}`,
             )}
           </p>
         )}
@@ -153,7 +152,7 @@ export function YourDayChart({
             <input
               type="range"
               aria-label={`${label} ${COPY.cursor}`}
-              aria-valuetext={`${cursorTime}, ${reading ? `${valueText(reading.value)} ${unit}` : "no data"}`}
+              aria-valuetext={`${cursorTime}, ${reading ? `${valueText(reading.value)} ${unit}` : COPY.noDataLower}`}
               className={`${styles.seek} focus-visible:outline-ring absolute inset-0 z-10 size-full cursor-crosshair rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2`}
               min={0}
               max={duration - 1}

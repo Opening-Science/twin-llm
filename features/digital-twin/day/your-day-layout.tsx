@@ -61,7 +61,7 @@ export function YourDayLayout({
             >
               {chartIds.length === 0 && (
                 <p className="surface text-muted-foreground grid place-items-center p-4 text-center text-sm">
-                  Add charts to see biomarker readings here.
+                  {YOUR_DAY_COPY.chart.empty}
                 </p>
               )}
               {chartIds.map((id) => (

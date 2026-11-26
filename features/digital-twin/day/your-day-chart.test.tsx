@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayChart } from "./your-day-chart";
-import { plottedValueAt, type YourDayChartId } from "./your-day-charts";
+import { chartUnit, plottedValueAt, type YourDayChartId } from "./your-day-charts";
 import { yourDayReplayFixtures } from "./your-day-replay-demo";
 
 const fixtures = yourDayReplayFixtures();
@@ -67,4 +67,11 @@ test("renders supported nightly reference bands with a text alternative", () => 
   const html = renderChart("hrv_rmssd", "2026-10-27");
   expect(html).toContain("Derived reference band:");
   expect(html).toContain("<rect");
+});
+
+test("shows per-minute heart streams as bpm and keeps other stream units", () => {
+  expect(chartUnit("heart_rate")).toBe("bpm");
+  expect(chartUnit("resting_heart_rate")).toBe("bpm");
+  expect(chartUnit("glucose")).toBe("mg/dL");
+  expect(chartUnit("hrv_rmssd")).toBe("ms");
 });
