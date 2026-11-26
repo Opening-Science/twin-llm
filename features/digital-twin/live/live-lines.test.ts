@@ -73,6 +73,28 @@ describe("liveLines", () => {
     ]);
   });
 
+  test("distinguishes an illustrative animation rate from the recorded heart rate", () => {
+    const beating = { ...on(true, false, false), chambers: "sinus" } as const;
+    expect(
+      liveLines(beating, VITALS, "hra", TODAY, "regular", {
+        bpm: 110,
+        illustrative: true,
+      }),
+    ).toEqual([
+      CHAMBERS_ILLUSTRATIVE,
+      "Recorded heart rate: 61 bpm · last reading 14 Mar 2025 (1 year ago) · Synthetic person 1",
+      "Illustrative heart animation at 110 bpm; not a reading.",
+      CHAMBERS_LINE,
+      "Beat timing: regular, at the animation rate above.",
+    ]);
+    expect(
+      liveLines(beating, NO_LIVE_VITALS, "hra", TODAY, "regular", {
+        bpm: 70,
+        illustrative: true,
+      })[1],
+    ).toBe("Illustrative heart animation at 70 bpm; not a reading.");
+  });
+
   test("BodyParts3D says why whole systems glow", () => {
     expect(liveLines(on(true, true, false), VITALS, "bodyparts3d", TODAY)).toEqual([
       ILLUSTRATIVE,

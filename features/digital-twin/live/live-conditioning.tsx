@@ -156,6 +156,7 @@ const drawn = (parts: readonly LivePart[]): boolean =>
 export const LiveConditioning = ({
   enabled,
   vitals,
+  heartBpm,
   scheme,
   parts,
   root,
@@ -165,6 +166,7 @@ export const LiveConditioning = ({
   /** Off inline unless asked, on in the environment, never with reduced motion. */
   enabled: boolean;
   vitals: LiveVitals;
+  heartBpm: number | null;
   scheme: AtlasScheme;
   parts: readonly LivePart[];
   /** The atlas root: its frame says which way is up, front and left on the heart. */
@@ -187,9 +189,27 @@ export const LiveConditioning = ({
   const statusRef = useRef<LiveStatus>(IDLE_STATUS);
   const clockRef = useRef<BeatClock | null>(null);
   const lastFrameRef = useRef<number | null>(null);
-  const live = useRef({ enabled, vitals, targets, onStatus, chambers, root, colours });
+  const live = useRef({
+    enabled,
+    vitals,
+    heartBpm,
+    targets,
+    onStatus,
+    chambers,
+    root,
+    colours,
+  });
   useEffect(() => {
-    live.current = { enabled, vitals, targets, onStatus, chambers, root, colours };
+    live.current = {
+      enabled,
+      vitals,
+      heartBpm,
+      targets,
+      onStatus,
+      chambers,
+      root,
+      colours,
+    };
   });
   // Another beat pattern (person, day) starts its own clock.
   useEffect(() => {
@@ -235,7 +255,7 @@ export const LiveConditioning = ({
   // Any change of input gets one frame, which starts or stops the loop.
   useEffect(() => {
     invalidate();
-  }, [enabled, vitals, targets, chambers.on, colours, invalidate]);
+  }, [enabled, vitals, heartBpm, targets, chambers.on, colours, invalidate]);
 
   // Leaving (atlas switch, unmount) puts every part back.
   useEffect(
@@ -259,12 +279,13 @@ export const LiveConditioning = ({
     const {
       enabled: on,
       vitals: rates,
+      heartBpm: bpm,
       targets: now,
       chambers: chamberSetting,
       root: atlasRoot,
       colours: tint,
     } = live.current;
-    const heart = on && rates.heart !== null && drawn(now.heart);
+    const heart = on && bpm !== null && drawn(now.heart);
     const lungs = on && rates.breath !== null && drawn(now.lungs);
     const glowing = on && rates.hrvBelow !== null && drawn(now.hrv);
     const nowMs = performance.now();
@@ -272,17 +293,12 @@ export const LiveConditioning = ({
     const dt = lastFrameRef.current === null ? 0 : (nowMs - lastFrameRef.current) / 1000;
     lastFrameRef.current = nowMs;
 
-    const beating = heart && rates.heart && chamberSetting.on;
+    const beating = heart && bpm !== null && chamberSetting.on;
     const clock =
-      beating && rates.heart
+      beating && bpm !== null
         ? clockRef.current === null
-          ? startClock(rates.heart.perMinute, chamberSetting.pattern)
-          : advanceClock(
-              clockRef.current,
-              dt,
-              rates.heart.perMinute,
-              chamberSetting.pattern,
-            )
+          ? startClock(bpm, chamberSetting.pattern)
+          : advanceClock(clockRef.current, dt, bpm, chamberSetting.pattern)
         : null;
     clockRef.current = clock;
     const contraction = clock ? chamberContraction(clock, chamberSetting.pattern) : null;
@@ -290,10 +306,7 @@ export const LiveConditioning = ({
       ? Math.max(0.5 * contraction.atria, contraction.ventricles)
       : null;
 
-    const beat =
-      contraction === null && heart && rates.heart
-        ? pulseAt(t, rates.heart.perMinute)
-        : 0;
+    const beat = contraction === null && heart && bpm !== null ? pulseAt(t, bpm) : 0;
     const glow =
       contraction !== null
         ? chamberGlow(contraction.atria, contraction.ventricles)
@@ -309,9 +322,7 @@ export const LiveConditioning = ({
       }
       setLiveGlow(
         part.mesh.material as Material,
-        vascularUnavailable && rates.heart
-          ? pulseAt(t, rates.heart.perMinute) * HEART_GLOW[scheme]
-          : glow,
+        vascularUnavailable && bpm !== null ? pulseAt(t, bpm) * HEART_GLOW[scheme] : glow,
         tint.pulse,
       );
     }

@@ -39,6 +39,8 @@ import { Field } from "@/infrastructure/ui-kit/field";
 import { Legend } from "@/infrastructure/ui-kit/legend";
 import { AnatomyControls } from "./anatomy/anatomy-controls";
 import { AnatomyLayers } from "./anatomy/anatomy-layers";
+import { glucoseUnavailable, type GlucoseStatus } from "./anatomy/glucose-flow";
+import { type GlucoseControlModel } from "./anatomy/glucose-control";
 import { demoStanceFor, fittedAvailable, fittedShown } from "./anatomy/fitted-option";
 import { highlightValue } from "./anatomy/highlight-options";
 import { BodyPanel, type BodyPanelProps, type PanelTab } from "./body-panel";
@@ -75,6 +77,8 @@ import {
 import { PickCard, ProjectAnchor } from "./environment/pick-card";
 import { IDLE_STATUS, type LiveStatus } from "./live/live-conditioning";
 import { LiveLines } from "./live/live-lines";
+import { heartAnimationRate } from "./live/heart-rate-control";
+import { type LiveVitalMode } from "./live/live-vitals-control";
 import { heartRhythmOf } from "./live/heart-rhythm";
 import { NIGHT_NEEDS_READINGS } from "./live/live-copy";
 import { NightPlayback, useNightPlayback } from "./live/night-playback";
@@ -316,8 +320,13 @@ export const BodyLoopAvatar = ({
   const [reducedMotion, setReducedMotion] = useState(false);
   // Live vitals: on in the environment, off inline until asked (battery on an
   // 8 GB Air), never with reduced motion.
-  const [liveInline, setLiveInline] = useState(false);
-  const [liveInEnvironment, setLiveInEnvironment] = useState(true);
+  const [inlineLiveMode, setInlineLiveMode] = useState<LiveVitalMode>(null);
+  const [environmentLiveMode, setEnvironmentLiveMode] = useState<LiveVitalMode>("hr");
+  const [heartOverride, setHeartOverride] = useState<{
+    subjectId: string;
+    personRef: string | null;
+    bpm: number;
+  } | null>(null);
   const [liveStatus, setLiveStatus] = useState<LiveStatus>(IDLE_STATUS);
   const [scanScene, setScanScene] = useState<Group | null>(null);
   const [canvasKey, setCanvasKey] = useState(0);
@@ -329,6 +338,9 @@ export const BodyLoopAvatar = ({
   const [heartFocus, setHeartFocus] = useState<CameraFocusRequest | null>(null);
   const camera = useMemo(() => new PerspectiveCamera(40, 1, 0.01, 40), []);
   const anatomy = useAnatomyView(preview === undefined);
+  const [particleDensity, setParticleDensity] = useState(0.5);
+  const [particleStatus, setParticleStatus] = useState<GlucoseStatus>("idle");
+  const [particleRetry, setParticleRetry] = useState(0);
   const onControls = useCallback((controls: OrbitControls | null) => {
     controlsRef.current = controls;
   }, []);
@@ -719,17 +731,22 @@ export const BodyLoopAvatar = ({
   const { live: measuredVitals } = biomarkers;
   // Night playback replaces the newest readings while it is open, inline only.
   const night = useNightPlayback(biomarkerSubject, reducedMotion);
+  const liveMode = environment.active ? environmentLiveMode : inlineLiveMode;
   const nightSynthetic = nightPlaybackFor(biomarkerSubject) === "synthetic";
   const playing = nightSynthetic && night.open && !environment.active;
   const liveVitals = playing ? night.vitals : measuredVitals;
-  const liveAvailable =
-    !reducedMotion &&
-    (measuredVitals.heart !== null ||
-      measuredVitals.breath !== null ||
-      measuredVitals.hrvBelow !== null);
+  const currentOverride =
+    heartOverride?.subjectId === subjectId &&
+    heartOverride.personRef === (isDemo ? biomarkers.personRef : null)
+      ? heartOverride.bpm
+      : null;
+  const animationHeart = heartAnimationRate(
+    liveVitals.heart?.perMinute ?? null,
+    currentOverride,
+    playing,
+  );
   const liveOn =
-    !reducedMotion &&
-    (playing || (liveAvailable && (environment.active ? liveInEnvironment : liveInline)));
+    !reducedMotion && liveMode !== "glucose" && (playing || liveMode === "hr");
   // Heart chambers (#53): on by default with live vitals, remembered per viewer.
   // BodyParts3D uses tagged heart structures and a delayed vessel-surface pulse.
   const [chambersWanted, toggleChambers] = usePanelOpen(PANEL_IDS.heartChambers);
@@ -742,6 +759,13 @@ export const BodyLoopAvatar = ({
     () => ({ on: chambersWanted, pattern: heartRhythm.pattern }),
     [chambersWanted, heartRhythm.pattern],
   );
+  const setLiveMode = environment.active ? setEnvironmentLiveMode : setInlineLiveMode;
+  const { onOpen: setNightOpen } = night;
+  const selectLiveMode = (mode: LiveVitalMode) => {
+    setLiveMode(mode);
+    if (mode !== "hr") setNightOpen(false);
+    if (mode !== null) anatomyDispatch({ type: "depth", depth: 3 });
+  };
   // Primitives only, so the page hears about a change once, not on every render.
   const contextScans = listedScans.length;
   const contextValues = biomarkers.rows.filter((row) => row.value !== null).length;
@@ -851,6 +875,17 @@ export const BodyLoopAvatar = ({
     installed: anatomy.fitted,
   };
   const fittedOn = fittedShown(anatomy.state.fitAtlas, fittedContext);
+  const particleControl: GlucoseControlModel = {
+    density: particleDensity,
+    status: particleStatus,
+    unavailable: glucoseUnavailable(
+      anatomy.state.atlasId,
+      fittedOn,
+      motion.clip !== null,
+    ),
+    onDensity: setParticleDensity,
+    onRetry: () => setParticleRetry((value) => value + 1),
+  };
 
   // One card for a picked part: inline over the canvas, in the environment in
   // the bottom stack. It describes one view, so entering or leaving closes it.
@@ -976,15 +1011,34 @@ export const BodyLoopAvatar = ({
             highlight={anatomy.state.highlight}
             highlightFromPick={pickLit}
             reducedMotion={reducedMotion}
+            moving={motion.clip !== null}
+            visualization={
+              liveMode === "glucose"
+                ? {
+                    kind: "glucose",
+                    model: {
+                      density: particleDensity,
+                      retry: particleRetry,
+                      status: particleStatus,
+                      onStatus: setParticleStatus,
+                    },
+                  }
+                : liveMode === "hr" || playing
+                  ? {
+                      kind: "hr",
+                      model: {
+                        enabled: liveOn,
+                        vitals: liveVitals,
+                        heartBpm: animationHeart.bpm,
+                        chambers,
+                        onStatus: setLiveStatus,
+                      },
+                    }
+                  : null
+            }
             onLoad={anatomy.onLoad}
             onPick={onPick}
             onHeartFocus={onHeartFocus}
-            liveVitals={{
-              enabled: liveOn,
-              vitals: liveVitals,
-              chambers,
-              onStatus: setLiveStatus,
-            }}
           />
         </Canvas>
         {glLost ? (
@@ -1083,17 +1137,27 @@ export const BodyLoopAvatar = ({
             motion={motion.control}
             environment={{ active: inEnvironment, onToggle: environment.toggle }}
             environmentRef={environment.buttonRef}
-            liveVitals={
-              liveAvailable
-                ? {
-                    on: liveOn,
-                    onToggle: () =>
-                      environment.active
-                        ? setLiveInEnvironment((on) => !on)
-                        : setLiveInline((on) => !on),
-                  }
-                : undefined
-            }
+            onLiveInteract={onUserRotate}
+            liveVitals={{
+              mode: liveMode,
+              onSelect: selectLiveMode,
+              hrUnavailable: reducedMotion
+                ? "HR animation is off with reduced motion."
+                : null,
+              heartRate: {
+                bpm: animationHeart.bpm,
+                overridden: currentOverride !== null,
+                nightPlayback: playing,
+                onChange: (bpm) =>
+                  setHeartOverride({
+                    subjectId,
+                    personRef: isDemo ? biomarkers.personRef : null,
+                    bpm,
+                  }),
+                onReset: () => setHeartOverride(null),
+              },
+              glucose: particleControl,
+            }}
             heartChambers={
               chambersAvailable
                 ? { on: chambersWanted, onToggle: toggleChambers }
@@ -1126,11 +1190,12 @@ export const BodyLoopAvatar = ({
         <LiveLines
           status={liveOn ? liveStatus : IDLE_STATUS}
           vitals={liveVitals}
+          animationHeart={animationHeart}
           timing={heartRhythm.timing}
           scheme={scheme}
           context={{
-            on: playing || (environment.active ? liveInEnvironment : liveInline),
-            inEnvironment: environment.active,
+            on: liveOn,
+            inEnvironment: environment.active && liveMode !== "glucose",
             reducedMotion,
           }}
           extra={motionLines(motion.control, anatomy.state.targetDepth > 0)}
@@ -1148,7 +1213,16 @@ export const BodyLoopAvatar = ({
           />
         )}
         {environment.active ? null : nightSynthetic ? (
-          <NightPlayback state={night} reducedMotion={reducedMotion} />
+          <NightPlayback
+            state={{
+              ...night,
+              onOpen: (open) => {
+                night.onOpen(open);
+                if (open) setInlineLiveMode("hr");
+              },
+            }}
+            reducedMotion={reducedMotion}
+          />
         ) : (
           <p className="text-muted-foreground mt-2 text-xs">{NIGHT_NEEDS_READINGS}</p>
         )}

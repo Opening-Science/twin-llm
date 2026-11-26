@@ -5,6 +5,7 @@ import {
   formatClock,
   formatBytes,
   formatDate,
+  formatWeekday,
   formatElapsed,
   formatForPrompt,
   formatMeasure,
@@ -220,6 +221,9 @@ describe("formatDate", () => {
   test.each([
     ["2026-10-16", "long", "16 Oct 2026"],
     ["2026-10-16", "short", "16 Oct"],
+    ["2026-10-16", "weekday", "Fri 16 Oct 2026"],
+    ["2026-11-23", "weekday", "Mon 23 Nov 2026"],
+    ["2026-02-31", "weekday", "—"],
     ["2026-01-01", "long", "1 Jan 2026"],
     ["2026-02-31", "long", "—"],
     ["16.10.2026", "long", "—"],
@@ -265,6 +269,12 @@ describe("formatDate", () => {
 
   test("an invalid Date is a dash", () => {
     expect(formatDate(new Date(Number.NaN))).toBe("—");
+  });
+
+  test("weekdays come from the same table, on the viewer's calendar", () => {
+    expect(formatWeekday(new Date(2026, 10, 23, 0, 30))).toBe("Mon");
+    expect(formatWeekday(new Date(2026, 10, 29, 23, 59))).toBe("Sun");
+    expect(formatWeekday(new Date(Number.NaN))).toBe("—");
   });
 
   describe("away from UTC", () => {
