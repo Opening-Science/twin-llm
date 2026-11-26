@@ -52,7 +52,7 @@ export function YourDayChart({
   };
 
   return (
-    <div className="dark surface text-foreground @container min-w-0 p-4 @sm:p-5">
+    <div className="dark surface text-foreground @container flex min-w-0 flex-col p-4 @sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h4 className="text-sm font-semibold">{label}</h4>
         {series && (
@@ -76,7 +76,7 @@ export function YourDayChart({
               {formatClock(active.minute)}
             </p>
           </div>
-          <div className="focus-within:outline-ring relative mt-5 rounded-sm focus-within:outline-2 focus-within:outline-offset-4">
+          <div className="focus-within:outline-ring relative mt-5 flex flex-1 flex-col rounded-sm focus-within:outline-2 focus-within:outline-offset-4">
             {series.points.length > 1 && (
               <input
                 type="range"
@@ -95,10 +95,10 @@ export function YourDayChart({
             )}
             <div
               aria-hidden="true"
-              className="text-muted-foreground ml-10 text-xs tabular-nums"
+              className="text-muted-foreground ml-10 flex flex-1 flex-col text-xs tabular-nums"
             >
               <div
-                className="relative h-28 cursor-crosshair @sm:h-36"
+                className="relative h-28 cursor-crosshair @sm:h-36 @2xl/replay:h-auto @2xl/replay:flex-1"
                 onPointerMove={(event) => {
                   if (event.pointerType === "mouse") inspectPoint(event);
                 }}
@@ -150,7 +150,7 @@ export function YourDayChart({
                   }}
                 />
               </div>
-              <div className="relative h-6 pt-2 text-[0.6875rem] @xs:text-xs">
+              <div className="relative h-6 shrink-0 pt-2 text-[0.6875rem] @xs:text-xs">
                 {TIME_TICKS.map((minute) => (
                   <span
                     key={minute}

@@ -4,12 +4,12 @@ import {
   createContext,
   useContext,
   useLayoutEffect,
-  useState,
+  useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 
-import { replayKeyOf, type ReplayKey } from "@/packages/query-tools/replay/replay-day";
+import { type ReplayKey } from "@/packages/query-tools/replay/replay-day";
 
 import {
   createReplayTransport,
@@ -34,12 +34,16 @@ type ReplayProviderProps = Readonly<{
 }>;
 
 /** Mount only while Your Day is open. A new selection owns a fresh clock. */
-export function ReplayProvider(props: ReplayProviderProps) {
-  return <ReplayScope key={replayKeyOf(props.selection)} {...props} />;
-}
-
-function ReplayScope({ selection, story = null, children }: ReplayProviderProps) {
-  const [transport] = useState(() => createReplayTransport(selection, browserClock));
+export function ReplayProvider({
+  selection,
+  story = null,
+  children,
+}: ReplayProviderProps) {
+  const { subject_ref, day, time_zone } = selection;
+  const transport = useMemo(
+    () => createReplayTransport({ subject_ref, day, time_zone }, browserClock),
+    [subject_ref, day, time_zone],
+  );
   useLayoutEffect(() => {
     const disconnect = transport.connect();
     window.addEventListener("pagehide", transport.actions.pause);
