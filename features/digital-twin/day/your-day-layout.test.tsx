@@ -40,9 +40,9 @@ test("renders replay controls and events before playback begins", () => {
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
-  expect(html.match(/Synthetic demo/g)).toHaveLength(2);
-  expect(html.match(/Daily range/g)).toHaveLength(2);
-  expect(html.match(/type="range"/g)).toHaveLength(3);
+  expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(DEFAULT_CHART_IDS.length);
+  expect(html.match(/Daily range/g)).toHaveLength(DEFAULT_CHART_IDS.length);
+  expect(html.match(/type="range"/g)).toHaveLength(DEFAULT_CHART_IDS.length + 1);
   expect(html).toContain('aria-label="Play"');
   expect(html.match(/data-replay-track/g)).toHaveLength(1);
   expect(html).toContain('aria-label="Replay speed"');
