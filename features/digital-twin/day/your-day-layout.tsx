@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
+import { useRef, useState, type ReactNode, type Ref } from "react";
 
+import { useReducedMotion } from "@/infrastructure/ui-kit/use-reduced-motion";
 import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
@@ -18,6 +20,32 @@ import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
 import { type YourDayDemo } from "./your-day-replay-demo";
 
 const atlas = ATLASES[DEFAULT_ATLAS_ID];
+
+function AnimatedChartCard({
+  children,
+  reducedMotion,
+  ref,
+}: Readonly<{
+  children: ReactNode;
+  reducedMotion: boolean;
+  ref?: Ref<HTMLDivElement>;
+}>) {
+  const isPresent = useIsPresent();
+  return (
+    <motion.div
+      ref={ref}
+      className="grid min-w-0"
+      inert={!isPresent}
+      layout={reducedMotion ? false : "position"}
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
+      transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export function YourDayLayout({
   children,
@@ -36,6 +64,7 @@ export function YourDayLayout({
   const [chartIds, setChartIds] = useState<readonly YourDayChartId[]>(() =>
     [...new Set(initialChartIds)].slice(0, MAX_YOUR_DAY_CHARTS),
   );
+  const reducedMotion = useReducedMotion();
   const chartsTitle = useRef<HTMLHeadingElement>(null);
   const data = demoDays.find(({ selection }) => selection.day === date) ?? null;
   const selection = data?.selection ?? { ...demoIdentity, day: date };
@@ -64,24 +93,32 @@ export function YourDayLayout({
               Biomarker charts
             </h3>
             <div
-              className={`grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
+              className={`relative grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
             >
-              {chartIds.length === 0 && (
-                <p className="surface text-muted-foreground grid place-items-center p-4 text-center text-sm">
-                  Add charts to see biomarker readings here.
-                </p>
-              )}
-              {chartIds.map((id) => (
-                <YourDayChart
-                  key={id}
-                  id={id}
-                  data={data?.chartData ?? null}
-                  onRemove={() => {
-                    setChartIds((ids) => ids.filter((chartId) => chartId !== id));
-                    chartsTitle.current?.focus({ preventScroll: true });
-                  }}
-                />
-              ))}
+              <AnimatePresence
+                initial={false}
+                mode={reducedMotion ? "sync" : "popLayout"}
+              >
+                {chartIds.length === 0 && (
+                  <AnimatedChartCard key="empty" reducedMotion={reducedMotion}>
+                    <p className="surface text-muted-foreground grid place-items-center p-4 text-center text-sm">
+                      Add charts to see biomarker readings here.
+                    </p>
+                  </AnimatedChartCard>
+                )}
+                {chartIds.map((id) => (
+                  <AnimatedChartCard key={id} reducedMotion={reducedMotion}>
+                    <YourDayChart
+                      id={id}
+                      data={data?.chartData ?? null}
+                      onRemove={() => {
+                        setChartIds((ids) => ids.filter((chartId) => chartId !== id));
+                        chartsTitle.current?.focus({ preventScroll: true });
+                      }}
+                    />
+                  </AnimatedChartCard>
+                ))}
+              </AnimatePresence>
             </div>
           </section>
         </div>
