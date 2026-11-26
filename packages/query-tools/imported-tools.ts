@@ -10,7 +10,11 @@ import {
   IMPORTED_TABLE_TOOL,
   IMPORTED_TREND_TOOL,
 } from "./imported-names";
-import type { ImportedDataPorts, ImportedDatasetRecord } from "./imported-ports";
+import {
+  type ImportedDataPorts,
+  type ImportedDatasetRecord,
+  LOINC_SYSTEM,
+} from "./imported-ports";
 import {
   conditionEntry,
   type ImportedColumnEntry,
@@ -47,6 +51,12 @@ import {
   seriesListing,
   storedUnits,
 } from "./imported-series";
+import {
+  type MeasureRequest,
+  type MeasureResolution,
+  resolveMeasures,
+} from "./measure-names";
+import { type MeasureRefusal } from "./measure-refusals";
 import {
   ANALYTICS_ROW_CAP,
   isToolRefusal,
@@ -129,6 +139,31 @@ const refusedByPolicy = (deps: ImportedToolDeps): ImportedRefusal | null => {
   return decision.ok ? null : importedNotPermitted(decision.reason);
 };
 
+/**
+ * Codes for the asked measures (#900): a name fitting several codes keeps the
+ * one this person's imported LOINC series hold (in `datasetId`, or in any
+ * dataset); see `resolveMeasures`.
+ */
+const settleMeasures = (
+  deps: ImportedToolDeps,
+  request: MeasureRequest,
+  datasetId: string | null,
+): Promise<MeasureResolution | MeasureRefusal> =>
+  resolveMeasures(request, async (codes) => {
+    const series = await deps.ports.listSeries(IMPORTED_SERIES_CAP + 1);
+    return new Set(
+      series
+        .filter(
+          (group) =>
+            group.codeSystem === LOINC_SYSTEM &&
+            group.code !== null &&
+            codes.includes(group.code) &&
+            (datasetId === null || group.datasetId === datasetId),
+        )
+        .flatMap((group) => (group.code === null ? [] : [group.code])),
+    );
+  });
+
 const findDataset = async (
   deps: ImportedToolDeps,
   datasetId: string,
@@ -203,11 +238,15 @@ export type ImportedLatestResult = Readonly<{
 export const runImportedLatest = (
   deps: ImportedToolDeps,
   input: z.infer<typeof importedLatestInput>,
-): Promise<ImportedLatestResult | ImportedRefusal> =>
-  auditedImported<ImportedLatestResult | ImportedRefusal>(
+): Promise<ImportedLatestResult | ImportedRefusal | MeasureRefusal> =>
+  auditedImported<ImportedLatestResult | ImportedRefusal | MeasureRefusal>(
     deps,
     IMPORTED_LATEST_TOOL,
-    { codes: input.loinc.length, dataset_id: input.dataset_id ?? null },
+    {
+      codes: input.loinc?.length ?? 0,
+      measures: input.measure?.length ?? 0,
+      dataset_id: input.dataset_id ?? null,
+    },
     async () => {
       const refused = refusedByPolicy(deps);
       if (refused !== null) return refused;
@@ -215,9 +254,15 @@ export const runImportedLatest = (
       if (datasetId !== null && !(await datasetExists(deps, datasetId))) {
         return datasetNotFound(datasetId);
       }
-      const rows = await deps.ports.findLatest({ codes: input.loinc, datasetId });
-      const picked = newestPerCode(rows, input.loinc);
-      if (picked.readings.length === 0) return importedNoRows(input.loinc);
+      const settled = await settleMeasures(
+        deps,
+        { loinc: input.loinc ?? [], measure: input.measure ?? [] },
+        datasetId,
+      );
+      if (!("codes" in settled)) return settled;
+      const rows = await deps.ports.findLatest({ codes: settled.codes, datasetId });
+      const picked = newestPerCode(rows, settled.codes);
+      if (picked.readings.length === 0) return importedNoRows(settled.codes);
       return {
         rows: picked.readings.map((row) => ({
           loinc: row.code ?? "",
@@ -260,14 +305,21 @@ export type ImportedTrendResult = Readonly<{
 export const runImportedTrend = (
   deps: ImportedToolDeps,
   input: z.infer<typeof importedTrendInput>,
-): Promise<ImportedTrendResult | ImportedRefusal | RowCapExceeded> =>
+): Promise<ImportedTrendResult | ImportedRefusal | RowCapExceeded | MeasureRefusal> =>
   withWindow(deps.scope, input, (input) =>
-    auditedImported<ImportedTrendResult | ImportedRefusal | RowCapExceeded>(
+    auditedImported<
+      ImportedTrendResult | ImportedRefusal | RowCapExceeded | MeasureRefusal
+    >(
       deps,
       IMPORTED_TREND_TOOL,
       {
         dataset_id: input.dataset_id,
-        by: input.loinc === undefined ? "name" : "loinc",
+        by:
+          input.measure !== undefined
+            ? "measure"
+            : input.loinc === undefined
+              ? "name"
+              : "loinc",
         start: input.start,
         end: input.end,
       },
@@ -280,7 +332,23 @@ export const runImportedTrend = (
         if (!(await datasetExists(deps, input.dataset_id))) {
           return datasetNotFound(input.dataset_id);
         }
-        const series = { loinc: input.loinc ?? null, name: input.name ?? null };
+        const settled =
+          input.loinc === undefined && input.measure === undefined
+            ? null
+            : await settleMeasures(
+                deps,
+                {
+                  loinc: input.loinc === undefined ? [] : [input.loinc],
+                  measure: input.measure === undefined ? [] : [input.measure],
+                },
+                input.dataset_id,
+              );
+        if (settled !== null && !("codes" in settled)) return settled;
+        const loinc = settled?.codes[0] ?? null;
+        if (loinc !== null && input.name !== undefined) {
+          return seriesNotCombined(loinc, input.name);
+        }
+        const series = { loinc, name: input.name ?? null };
         const rows = await deps.ports.findSeries({
           datasetId: input.dataset_id,
           code: series.loinc,

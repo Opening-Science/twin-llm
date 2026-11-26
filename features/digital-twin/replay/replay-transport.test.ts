@@ -81,6 +81,7 @@ describe("replay transport", () => {
     const starts = [...new Set(phases.map(({ from }) => Date.parse(from)))].sort(
       (a, b) => a - b,
     );
+    expect(starts[0]).toBe(state().startMs);
     expect(phases).toHaveLength(16);
     expect(starts.length).toBeLessThan(phases.length);
     const holds = new Map<number, number>();
@@ -100,11 +101,25 @@ describe("replay transport", () => {
     expect(state()).toMatchObject({ status: "ended", cursorMs: state().endMs - 1 });
     expect(time.pending()).toHaveLength(0);
     if (speed === "default") {
-      expect([...holds.keys()]).toEqual(starts);
+      expect([...holds.keys()]).toEqual(starts.slice(1));
       for (const duration of holds.values())
         expect(duration).toBeGreaterThanOrEqual(3_000);
     } else {
       expect(holds.size).toBe(0);
+    }
+  });
+
+  test("advances on the first frame after Play and Replay even with a midnight phase", () => {
+    const { time, transport, state } = setup();
+    for (const start of [transport.actions.play, transport.actions.replay]) {
+      start();
+      expect(state()).toMatchObject({
+        status: "playing",
+        cursorMs: state().startMs,
+        holding: false,
+      });
+      time.advance(16);
+      expect(state().cursorMs).toBeGreaterThan(state().startMs);
     }
   });
 

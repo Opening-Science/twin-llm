@@ -223,6 +223,63 @@ describe("classifyCall", () => {
     expect(classOf(byPeriod("2024-10-02", "2026-10-01"))).toBe("wrong window");
   });
 
+  test("a measure named by name is scored by the code the tool read it as (#900)", () => {
+    const byName = (code: string) =>
+      toolResult(
+        "trend",
+        {
+          subject_ref: SUBJECT_A,
+          measure: "HbA1c",
+          start: "2024-01-01",
+          end: "2026-01-01",
+        },
+        {
+          ...TREND_OUTPUT,
+          resolved_measures: [{ measure: "HbA1c", loinc: code, name: "HbA1c" }],
+        },
+      );
+    expect(classOf(byName("4548-4"))).toBe("right call");
+    expect(classOf(byName("2339-0"))).toBe("wrong code");
+    // Refused by name: no code was read, so the call names none.
+    expect(
+      classOf(
+        toolResult(
+          "trend",
+          {
+            subject_ref: SUBJECT_A,
+            measure: "A1",
+            start: "2024-01-01",
+            end: "2026-01-01",
+          },
+          { code: "UNKNOWN_MEASURE" },
+        ),
+      ),
+    ).toBe("extra call");
+  });
+
+  test("a name over a period is scored by the code and the dates it was read as", () => {
+    const byBoth = (code: string, start: string, end: string) =>
+      toolResult(
+        "trend",
+        { subject_ref: SUBJECT_A, measure: "HbA1c", period: "last 2 years" },
+        {
+          ...TREND_OUTPUT,
+          resolved_measures: [{ measure: "HbA1c", loinc: code, name: "HbA1c" }],
+          resolved_window: {
+            period: "last 2 years",
+            start,
+            end,
+            first_day: start,
+            last_day: end,
+            time_zone: "UTC",
+          },
+        },
+      );
+    expect(classOf(byBoth("4548-4", "2024-01-02", "2026-01-01"))).toBe("right call");
+    expect(classOf(byBoth("2339-0", "2024-01-02", "2026-01-01"))).toBe("wrong code");
+    expect(classOf(byBoth("4548-4", "2024-10-02", "2026-10-01"))).toBe("wrong window");
+  });
+
   test("wrong code: a cohort code that is not the key's", () => {
     const call = classifyCall(trendCall({ loinc: "2339-0" }), context());
     expect(call.class).toBe("wrong code");

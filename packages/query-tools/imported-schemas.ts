@@ -10,6 +10,10 @@ import {
 } from "./imported-names";
 import {
   loincSchema,
+  manyMeasures,
+  measureNameSchema,
+  SOME_MEASURES,
+  someMeasuresGiven,
   START_BEFORE_END,
   startBeforeEnd,
   WINDOW_GIVEN,
@@ -45,24 +49,33 @@ export const importedDatasetsInput = z
 
 export const importedLatestInput = z
   .object({
-    loinc: z.array(loincSchema).min(1).max(20),
+    ...manyMeasures,
     dataset_id: datasetIdSchema.optional(),
   })
   .strict()
-  .describe("Newest imported reading per LOINC");
+  .refine(someMeasuresGiven, SOME_MEASURES)
+  .describe("Newest imported reading per measure");
 
-const oneSeriesGiven = (input: { readonly loinc?: string; readonly name?: string }) =>
-  input.loinc !== undefined || input.name !== undefined;
+const oneSeriesGiven = (input: {
+  readonly loinc?: string;
+  readonly name?: string;
+  readonly measure?: string;
+}) =>
+  input.loinc !== undefined || input.name !== undefined || input.measure !== undefined;
 
 export const importedTrendInput = z
   .object({
     dataset_id: datasetIdSchema,
     loinc: loincSchema.optional(),
+    measure: measureNameSchema.optional(),
     name: seriesNameSchema.optional(),
     ...windowFields,
   })
   .strict()
-  .refine(oneSeriesGiven, { message: "give loinc or name" })
+  .refine(oneSeriesGiven, { message: "give measure, loinc or name" })
+  .refine((input) => input.loinc === undefined || input.measure === undefined, {
+    message: "give measure (a name) or loinc, not both",
+  })
   .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Least-squares trend of one imported series in a window");
@@ -121,13 +134,13 @@ export const IMPORTED_TOOL_DEFINITIONS = [
   {
     name: IMPORTED_LATEST_TOOL,
     description:
-      "Newest imported reading per LOINC, with its dataset, unit as stored and date precision. Series stored by name are not included.",
+      "Newest imported reading per measure, with its dataset, unit as stored and date precision. Series stored by name are not included.",
     input: importedLatestInput,
   },
   {
     name: IMPORTED_TREND_TOOL,
     description:
-      "Least-squares slope per day of one imported series (dataset_id and loinc or name) in a window. Up to 5000 rows; refuses mixed units and month or year dates. A series stored by name is not the LOINC of a similar name (HRV RMSSD is not SDNN, 80404-7): never combine them or mix datasets in one trend.",
+      "Least-squares slope per day of one imported series (dataset_id, and measure, loinc or stored name) in a window. Up to 5000 rows; refuses mixed units and month or year dates. A series stored by name is not the LOINC of a similar name (HRV RMSSD is not SDNN, 80404-7): never combine them or mix datasets in one trend.",
     input: importedTrendInput,
   },
   {

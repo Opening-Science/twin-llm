@@ -75,6 +75,7 @@ const fakePorts = (rows: readonly FakeRow[] = FIXTURE) => {
   const audits: AppendInput[] = [];
   const subjectLookups: string[] = [];
   const queries: ObservationQuery[] = [];
+  const codeLookups: string[] = [];
   const ports: QueryToolPorts = {
     findSubject: async (subjectRef) => {
       subjectLookups.push(subjectRef);
@@ -94,11 +95,17 @@ const fakePorts = (rows: readonly FakeRow[] = FIXTURE) => {
         .sort((a, b) => a.effectiveAt.getTime() - b.effectiveAt.getTime())
         .slice(0, query.take);
     },
+    findSubjectCodes: async (subjectRef, codes) => {
+      codeLookups.push(subjectRef);
+      return codes.filter((code) =>
+        rows.some((each) => each.subjectRef === subjectRef && each.loinc === code),
+      );
+    },
     appendAudit: async (input) => {
       audits.push(input);
     },
   };
-  return { ports, audits, subjectLookups, queries };
+  return { ports, audits, subjectLookups, queries, codeLookups };
 };
 
 const synthetic: SessionScope = {
@@ -200,6 +207,141 @@ describe("relative windows (#901)", () => {
     expect(Reflect.get(Object(Reflect.get(result, "resolved_window")), "last_day")).toBe(
       today,
     );
+  });
+});
+
+describe("measures by name (#900)", () => {
+  test("trend by name reads the table's code and audits the name with it", async () => {
+    const { ports, audits, codeLookups } = fakePorts();
+    const input = { subject_ref: SUBJECT, measure: "Heart rate", ...JAN };
+    const result = await runTrend(synthetic, input, ports);
+    expect(result).toMatchObject({ loinc: HR, n: 5, slope_per_day: 1 });
+    expect(Reflect.get(result, "resolved_measures")).toEqual([
+      { measure: "Heart rate", loinc: HR, name: "Heart rate" },
+    ]);
+    // One code for the name: no lookup of which codes the subject has.
+    expect(codeLookups).toEqual([]);
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.args).toEqual({ ...input, loinc: HR });
+  });
+
+  test("blood pressure is the half the subject has readings of", async () => {
+    const { ports, codeLookups } = fakePorts();
+    const result = await runCompareWindows(
+      synthetic,
+      { subject_ref: SUBJECT, measure: "blood pressure", window_a: JAN, window_b: FEB },
+      ports,
+    );
+    expect(result).toMatchObject({ loinc: SBP });
+    expect(codeLookups).toEqual([SUBJECT]);
+  });
+
+  test("a name none of whose codes has readings is refused with every candidate", async () => {
+    const { ports, audits, queries } = fakePorts();
+    const input = { subject_ref: SUBJECT, measure: ["glucose"], ...JAN };
+    const result = await runCoverage(synthetic, input, ports);
+    expect(result).toMatchObject({
+      code: "AMBIGUOUS_MEASURE",
+      candidates: [
+        { loinc: "1558-6", has_readings: false },
+        { loinc: GLUCOSE, has_readings: false },
+        { loinc: "2345-7", has_readings: false },
+      ],
+    });
+    expect(queries).toEqual([]);
+    expect(audits).toEqual([auditRow("coverage", input, result, 0)]);
+  });
+
+  test("out of scope: refused before asking which codes the subject has", async () => {
+    const { ports, codeLookups, queries } = fakePorts();
+    const result = await runBaselineDeviation(
+      synthetic,
+      { subject_ref: UNLISTED, measure: "glucose", baseline: JAN, target: FEB },
+      ports,
+    );
+    expect(result).toEqual(SUBJECT_SCOPE_VIOLATION);
+    expect(codeLookups).toEqual([]);
+    expect(queries).toEqual([]);
+  });
+
+  test("an invented code never reaches a read", async () => {
+    const { ports, queries } = fakePorts();
+    const result = await runTrend(
+      synthetic,
+      { subject_ref: SUBJECT, loinc: "8480-8", ...JAN },
+      ports,
+    );
+    expect(result).toMatchObject({ code: "INVALID_LOINC", loinc: ["8480-8"] });
+    expect(queries).toEqual([]);
+  });
+
+  test("the schemas take a name or a code, never both and never neither", () => {
+    expect(
+      trendInput.safeParse({ subject_ref: SUBJECT, measure: "HbA1c", ...JAN }).success,
+    ).toBe(true);
+    expect(
+      trendInput.safeParse({ subject_ref: SUBJECT, measure: "HbA1c", loinc: HR, ...JAN })
+        .success,
+    ).toBe(false);
+    expect(trendInput.safeParse({ subject_ref: SUBJECT, ...JAN }).success).toBe(false);
+    expect(
+      coverageInput.safeParse({
+        subject_ref: SUBJECT,
+        loinc: [HR],
+        measure: ["HbA1c"],
+        ...JAN,
+      }).success,
+    ).toBe(true);
+    expect(
+      coverageInput.safeParse({
+        subject_ref: SUBJECT,
+        loinc: Array.from({ length: 15 }, () => HR),
+        measure: Array.from({ length: 6 }, () => "HbA1c"),
+        ...JAN,
+      }).success,
+    ).toBe(false);
+    expect(
+      compareWindowsInput.safeParse({
+        subject_ref: SUBJECT,
+        measure: "LDL\u0000",
+        window_a: JAN,
+        window_b: FEB,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("a measure by name over a period (#900 with #901)", () => {
+  const pinned: SessionScope = { ...synthetic, now: new Date("2024-01-09T12:00:00Z") };
+
+  test("trend says back the code and the dates, and audits both", async () => {
+    const { ports, audits } = fakePorts();
+    const input = { subject_ref: SUBJECT, measure: "Heart rate", period: "last 9 days" };
+    const result = await runTrend(pinned, input, ports);
+    expect(result).toMatchObject({ loinc: HR, n: 5, slope_per_day: 1 });
+    expect(Reflect.get(result, "resolved_measures")).toEqual([
+      { measure: "Heart rate", loinc: HR, name: "Heart rate" },
+    ]);
+    expect(Reflect.get(result, "resolved_window")).toMatchObject({
+      start: "2024-01-01",
+      end: "2024-01-09",
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.args).toEqual({
+      ...input,
+      loinc: HR,
+      start: "2024-01-01",
+      end: "2024-01-09",
+    });
+  });
+
+  test("a refused name is audited with the dates the period was read as", async () => {
+    const { ports, audits, queries } = fakePorts();
+    const input = { subject_ref: SUBJECT, measure: ["glucose"], period: "last 9 days" };
+    const result = await runCoverage(pinned, input, ports);
+    expect(result).toMatchObject({ code: "AMBIGUOUS_MEASURE" });
+    expect(queries).toEqual([]);
+    expect(audits[0]?.args).toEqual({ ...input, start: "2024-01-01", end: "2024-01-09" });
   });
 });
 

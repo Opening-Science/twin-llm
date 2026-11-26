@@ -9,7 +9,8 @@ import type { AppendInput } from "@/packages/audit/append";
 import { createQueryTools } from "./ai-tools";
 import { modelJsonSchema } from "./model-schema";
 import type { ObservationQuery, QueryToolPorts } from "./ports";
-import { summaryStatsInput } from "./schemas";
+import { importedTrendInput } from "./imported-schemas";
+import { latestByLoincInput, summaryStatsInput } from "./schemas";
 
 const SUBJECT = "9661a432-4630-2cd9-142c-386845fae837";
 const START_TEXT = "YYYY-MM-DD (whole day) or UTC datetime";
@@ -49,15 +50,39 @@ describe("modelJsonSchema", () => {
           maxLength: 128,
           description: "Opaque subject_ref",
         },
-        loinc: { type: "string", description: "LOINC code" },
+        // Models name the measure (#900); zod still takes loinc.
+        measure: { type: "string", description: "e.g. LDL" },
         start: { type: "string", description: START_TEXT },
         end: { type: "string", description: END_TEXT },
         period: { type: "string", description: PERIOD_TEXT },
       },
       // start and end, or period: zod checks that (#901), the schema cannot say it.
-      required: ["subject_ref", "loinc"],
+      required: ["subject_ref", "measure"],
       additionalProperties: false,
     });
+  });
+
+  test("measures by name: loinc is not shown, measure is required unless a stored name may stand in", () => {
+    const latest = modelJsonSchema(latestByLoincInput);
+    expect(Object.keys(Object(latest.properties))).toEqual(["subject_ref", "measure"]);
+    expect(latest.required).toEqual(["subject_ref", "measure"]);
+    const imported = modelJsonSchema(importedTrendInput);
+    expect(Object.keys(Object(imported.properties))).toEqual([
+      "dataset_id",
+      "measure",
+      "name",
+      "start",
+      "end",
+      "period",
+    ]);
+    expect(imported.required).toEqual(["dataset_id"]);
+    // The MCP manifest keeps both: external clients may send codes.
+    const full = z.toJSONSchema(latestByLoincInput);
+    expect(Object.keys(Object(full.properties))).toEqual([
+      "subject_ref",
+      "loinc",
+      "measure",
+    ]);
   });
 
   test("keeps array and number bounds", () => {

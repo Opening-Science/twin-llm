@@ -42,12 +42,13 @@ function Arrow({
   );
 }
 
-export function YourDayDatePicker() {
+export function YourDayDatePicker({
+  selected,
+  onSelect,
+}: Readonly<{ selected: string; onSelect: (date: string) => void }>) {
   const reducedMotion = useReducedMotion();
   const today = useSyncExternalStore(subscribe, isoLocalDate, serverToday);
-  const [picked, setPicked] = useState<string | null>(null);
   const [isOpen, setOpen] = useState(false);
-  const selected = picked ?? today;
   const picker = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -80,11 +81,11 @@ export function YourDayDatePicker() {
     setOpen(false);
   };
   const select = (day: string) => {
-    setPicked(day);
+    onSelect(day);
     close();
   };
   const step = (days: number) => {
-    if (selected) setPicked(addDays(selected, days));
+    onSelect(addDays(selected, days));
     setOpen(false);
   };
 
@@ -96,12 +97,7 @@ export function YourDayDatePicker() {
       className="dark text-foreground relative z-20 ml-auto w-full max-w-60"
     >
       <div className="border-input bg-card flex items-center rounded-[10px] border p-0.5">
-        <Arrow
-          direction={-1}
-          label={COPY.previousDay}
-          onClick={() => step(-1)}
-          disabled={!selected}
-        />
+        <Arrow direction={-1} label={COPY.previousDay} onClick={() => step(-1)} />
         <button
           ref={trigger}
           type="button"
@@ -110,20 +106,14 @@ export function YourDayDatePicker() {
           aria-controls={isOpen ? panelId : undefined}
           aria-haspopup="dialog"
           aria-live="polite"
-          disabled={!selected}
           onClick={() => setOpen(!isOpen)}
         >
           <span className="sr-only">{COPY.current}</span>
-          {selected ? formatDate(selected, "weekday") : COPY.empty}
+          {formatDate(selected, "weekday")}
         </button>
-        <Arrow
-          direction={1}
-          label={COPY.nextDay}
-          onClick={() => step(1)}
-          disabled={!selected}
-        />
+        <Arrow direction={1} label={COPY.nextDay} onClick={() => step(1)} />
       </div>
-      {isOpen && selected ? (
+      {isOpen ? (
         <div
           id={panelId}
           role="dialog"
