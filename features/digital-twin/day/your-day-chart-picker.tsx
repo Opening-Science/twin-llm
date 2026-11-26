@@ -158,7 +158,7 @@ export function YourDayChartPicker({
         id={id}
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-intro`}
-        className="dark border-border bg-background text-foreground m-auto h-[calc(100dvh-3.5rem)] max-h-none w-[calc(100%-1.5rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border p-0 shadow-xl backdrop:bg-black/55 backdrop:backdrop-blur-xs open:flex sm:h-[calc(100dvh-2rem)]"
+        className="dark border-border bg-background text-foreground m-auto h-[calc(100dvh-20rem)] max-h-none w-[calc(100%-1.5rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border p-0 shadow-xl backdrop:bg-black/55 backdrop:backdrop-blur-xs open:flex sm:h-[calc(100dvh-clamp(3rem,12dvh,8rem))]"
         onCancel={(event) => {
           event.preventDefault();
           close();
@@ -392,7 +392,7 @@ export function YourDayChartPicker({
                       <PaginationButton
                         isActive={target === page}
                         aria-label={`Page ${target + 1}`}
-                        className={target === page ? undefined : "bg-muted"}
+                        className={cn("transition-none", target !== page && "bg-muted")}
                         onClick={() => changePage(target)}
                       >
                         {target + 1}
