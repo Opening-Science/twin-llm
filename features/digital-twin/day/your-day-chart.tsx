@@ -3,24 +3,24 @@
 import { X } from "lucide-react";
 import { useId, useMemo } from "react";
 
-import { extent, niceTicks } from "@/infrastructure/charts/chart-geometry";
+import { countTicks, extent, niceTicks } from "@/infrastructure/charts/chart-geometry";
 import { formatNumber } from "@/infrastructure/format-measure";
 import {
   chartSeries,
   readingInSeriesAt,
   seriesOf,
 } from "@/packages/query-tools/replay/at-time";
+import { isAvailable } from "@/packages/query-tools/replay/items";
 import { localClock } from "@/packages/query-tools/replay/local-time";
 import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
 import { stepReplayOnArrow } from "../replay/replay-seek-keys";
 import { YOUR_DAY_COPY } from "../twin-page-copy";
 import styles from "./your-day-replay.module.css";
 import {
-  chartUnit,
+  intervalEndMs,
   plottedValueAt,
-  YOUR_DAY_CHARTS,
   type YourDayChartData,
-  type YourDayChartId,
+  type YourDayChartDefinition,
 } from "./your-day-charts";
 
 const COPY = YOUR_DAY_COPY.chart;
@@ -33,17 +33,20 @@ const timestamp = (ms: number, zone: string) => {
 };
 
 export function YourDayChart({
-  id,
+  chart,
   data,
   onRemove,
 }: Readonly<{
-  id: YourDayChartId;
+  chart: YourDayChartDefinition;
   data: YourDayChartData | null;
   onRemove: () => void;
 }>) {
   const heading = useId();
-  const { label, selector } = YOUR_DAY_CHARTS[id];
-  const unit = chartUnit(id);
+  const { id, label, selector, view } = chart;
+  const { label: unit, presentation, scale, axis, accent } = view;
+  const summary = presentation === "nightly-summary" || presentation === "daily-summary";
+  const intervals = presentation === "intervals";
+  const points = presentation === "points";
   const { cursorMs, startMs, endMs, selection } = useReplaySnapshot();
   const { seek, step } = useReplayActions();
   const { time_zone: zone } = selection;
@@ -51,25 +54,46 @@ export function YourDayChart({
   const x = (ms: number) => ((ms - startMs) / duration) * 100;
   const cursorLeft = `${x(cursorMs)}%`;
   const bandState =
-    id === "resting_heart_rate" || id === "hrv_rmssd" ? data?.bands[id] : undefined;
+    id === "resting_heart_rate" || id === "hrv_rmssd" ? data?.bands?.[id] : undefined;
   const band = bandState?.state === "available" ? bandState : null;
   const model = useMemo(() => {
     if (!data) return null;
-    const series = seriesOf(data.day, selector);
-    const chart = chartSeries(data.day, selector);
-    const { gaps } = chart;
-    const segments = chart.segments.map((segment) =>
-      segment.map(({ id, at, value }) => ({ id, ms: Date.parse(at), value })),
-    );
-    const values = segments.flatMap((segment) => segment.map((reading) => reading.value));
+    const series = selector ? seriesOf(data.day, selector) : [];
+    const observations = selector
+      ? series.filter(isAvailable)
+      : (chart.observations ?? [])
+          .filter(({ day }) => day === data.day.day)
+          .map((row) => ({
+            ...row,
+            source: { name: row.source },
+            provenance: data.day.origin === "synthetic_demo" ? "synthetic" : "recorded",
+          }));
+    const plot = selector && !summary && !points ? chartSeries(data.day, selector) : null;
+    const segments =
+      plot?.segments.map((segment) =>
+        segment.map(({ id, at, value }) => ({
+          id,
+          ms: Date.parse(at),
+          value: value * scale,
+        })),
+      ) ?? [];
+    const values = observations.map(({ value }) => value * scale);
     const range = values.length ? extent(values) : null;
-    const domain = band ? [...values, band.low, band.high] : values;
-    const ticks = domain.length ? niceTicks(...extent(domain), 2) : [];
+    const ticks =
+      !range || summary
+        ? []
+        : axis === "count"
+          ? countTicks(range[1], 2)
+          : niceTicks(
+              intervals ? Math.min(0, range[0]) : range[0],
+              intervals ? Math.max(0, range[1]) : range[1],
+              2,
+            );
     const floor = ticks[0] ?? 0;
     const ceiling = ticks.at(-1) ?? 1;
     const y = (value: number) => ((ceiling - value) / (ceiling - floor)) * 100;
-    return { series, segments, gaps, range, ticks, y };
-  }, [data, selector, band]);
+    return { series, observations, segments, gaps: plot?.gaps ?? [], range, ticks, y };
+  }, [data, selector, chart.observations, summary, points, intervals, scale, axis]);
   const ticks = useMemo(
     () =>
       TICKS.map((fraction) =>
@@ -78,19 +102,42 @@ export function YourDayChart({
     [startMs, endMs, duration, zone],
   );
   const current = model ? readingInSeriesAt(model.series, cursorMs) : null;
-  const reading = current?.state === "available" ? current.reading : null;
-  const dotValue = model ? plottedValueAt(model.segments, cursorMs) : null;
+  const currentReading = selector
+    ? current?.state === "available"
+      ? current.reading
+      : null
+    : (model?.observations.findLast(({ at, interval_min }) => {
+        const from = Date.parse(at);
+        return cursorMs >= from && cursorMs < intervalEndMs(from, interval_min);
+      }) ?? null);
+  const reading =
+    summary || points
+      ? (model?.observations.at(-1) ?? null)
+      : intervals &&
+          currentReading &&
+          cursorMs >=
+            intervalEndMs(Date.parse(currentReading.at), currentReading.interval_min)
+        ? null
+        : currentReading;
+  const dotValue =
+    model && presentation === "line" ? plottedValueAt(model.segments, cursorMs) : null;
   const cursorTime = timestamp(cursorMs, zone);
+  const observationTime =
+    points && reading ? timestamp(Date.parse(reading.at), zone) : null;
+  const value = reading ? valueText(reading.value * scale) : null;
   const detail =
-    current?.state === "stale"
-      ? `${COPY.stale} ${timestamp(Date.parse(current.reading.at), zone)}`
-      : current?.state === "unavailable"
-        ? current.text
-        : null;
+    !selector || summary || points
+      ? null
+      : current?.state === "stale"
+        ? `${COPY.stale} ${timestamp(Date.parse(current.reading.at), zone)}`
+        : current?.state === "unavailable"
+          ? current.text
+          : null;
 
   return (
     <article
       aria-labelledby={heading}
+      data-replay-chart={presentation}
       className="dark surface text-foreground @container flex min-w-0 flex-col p-4 @sm:p-5"
     >
       <header className="flex items-start gap-3">
@@ -98,7 +145,7 @@ export function YourDayChart({
           <h4 id={heading} className="text-sm font-semibold">
             {label}
           </h4>
-          {model?.range && (
+          {!summary && model?.range && model.range[0] !== model.range[1] && (
             <p className="text-muted-foreground text-xs tabular-nums">
               {COPY.dailyRange}{" "}
               <span className="whitespace-nowrap">
@@ -116,8 +163,17 @@ export function YourDayChart({
           <X aria-hidden="true" className="size-4" />
         </button>
       </header>
+      {(summary || observationTime) && (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {summary
+            ? presentation === "daily-summary"
+              ? COPY.dailySummary
+              : COPY.nightlySummary
+            : `${COPY.lastObservation} ${observationTime}`}
+        </p>
+      )}
       <p className="mt-3 text-3xl leading-none font-semibold tabular-nums">
-        {reading ? valueText(reading.value) : COPY.noData}{" "}
+        {value ?? COPY.noData}{" "}
         <span className="text-muted-foreground text-sm font-normal">{unit}</span>
       </p>
       <div className="sr-only">
@@ -125,16 +181,13 @@ export function YourDayChart({
         {reading && (
           <p>
             {reading.provenance} · {reading.source.name} ·{" "}
-            {timestamp(Date.parse(reading.at), zone)}
+            {summary && !selector
+              ? selection.day
+              : timestamp(Date.parse(reading.at), zone)}
           </p>
         )}
         {detail && <p>{detail}</p>}
         {!data && <p>{COPY.noReadings}</p>}
-        {band && (
-          <p>
-            {COPY.band} {valueText(band.low)}–{valueText(band.high)} {unit}. {band.rule}
-          </p>
-        )}
         {bandState?.state === "unavailable" && <p>{bandState.text}</p>}
         {model && model.gaps.length > 0 && (
           <p>
@@ -146,126 +199,160 @@ export function YourDayChart({
           </p>
         )}
       </div>
-      <div className="mt-3 flex flex-1 flex-col pl-9 text-xs tabular-nums">
-        <div className="relative min-h-24 flex-1">
-          {data && (
-            <input
-              type="range"
-              aria-label={`${label} ${COPY.cursor}`}
-              aria-valuetext={`${cursorTime}, ${reading ? `${valueText(reading.value)} ${unit}` : COPY.noDataLower}`}
-              className={`${styles.seek} focus-visible:outline-ring absolute inset-0 z-10 size-full cursor-crosshair rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2`}
-              min={0}
-              max={duration - 1}
-              value={cursorMs - startMs}
-              onChange={(event) => seek(startMs + event.currentTarget.valueAsNumber)}
-              onKeyDown={(event) => stepReplayOnArrow(event, step)}
-            />
-          )}
-          {model?.ticks.map((tick) => (
-            <span
-              key={tick}
-              aria-hidden="true"
-              className="text-muted-foreground pointer-events-none absolute -left-9 -translate-y-1/2"
-              style={{ top: `${model.y(tick)}%` }}
-            >
-              {valueText(tick)}
-            </span>
-          ))}
-          <svg
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 size-full overflow-visible"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-          >
-            {band && model && (
-              <rect
-                x={0}
-                width={100}
-                y={model.y(band.high)}
-                height={Math.max(0.6, model.y(band.low) - model.y(band.high))}
-                className="fill-chart-3/15"
+      {summary && band && (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {COPY.band} {valueText(band.low * scale)}–{valueText(band.high * scale)} {unit}.
+          <span className="sr-only"> {band.rule}</span>
+        </p>
+      )}
+      {!summary && (
+        <div className="mt-3 flex flex-1 flex-col pl-9 text-xs tabular-nums">
+          <div className="relative min-h-24 flex-1">
+            {data && (
+              <input
+                type="range"
+                aria-label={`${label} ${COPY.cursor}`}
+                aria-valuetext={
+                  points
+                    ? cursorTime
+                    : `${cursorTime}, ${value === null ? COPY.noDataLower : `${value} ${unit}`}`
+                }
+                className={`${styles.seek} focus-visible:outline-ring absolute inset-0 z-10 size-full cursor-crosshair rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2`}
+                min={0}
+                max={duration - 1}
+                value={cursorMs - startMs}
+                onChange={(event) => seek(startMs + event.currentTarget.valueAsNumber)}
+                onKeyDown={(event) => stepReplayOnArrow(event, step)}
               />
             )}
             {model?.ticks.map((tick) => (
-              <line
+              <span
                 key={tick}
-                x1={0}
-                x2={100}
-                y1={model.y(tick)}
-                y2={model.y(tick)}
-                className="stroke-border"
-                vectorEffect="non-scaling-stroke"
-              />
+                aria-hidden="true"
+                className="text-muted-foreground pointer-events-none absolute -left-9 -translate-y-1/2"
+                style={{ top: `${model.y(tick)}%` }}
+              >
+                {valueText(tick)}
+              </span>
             ))}
-            {model?.segments
-              .filter((segment) => segment.length > 1)
-              .map((segment) => (
-                <polyline
-                  key={segment[0]!.id}
-                  points={segment
-                    .map(({ ms, value }) => `${x(ms)},${model.y(value)}`)
-                    .join(" ")}
-                  className={
-                    id === "glucose" || id === "blood_glucose"
-                      ? "stroke-chart-2 fill-none"
-                      : "stroke-chart-3 fill-none"
-                  }
-                  strokeWidth={2}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 size-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              {model?.ticks.map((tick) => (
+                <line
+                  key={tick}
+                  x1={0}
+                  x2={100}
+                  y1={model.y(tick)}
+                  y2={model.y(tick)}
+                  className="stroke-border"
                   vectorEffect="non-scaling-stroke"
                 />
               ))}
-          </svg>
-          {model?.segments
-            .filter((segment) => segment.length === 1)
-            .map(([point]) => (
+              {intervals &&
+                model?.observations.map(({ id, at, interval_min, value }) => {
+                  const atMs = Date.parse(at);
+                  const from = Math.max(startMs, atMs);
+                  const to = Math.min(endMs, intervalEndMs(atMs, interval_min));
+                  const y = model.y(value * scale);
+                  const zero = model.y(0);
+                  return (
+                    <rect
+                      key={id}
+                      x={x(from)}
+                      width={x(to) - x(from)}
+                      y={Math.min(y, zero)}
+                      height={Math.abs(zero - y)}
+                      className="fill-chart-3/70 stroke-card"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              {presentation === "line" &&
+                model?.segments
+                  .filter((segment) => segment.length > 1)
+                  .map((segment) => (
+                    <polyline
+                      key={segment[0]!.id}
+                      points={segment
+                        .map(({ ms, value }) => `${x(ms)},${model.y(value)}`)
+                        .join(" ")}
+                      className={
+                        accent === "warm"
+                          ? "stroke-chart-2 fill-none"
+                          : "stroke-chart-3 fill-none"
+                      }
+                      strokeWidth={2}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
+            </svg>
+            {model &&
+              (points
+                ? model.observations.map(({ id, at, value }) => ({
+                    id,
+                    ms: Date.parse(at),
+                    value,
+                  }))
+                : presentation === "line"
+                  ? model.segments.flatMap((segment) =>
+                      segment.length === 1 ? segment : [],
+                    )
+                  : []
+              ).map((point) => (
+                <span
+                  key={point.id}
+                  data-replay-observation={points ? "" : undefined}
+                  className="bg-foreground pointer-events-none absolute size-1.5 -translate-1/2 rounded-full"
+                  style={{
+                    left: `${x(point.ms)}%`,
+                    top: `${model.y(point.value)}%`,
+                  }}
+                />
+              ))}
+            <span
+              className="border-muted-foreground pointer-events-none absolute inset-y-0 -translate-x-1/2 border-l border-dashed"
+              style={{ left: cursorLeft }}
+            />
+            {dotValue !== null && model && (
               <span
-                key={point!.id}
-                className="bg-foreground pointer-events-none absolute size-1.5 -translate-1/2 rounded-full"
+                className="border-card bg-foreground pointer-events-none absolute size-3 -translate-1/2 rounded-full border-2"
                 style={{
-                  left: `${x(point!.ms)}%`,
-                  top: `${model.y(point!.value)}%`,
+                  left: cursorLeft,
+                  top: `${model.y(dotValue)}%`,
                 }}
               />
+            )}
+          </div>
+          <div
+            aria-hidden="true"
+            className="text-muted-foreground relative mt-1 h-4 shrink-0 text-[0.6875rem]"
+          >
+            {ticks.map(({ time }, index) => (
+              <span
+                key={index}
+                className={
+                  index === 0
+                    ? "absolute left-0"
+                    : index === 4
+                      ? "absolute right-0"
+                      : `absolute -translate-x-1/2 ${index % 2 ? "hidden @xs:inline" : ""}`
+                }
+                style={
+                  index > 0 && index < 4 ? { left: `${TICKS[index]! * 100}%` } : undefined
+                }
+              >
+                {time}
+              </span>
             ))}
-          <span
-            className="border-muted-foreground pointer-events-none absolute inset-y-0 -translate-x-1/2 border-l border-dashed"
-            style={{ left: cursorLeft }}
-          />
-          {dotValue !== null && model && (
-            <span
-              className="border-card bg-foreground pointer-events-none absolute size-3 -translate-1/2 rounded-full border-2"
-              style={{
-                left: cursorLeft,
-                top: `${model.y(dotValue)}%`,
-              }}
-            />
-          )}
+          </div>
         </div>
-        <div
-          aria-hidden="true"
-          className="text-muted-foreground relative mt-1 h-4 shrink-0 text-[0.6875rem]"
-        >
-          {ticks.map(({ time }, index) => (
-            <span
-              key={index}
-              className={
-                index === 0
-                  ? "absolute left-0"
-                  : index === 4
-                    ? "absolute right-0"
-                    : `absolute -translate-x-1/2 ${index % 2 ? "hidden @xs:inline" : ""}`
-              }
-              style={
-                index > 0 && index < 4 ? { left: `${TICKS[index]! * 100}%` } : undefined
-              }
-            >
-              {time}
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
     </article>
   );
 }

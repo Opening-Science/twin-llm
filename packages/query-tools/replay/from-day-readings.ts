@@ -98,17 +98,22 @@ export const replayDayFromDayReadings = (
     {
       id: "hr",
       valueOf: (reading: DayReading) => reading.heartRatePerMin,
-      shape: { stream: "heart_rate", unit: "/min" },
+      shape: { stream: "heart_rate", unit: "/min", timing: "sample" },
     },
     {
       id: "bg",
       valueOf: (reading: DayReading) => reading.glucoseMgDl,
-      shape: { stream: "glucose", unit: "mg/dL", specimen: "blood" },
+      shape: {
+        stream: "glucose",
+        unit: "mg/dL",
+        specimen: "blood",
+        timing: "observation",
+      },
     },
     {
       id: "sg",
       valueOf: (reading: DayReading) => reading.sensorGlucoseMgDl ?? null,
-      shape: { stream: "glucose", unit: "mg/dL", specimen: "sensor" },
+      shape: { stream: "glucose", unit: "mg/dL", specimen: "sensor", timing: "sample" },
     },
   ] as const;
   const replayReadings = series.flatMap(({ id, valueOf, shape }) => {

@@ -110,6 +110,9 @@ secrets. `serverEnv()` and the database client already work this way.
 writes and logging happen in route handlers, server actions and functions whose names
 say they do I/O. When a module has both pure logic and a fetch, split it into two files
 and mark the fetching one `server-only`, so client code can use the pure half.
+Keep UI copy in a browser-safe module when the view model imports Node-only code.
+Client components can import the view model's types with `import type` without
+pulling its runtime dependencies into the browser bundle.
 
 **Tests.**
 

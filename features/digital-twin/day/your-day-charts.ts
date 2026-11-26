@@ -1,5 +1,9 @@
+import { type OrganSystem, type SystemId } from "@/packages/anatomy/systems";
+import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
+import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
+import { MEASURES, type Measure } from "@/packages/personal-data/wearable-measure-codes";
 import { type SeriesSelector } from "@/packages/query-tools/replay/at-time";
-import { STREAM_UNITS } from "@/packages/query-tools/replay/items";
+import { isAvailable, type ReplayReading } from "@/packages/query-tools/replay/items";
 import { type ReplayDay } from "@/packages/query-tools/replay/replay-day";
 import {
   type ReferenceBand,
@@ -7,56 +11,94 @@ import {
 } from "@/packages/query-tools/replay/nights";
 
 import { YOUR_DAY_COPY } from "../twin-page-copy";
+import { chartPresentation } from "./your-day-chart-units";
+import { type DayObservation } from "./your-day-observations";
 
-export const YOUR_DAY_CHARTS = {
-  heart_rate: {
-    label: YOUR_DAY_COPY.chart.heartRate,
-    selector: { stream: "heart_rate" },
-    ...YOUR_DAY_COPY.chartInfo.heart_rate,
-  },
-  glucose: {
-    label: YOUR_DAY_COPY.chart.glucose,
-    selector: { stream: "glucose", specimen: "sensor" },
-    ...YOUR_DAY_COPY.chartInfo.glucose,
-  },
-  blood_glucose: {
-    label: YOUR_DAY_COPY.chart.bloodGlucose,
-    selector: { stream: "glucose", specimen: "blood" },
-    ...YOUR_DAY_COPY.chartInfo.blood_glucose,
-  },
-  steps: {
-    label: YOUR_DAY_COPY.chart.steps,
-    selector: { stream: "steps" },
-    ...YOUR_DAY_COPY.chartInfo.steps,
-  },
+const wearable = {
+  heart_rate: { measure: MEASURES.heartRate, system: VITAL_ANATOMY.heartRate.system },
+  steps: { measure: MEASURES.steps, system: VITAL_ANATOMY.steps.system },
   resting_heart_rate: {
-    label: YOUR_DAY_COPY.chart.restingHeartRate,
-    selector: { stream: "resting_heart_rate" },
-    ...YOUR_DAY_COPY.chartInfo.resting_heart_rate,
+    measure: MEASURES.restingHeartRate,
+    system: VITAL_ANATOMY.rhr.system,
   },
-  hrv_rmssd: {
-    label: YOUR_DAY_COPY.chart.hrv,
-    selector: { stream: "hrv_rmssd" },
-    ...YOUR_DAY_COPY.chartInfo.hrv_rmssd,
-  },
-} as const satisfies Record<
-  string,
-  {
-    label: string;
-    selector: SeriesSelector;
-    category: string;
-    provider: string;
-    description: string;
-  }
+  hrv_rmssd: { measure: MEASURES.hrvRmssd, system: VITAL_ANATOMY.hrv.system },
+} satisfies Record<
+  Exclude<ReplayReading["stream"], "glucose">,
+  { measure: Measure; system: SystemId }
 >;
 
-export type YourDayChartId = keyof typeof YOUR_DAY_CHARTS;
+export type YourDayChartId =
+  ReplayReading["stream"] | "blood_glucose" | `observations:${string}`;
+export type YourDayChartDefinition = Readonly<{
+  id: YourDayChartId;
+  selector: SeriesSelector | null;
+  view: ReturnType<typeof chartPresentation>;
+  label: string;
+  system: OrganSystem;
+  measure: Measure | null;
+  sources: readonly string[];
+  marker?: Biomarker;
+  observations?: readonly DayObservation[];
+}>;
 export const MAX_YOUR_DAY_CHARTS = 6;
+
+/** Discover across the replay span, so a chart stays selected on days with gaps. */
+export function discoverYourDayCharts(
+  days: readonly ReplayDay[],
+): YourDayChartDefinition[] {
+  const charts = new Map<
+    YourDayChartId,
+    Omit<YourDayChartDefinition, "sources"> & {
+      sources: Set<string>;
+    }
+  >();
+  for (const day of days) {
+    for (const reading of day.readings) {
+      if (!isAvailable(reading)) continue;
+      const { stream, unit, source } = reading;
+      const id =
+        stream === "glucose" && reading.specimen === "blood" ? "blood_glucose" : stream;
+      const existing = charts.get(id);
+      if (existing) {
+        existing.sources.add(source.name);
+        continue;
+      }
+      const { measure, system } =
+        stream === "glucose"
+          ? { measure: null, system: "metabolic" as const }
+          : wearable[stream];
+      const selector: SeriesSelector =
+        stream === "glucose" ? { stream, specimen: reading.specimen } : { stream };
+      const label =
+        measure?.display ??
+        (id === "blood_glucose"
+          ? YOUR_DAY_COPY.chart.bloodGlucose
+          : YOUR_DAY_COPY.chart.glucose);
+      charts.set(id, {
+        id,
+        selector,
+        view: chartPresentation(unit, label, reading.timing),
+        label,
+        system,
+        measure,
+        sources: new Set([source.name]),
+      });
+    }
+  }
+  return [...charts.values()].map(({ sources, ...chart }) => ({
+    ...chart,
+    sources: [...sources].sort(),
+  }));
+}
 
 export function toggleYourDayChart(draft: readonly YourDayChartId[], id: YourDayChartId) {
   if (draft.includes(id)) return draft.filter((chartId) => chartId !== id);
   return draft.length < MAX_YOUR_DAY_CHARTS ? [...draft, id] : draft;
 }
+
+// Replay step buckets are keyed by their start, including on DST days.
+export const intervalEndMs = (startMs: number, intervalMin: number): number =>
+  startMs + intervalMin * 60_000;
 
 /** Interpolate within a plotted run only, never across a gap. */
 export function plottedValueAt(
@@ -79,22 +121,9 @@ export function plottedValueAt(
   }
   return null;
 }
-export const DEFAULT_CHART_IDS: readonly YourDayChartId[] = [
-  "heart_rate",
-  "glucose",
-  "blood_glucose",
-  "steps",
-  "resting_heart_rate",
-  "hrv_rmssd",
-];
-export const chartUnit = (id: YourDayChartId) => {
-  const unit = STREAM_UNITS[YOUR_DAY_CHARTS[id].selector.stream];
-  return unit === "/min" ? "bpm" : unit;
-};
-
 export type YourDayChartData = Readonly<{
   day: ReplayDay;
-  bands: Readonly<
+  bands?: Readonly<
     Record<"resting_heart_rate" | "hrv_rmssd", ReferenceBand | Unavailable>
   >;
 }>;

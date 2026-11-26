@@ -33,7 +33,7 @@ import {
   type YourDayChartId,
 } from "./your-day-charts";
 import {
-  BIOMARKER_CATEGORIES,
+  type buildPickerCatalog,
   filterPickerCatalog,
   paginatePickerCatalog,
 } from "./your-day-picker-catalog";
@@ -49,9 +49,11 @@ const dialogRest = "none";
 const dialogOffset = "translateY(6px) scale(0.98)";
 
 export function YourDayChartPicker({
+  catalog,
   active,
   onApply,
 }: Readonly<{
+  catalog: ReturnType<typeof buildPickerCatalog>;
   active: readonly YourDayChartId[];
   onApply: (ids: readonly YourDayChartId[]) => void;
 }>) {
@@ -69,7 +71,7 @@ export function YourDayChartPicker({
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(0);
   const [draft, setDraft] = useState(active);
-  const results = filterPickerCatalog(query, category);
+  const results = filterPickerCatalog(catalog.entries, query, category);
   const { entries, firstResult, lastResult, pageCount, visiblePages } =
     paginatePickerCatalog(results, page);
   const remaining = MAX_YOUR_DAY_CHARTS - draft.length;
@@ -234,7 +236,7 @@ export function YourDayChartPicker({
             aria-label={COPY.category}
             className="mt-2 mb-4 flex flex-wrap items-center gap-x-1.5 gap-y-1"
           >
-            {["", ...BIOMARKER_CATEGORIES].map((item) => (
+            {["", ...catalog.categories].map((item) => (
               <Button
                 key={item}
                 variant="ghost"
@@ -288,9 +290,11 @@ export function YourDayChartPicker({
                       {label}
                     </span>
                     <span id={detailsId} className="mt-1 block text-xs">
-                      <span className="text-muted-foreground block">
-                        {COPY.unit} {unit}
-                      </span>
+                      {unit && (
+                        <span className="text-muted-foreground block">
+                          {COPY.unit} {unit}
+                        </span>
+                      )}
                       <span className="text-muted-foreground block">
                         {COPY.provider} {provider}
                       </span>
@@ -301,7 +305,10 @@ export function YourDayChartPicker({
                   </span>
                 );
                 if (chartId === null || (!checked && remaining === 0)) {
-                  const reason = chartId === null ? COPY.noSeries : COPY.full;
+                  const reason =
+                    chartId === null
+                      ? (entry.unavailableReason ?? COPY.noSeries)
+                      : COPY.full;
                   return (
                     <li key={entryId} className={`${card} text-muted-foreground`}>
                       <div

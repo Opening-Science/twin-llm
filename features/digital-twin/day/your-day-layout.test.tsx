@@ -2,17 +2,38 @@ import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { YourDayLayout } from "./your-day-layout";
-import {
-  DEFAULT_CHART_IDS,
-  YOUR_DAY_CHARTS,
-  type YourDayChartId,
-} from "./your-day-charts";
+import { discoverYourDayCharts, type YourDayChartId } from "./your-day-charts";
+import { observationCharts } from "./your-day-observations";
 import { yourDayReplayFixtures } from "./your-day-replay-demo";
 import { YourDayViewer } from "./your-day-viewer";
 
 const demoDays = yourDayReplayFixtures();
+const chartIds = discoverYourDayCharts(
+  demoDays.map(({ chartData }) => chartData.day),
+).map(({ id }) => id);
 const { subject_ref, time_zone } = demoDays[0]!.selection;
 const demoIdentity = { subject_ref, time_zone };
+
+test("selects an Anchor lab observation as a replay chart without a predefined stream", () => {
+  const charts = observationCharts(
+    demoDays.flatMap(({ observations }) => observations ?? []),
+  );
+  const ferritin = charts.find(({ label }) => label === "Ferritin")!;
+  const html = renderToStaticMarkup(
+    <YourDayLayout
+      initialDate="2026-10-27"
+      demoDays={demoDays}
+      demoIdentity={demoIdentity}
+      initialChartIds={[ferritin.id]}
+    >
+      <p>Viewer</p>
+    </YourDayLayout>,
+  );
+  expect(html).toContain(">Ferritin</h4>");
+  expect(html).toContain("Last recorded at 08:40");
+  expect(html).toContain("data-replay-observation");
+  expect(html).not.toContain("<polyline");
+});
 
 test("renders replay controls and events before playback begins", () => {
   const html = renderToStaticMarkup(
@@ -41,9 +62,10 @@ test("renders replay controls and events before playback begins", () => {
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
   expect(html).toContain("mg/dL");
-  expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(DEFAULT_CHART_IDS.length);
-  expect(html.match(/Daily range/g)).toHaveLength(DEFAULT_CHART_IDS.length);
-  expect(html.match(/type="range"/g)).toHaveLength(DEFAULT_CHART_IDS.length + 1);
+  expect(chartIds).toHaveLength(6);
+  expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(6);
+  expect(html.match(/Daily range/g)).toHaveLength(3);
+  expect(html.match(/type="range"/g)).toHaveLength(5);
   expect(html).toContain('aria-label="Play"');
   expect(html.match(/data-replay-track/g)).toHaveLength(1);
   expect(html).toContain('aria-label="Replay speed"');
@@ -88,7 +110,7 @@ test("shows an empty state without old events or charts on a non-demo date", () 
   expect(html).toMatch(/font-mono[^"]*text-foreground">--:--/);
   expect(html).toMatch(/<header[^>]*>.*<circle cx="8" cy="8" r="6">/);
   expect(html).toContain("No readings for this day.");
-  expect(html).not.toMatch(/Seek replay time|Seek to |Synthetic demo/);
+  expect(html).not.toMatch(/Seek replay time|Seek to |<p>Synthetic demo<\/p>/);
 });
 
 test("supports zero or six distinct cards independently of the replay controls", () => {
@@ -108,6 +130,7 @@ test("supports zero or six distinct cards independently of the replay controls",
   expect(empty).toContain('aria-label="Seek replay time"');
   expect(empty).toContain("0 of 6 charts selected");
   expect(empty).toContain('aria-disabled="true"');
+  expect(empty).toContain('aria-label="Why is Sleep unavailable?"');
   expect(empty).toMatch(
     /<button(?=[^>]*aria-label="Why is Alanine aminotransferase unavailable\?")(?=[^>]*aria-expanded="false")[^>]*>/,
   );
@@ -118,14 +141,9 @@ test("supports zero or six distinct cards independently of the replay controls",
   const two = render(["heart_rate", "glucose"]);
   expect(two).toContain("2 of 6 charts selected");
   expect(two.match(/<input[^>]*type="checkbox"[^>]*checked=""/g)).toHaveLength(2);
-  expect(
-    render([
-      ...Object.keys(YOUR_DAY_CHARTS).filter((id): id is YourDayChartId =>
-        Object.hasOwn(YOUR_DAY_CHARTS, id),
-      ),
-      ...DEFAULT_CHART_IDS,
-    ]).match(/aria-label="Remove /g),
-  ).toHaveLength(6);
+  expect(render([...chartIds, ...chartIds]).match(/aria-label="Remove /g)).toHaveLength(
+    6,
+  );
 });
 
 test("the atlas viewport has an accessible name and no on-screen controls", () => {

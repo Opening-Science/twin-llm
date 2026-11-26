@@ -1,16 +1,23 @@
 import { expect, test } from "bun:test";
 
 import { listBiomarkers } from "@/packages/biomarkers/catalogue";
+import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
 
-import { DEFAULT_CHART_IDS, toggleYourDayChart } from "./your-day-charts";
+import { toggleYourDayChart } from "./your-day-charts";
 import {
-  BIOMARKER_PICKER_CATALOG,
+  buildPickerCatalog,
   filterPickerCatalog,
   paginatePickerCatalog,
 } from "./your-day-picker-catalog";
+import { yourDayReplayFixtures } from "./your-day-replay-demo";
+
+const days = yourDayReplayFixtures().map(({ chartData }) => chartData.day);
+const catalog = buildPickerCatalog(days);
+const search = (query: string, category = "") =>
+  filterPickerCatalog(catalog.entries, query, category);
 
 test("paginates nine biomarkers with a bounded three-page window", () => {
-  const entries = BIOMARKER_PICKER_CATALOG.slice(0, 38);
+  const entries = catalog.entries.slice(0, 38);
   expect(paginatePickerCatalog(entries, 0)).toEqual({
     entries: entries.slice(0, 9),
     firstResult: 1,
@@ -29,7 +36,7 @@ test("paginates nine biomarkers with a bounded three-page window", () => {
 });
 
 test("handles single-page, exact page size, and empty results", () => {
-  const entries = BIOMARKER_PICKER_CATALOG.slice(0, 9);
+  const entries = catalog.entries.slice(0, 9);
   expect(paginatePickerCatalog(entries, 0)).toEqual({
     entries,
     firstResult: 1,
@@ -46,30 +53,105 @@ test("handles single-page, exact page size, and empty results", () => {
   });
 });
 
-test("combines category and case-insensitive search across catalog details", () => {
-  expect(filterPickerCatalog("  GLUCOSE mg/dL ", "Glucose").map(({ id }) => id)).toEqual([
-    "glucose",
+test("groups replay measures and Anchor lab markers under the same body systems", () => {
+  expect(catalog.categories).toEqual(
+    expect.arrayContaining(["Cardiovascular", "Metabolic", "Musculoskeletal", "Nervous"]),
+  );
+  expect(search("8867-4", "Cardiovascular").map(({ id }) => id)).toEqual(["heart_rate"]);
+  expect(search("steps", "Musculoskeletal").map(({ id }) => id)).toEqual([
+    "steps",
+    "wearable:stepsPerDay",
+  ]);
+  expect(search("RMSSD", "Nervous").map(({ id }) => id)).toEqual(["hrv_rmssd"]);
+  expect(
+    search("  GLUCOSE mg/dL ", "Metabolic")
+      .map(({ id }) => id)
+      .sort(),
+  ).toEqual(["anchor:BM-128", "blood_glucose", "glucose"]);
+  expect(search("sleep", "Nervous").find(({ id }) => id === "sleep")).toMatchObject({
+    chartId: null,
+    unavailableReason: "Sleep is shown on the replay timeline, not as a chart.",
+  });
+});
+
+test("lists the full wearable registry even when no replay readings exist", () => {
+  const { entries, charts } = buildPickerCatalog([], []);
+  expect(charts).toEqual([]);
+  expect(entries.map(({ id }) => id).sort()).toEqual(
+    Object.keys(MEASURES)
+      .map((key) => `wearable:${key}`)
+      .sort(),
+  );
+  expect(entries.every(({ chartId }) => chartId === null)).toBe(true);
+  expect(search("59408-5", "Respiratory")).toEqual([
+    expect.objectContaining({ label: MEASURES.oxygenSaturation.display, chartId: null }),
+  ]);
+  expect(
+    search("heart rate", "Cardiovascular").filter(
+      ({ label }) => label === MEASURES.heartRate.display,
+    ),
+  ).toEqual([expect.objectContaining({ chartId: "heart_rate" })]);
+});
+
+test("discovers available series instead of listing a fixed set of charts", () => {
+  expect(catalog.charts.map(({ id }) => id).sort()).toEqual([
     "blood_glucose",
-  ]);
-  expect(filterPickerCatalog("8867-4", "Heart").map(({ id }) => id)).toEqual([
+    "glucose",
     "heart_rate",
-  ]);
-  expect(filterPickerCatalog("RMSSD", "Heart").map(({ id }) => id)).toEqual([
     "hrv_rmssd",
+    "resting_heart_rate",
+    "steps",
   ]);
-  expect(filterPickerCatalog("glucose", "Activity")).toEqual([]);
+  const day = days[0]!;
+  const heartOnly = buildPickerCatalog([
+    {
+      ...day,
+      readings: day.readings.filter(({ stream }) => stream === "heart_rate"),
+    },
+  ]);
+  expect(heartOnly.charts.map(({ id }) => id)).toEqual(["heart_rate"]);
+  expect(buildPickerCatalog([]).charts).toEqual([]);
+});
+
+test("merges an exact LOINC and UCUM match without duplicating the picker entry", () => {
+  const marker = {
+    ...listBiomarkers()[0]!,
+    id: "test-heart-rate",
+    loincCode: "8867-4",
+    loincDisplay: "Heart rate",
+    systemId: "cardiovascular" as const,
+    unitUcum: "/min",
+    blocked: false,
+  };
+  const exact = buildPickerCatalog(days, [marker]).entries.filter(
+    ({ id, chartId }) => id === "anchor:test-heart-rate" || chartId === "heart_rate",
+  );
+  expect(exact).toHaveLength(1);
+  expect(exact[0]).toMatchObject({
+    id: "anchor:test-heart-rate",
+    chartId: "heart_rate",
+    category: "Cardiovascular",
+  });
+  const withoutReadings = buildPickerCatalog([], [marker]).entries.filter(
+    ({ label }) => label === MEASURES.heartRate.display,
+  );
+  expect(withoutReadings).toEqual([
+    expect.objectContaining({ id: "anchor:test-heart-rate", chartId: null }),
+  ]);
+  const mismatch = buildPickerCatalog(days, [{ ...marker, unitUcum: "/h" }]).entries;
+  expect(mismatch.find(({ id }) => id === "anchor:test-heart-rate")?.chartId).toBeNull();
+  expect(mismatch.find(({ id }) => id === "heart_rate")?.chartId).toBe("heart_rate");
 });
 
 test("includes every Anchor biomarker without offering an unsupported replay chart", () => {
-  const entries = BIOMARKER_PICKER_CATALOG.filter(({ chartId }) => chartId === null);
+  const entries = catalog.entries.filter(({ id }) => id.startsWith("anchor:"));
+  expect(entries.every(({ chartId }) => chartId === null)).toBe(true);
   expect(entries.map(({ id }) => id).sort()).toEqual(
     listBiomarkers()
       .map(({ id }) => `anchor:${id}`)
       .sort(),
   );
-  const ferritin = filterPickerCatalog("Ferritin", "").find(
-    (entry) => entry.label === "Ferritin",
-  );
+  const ferritin = search("  ferrITIN ").find((entry) => entry.label === "Ferritin");
   expect(ferritin).toMatchObject({
     chartId: null,
     provider: "Lab result (Anchor catalogue)",
@@ -83,7 +165,7 @@ test("draft toggles leave active charts untouched and respect the six-card limit
   expect(active).toEqual(["heart_rate", "glucose"]);
   expect(toggleYourDayChart(draft, "steps")).toEqual(active);
 
-  const full = [...DEFAULT_CHART_IDS, "heart_rate" as const].slice(0, 6);
+  const full = catalog.charts.map(({ id }) => id);
   expect(toggleYourDayChart(full, "heart_rate")).not.toContain("heart_rate");
   const alternativeDraft = [
     ...full.filter((id) => id !== "heart_rate"),

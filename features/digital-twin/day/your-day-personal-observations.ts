@@ -1,0 +1,126 @@
+import { type Bundle, type Observation } from "fhir/r4";
+
+import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
+import {
+  LOINC_SYSTEM,
+  type ImportedObservationRecord,
+} from "@/packages/query-tools/imported-ports";
+import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
+
+import { type DayObservation } from "./your-day-observations";
+
+export function importedDayObservations(
+  rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],
+  day: string,
+  zone: string,
+): DayObservation[] {
+  const bounds = localDayBounds(day, zone);
+  return rows.flatMap((row) => {
+    if (!Number.isFinite(row.value)) return [];
+    const at = row.effectiveAt.toISOString();
+    const daily = row.effectivePrecision === "day";
+    if (
+      daily
+        ? at.slice(0, 10) !== day
+        : row.effectivePrecision !== "instant" || !inLocalDay(row.effectiveAt, bounds)
+    )
+      return [];
+    return [
+      {
+        id: row.id,
+        codeSystem: row.codeSystem,
+        code: row.code,
+        unit: row.unit,
+        value: row.value,
+        day,
+        at,
+        sourceId: `import:${row.datasetId}`,
+        source: "Imported record",
+        label: row.display,
+        timing: daily ? "day" : "observation",
+        interval_min: 0,
+      },
+    ];
+  });
+}
+
+export function connectedDayObservations(
+  bundle: unknown,
+  source: string,
+  day: string,
+  zone: string,
+): DayObservation[] {
+  if (
+    !bundle ||
+    typeof bundle !== "object" ||
+    Reflect.get(bundle, "resourceType") !== "Bundle"
+  )
+    return [];
+  const bounds = localDayBounds(day, zone);
+  return ((bundle as Bundle).entry ?? []).flatMap((entry, index) => {
+    if (entry.resource?.resourceType !== "Observation") return [];
+    const resource = entry.resource as Observation;
+    const coding =
+      resource.code.coding?.find(({ system }) => system === LOINC_SYSTEM) ??
+      resource.code.coding?.[0];
+    const from = Date.parse(resource.effectivePeriod?.start ?? "");
+    const to = Date.parse(resource.effectivePeriod?.end ?? "");
+    const hasPeriod = Number.isFinite(from) && Number.isFinite(to) && to > from;
+    const duration = hasPeriod ? (to - from) / 60_000 : 0;
+    const interval =
+      hasPeriod &&
+      duration < 23 * 60 &&
+      coding?.system === LOINC_SYSTEM &&
+      coding.code === MEASURES.steps.code;
+    const time = resource.effectiveDateTime;
+    const dateOnly = time !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(time);
+    const instant = new Date(
+      hasPeriod
+        ? interval
+          ? from
+          : to - 1
+        : time && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(time)
+          ? Date.parse(time)
+          : Number.NaN,
+    );
+    const belongs = interval
+      ? from < bounds.end.getTime() && to > bounds.start.getTime()
+      : dateOnly
+        ? time === day
+        : inLocalDay(instant, bounds);
+    if (!belongs) return [];
+    const at = dateOnly && time ? `${time}T00:00:00.000Z` : instant.toISOString();
+    return [resource, ...(resource.component ?? [])].flatMap(
+      (record, part): DayObservation[] => {
+        const { valueQuantity, code } = record;
+        const value = valueQuantity?.value;
+        if (value === undefined || !Number.isFinite(value)) return [];
+        const term =
+          code.coding?.find(({ system }) => system === LOINC_SYSTEM) ?? code.coding?.[0];
+        const label = code.text || term?.display || term?.code;
+        if (!label) return [];
+        return [
+          {
+            id: `${source}:${index}:${part}`,
+            sourceId: `wearable:${source}`,
+            source,
+            codeSystem: term?.system ?? null,
+            code: term?.code ?? null,
+            label,
+            unit: valueQuantity?.code || valueQuantity?.unit || "",
+            day,
+            at,
+            value,
+            timing:
+              interval && part === 0
+                ? "interval"
+                : hasPeriod || dateOnly
+                  ? "day"
+                  : "observation",
+            interval_min: interval && part === 0 ? duration : 0,
+          },
+        ];
+      },
+    );
+  });
+}

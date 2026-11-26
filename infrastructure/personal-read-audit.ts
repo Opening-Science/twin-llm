@@ -21,6 +21,7 @@ export const PERSONAL_READ_PURPOSES = [
   "genome-report",
   "connectors-page",
   "dashboard-page",
+  "day-replay",
   "sync-oura",
   "sync-whoop",
   "sync-google-health",

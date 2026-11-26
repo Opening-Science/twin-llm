@@ -3,10 +3,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayChart } from "./your-day-chart";
-import { chartUnit, plottedValueAt, type YourDayChartId } from "./your-day-charts";
+import { chartPresentation } from "./your-day-chart-units";
+import {
+  discoverYourDayCharts,
+  plottedValueAt,
+  type YourDayChartId,
+} from "./your-day-charts";
 import { yourDayReplayFixtures } from "./your-day-replay-demo";
 
 const fixtures = yourDayReplayFixtures();
+const charts = discoverYourDayCharts(fixtures.map(({ chartData }) => chartData.day));
 
 test("the cursor dot follows plotted segments without crossing gaps", () => {
   const segments = [
@@ -26,9 +32,10 @@ test("the cursor dot follows plotted segments without crossing gaps", () => {
 });
 const renderChart = (id: YourDayChartId, day: string) => {
   const fixture = fixtures.find(({ selection }) => selection.day === day)!;
+  const chart = charts.find((chart) => chart.id === id)!;
   return renderToStaticMarkup(
     <ReplayProvider selection={fixture.selection}>
-      <YourDayChart id={id} data={fixture.chartData} onRemove={() => {}} />
+      <YourDayChart chart={chart} data={fixture.chartData} onRemove={() => {}} />
     </ReplayProvider>,
   );
 };
@@ -63,15 +70,40 @@ test("plots a 25-hour date using elapsed time and local labels", () => {
   expect(html).toContain("23:59");
 });
 
-test("renders supported nightly reference bands with a text alternative", () => {
-  const html = renderChart("hrv_rmssd", "2026-10-27");
-  expect(html).toContain("Derived reference band:");
-  expect(html).toContain("<rect");
+test("applies the unit conversion to the rendered value and range", () => {
+  const fixture = fixtures.find(({ selection }) => selection.day === "2026-10-27")!;
+  const chart = charts.find(({ id }) => id === "heart_rate")!;
+  const html = renderToStaticMarkup(
+    <ReplayProvider selection={fixture.selection}>
+      <YourDayChart
+        chart={{ ...chart, view: chartPresentation("/h", chart.label, "sample") }}
+        data={fixture.chartData}
+        onRemove={() => {}}
+      />
+    </ReplayProvider>,
+  );
+  expect(html).toContain("1.0–2.9 bpm");
+  expect(html).toContain('aria-valuetext="00:00 UTC+01:00, 1.0 bpm"');
 });
 
-test("shows per-minute heart streams as bpm and keeps other stream units", () => {
-  expect(chartUnit("heart_rate")).toBe("bpm");
-  expect(chartUnit("resting_heart_rate")).toBe("bpm");
-  expect(chartUnit("glucose")).toBe("mg/dL");
-  expect(chartUnit("hrv_rmssd")).toBe("ms");
+test("shows nightly values and reference bands without an intraday axis", () => {
+  const html = renderChart("hrv_rmssd", "2026-10-27");
+  expect(html).toContain('data-replay-chart="nightly-summary"');
+  expect(html).toContain("Nightly summary");
+  expect(html).toContain("Derived reference band:");
+  expect(html).not.toMatch(/23:59|type="range"|<polyline|<rect|Daily range/);
+});
+
+test("plots step buckets as bars rather than a connected line", () => {
+  const html = renderChart("steps", "2026-10-27");
+  expect(html).toContain('data-replay-chart="intervals"');
+  expect(html).toMatch(/<rect x="0" width="1\.04/);
+  expect(html).not.toContain("<polyline");
+});
+
+test("shows the recorded blood observation as one dot at its actual time", () => {
+  const html = renderChart("blood_glucose", "2026-10-27");
+  expect(html.match(/data-replay-observation/g)).toHaveLength(1);
+  expect(html).toContain("Last recorded at 07:25 UTC+01:00");
+  expect(html).not.toMatch(/<polyline|Daily range|aria-valuetext="00:00 UTC\+01:00, 98/);
 });

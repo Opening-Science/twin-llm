@@ -108,7 +108,6 @@ export const YOUR_DAY_COPY = {
     nextDay: "Next day",
   },
   chart: {
-    heartRate: "Heart rate",
     glucose: "Glucose",
     bloodGlucose: "Blood glucose",
     steps: "Steps",
@@ -120,6 +119,9 @@ export const YOUR_DAY_COPY = {
     empty: "Add charts to see biomarker readings here.",
     syntheticDemo: "Synthetic demo",
     dailyRange: "Daily range",
+    nightlySummary: "Nightly summary",
+    dailySummary: "Daily summary",
+    lastObservation: "Last recorded at",
     cursor: "replay cursor",
     remove: (label: string) => `Remove ${label} chart`,
     stale: "Stale · last reading",
