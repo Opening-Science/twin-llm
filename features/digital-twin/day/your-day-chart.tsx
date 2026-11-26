@@ -13,6 +13,7 @@ import {
 import { localClock } from "@/packages/query-tools/replay/local-time";
 import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
 import { stepReplayOnArrow } from "../replay/replay-seek-keys";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import styles from "./your-day-replay.module.css";
 import {
   chartUnit,
@@ -22,6 +23,7 @@ import {
   type YourDayChartId,
 } from "./your-day-charts";
 
+const COPY = YOUR_DAY_COPY.chart;
 const TICKS = [0, 0.25, 0.5, 0.75, 1];
 const valueText = (value: number) => formatNumber(value, Number.isInteger(value) ? 0 : 1);
 const clockAt = (ms: number, zone: string) => localClock(new Date(ms), zone);
@@ -98,7 +100,7 @@ export function YourDayChart({
           </h4>
           {model?.range && (
             <p className="text-muted-foreground text-xs tabular-nums">
-              Daily range{" "}
+              {COPY.dailyRange}{" "}
               <span className="whitespace-nowrap">
                 {valueText(model.range[0])}–{valueText(model.range[1])} {unit}
               </span>
@@ -115,11 +117,11 @@ export function YourDayChart({
         </button>
       </header>
       <p className="mt-3 text-3xl leading-none font-semibold tabular-nums">
-        {reading ? valueText(reading.value) : "No data"}{" "}
+        {reading ? valueText(reading.value) : COPY.noData}{" "}
         <span className="text-muted-foreground text-sm font-normal">{unit}</span>
       </p>
       <div className="sr-only">
-        {data?.day.origin === "synthetic_demo" && <p>Synthetic demo</p>}
+        {data?.day.origin === "synthetic_demo" && <p>{COPY.syntheticDemo}</p>}
         {reading && (
           <p>
             {reading.provenance} · {reading.source.name} ·{" "}
@@ -150,7 +152,7 @@ export function YourDayChart({
           {data && (
             <input
               type="range"
-              aria-label={`${label} replay cursor`}
+              aria-label={`${label} ${COPY.cursor}`}
               aria-valuetext={`${cursorTime}, ${reading ? `${valueText(reading.value)} ${unit}` : "no data"}`}
               className={`${styles.seek} focus-visible:outline-ring absolute inset-0 z-10 size-full cursor-crosshair rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2`}
               min={0}

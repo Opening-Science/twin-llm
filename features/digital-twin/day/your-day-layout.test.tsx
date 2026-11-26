@@ -40,6 +40,7 @@ test("renders replay controls and events before playback begins", () => {
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
+  expect(html).toContain("mg/dL");
   expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(DEFAULT_CHART_IDS.length);
   expect(html.match(/Daily range/g)).toHaveLength(DEFAULT_CHART_IDS.length);
   expect(html.match(/type="range"/g)).toHaveLength(DEFAULT_CHART_IDS.length + 1);

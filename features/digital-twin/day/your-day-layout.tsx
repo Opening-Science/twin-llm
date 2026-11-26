@@ -7,6 +7,8 @@ import { useReducedMotion } from "@/infrastructure/ui-kit/use-reduced-motion";
 import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
+import { ReplayProvider } from "../replay/replay-provider";
+import { YOUR_DAY_COPY } from "../twin-page-copy";
 import { YourDayChart } from "./your-day-chart";
 import { YourDayChartPicker } from "./your-day-chart-picker";
 import {
@@ -15,7 +17,6 @@ import {
   type YourDayChartId,
 } from "./your-day-charts";
 import { YourDayDatePicker } from "./your-day-date-picker";
-import { ReplayProvider } from "../replay/replay-provider";
 import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
 import { type YourDayDemo } from "./your-day-replay-demo";
 
@@ -82,7 +83,7 @@ export function YourDayLayout({
           </div>
         </header>
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-          <section aria-label="Anatomy viewer" className="surface min-w-0">
+          <section aria-label={YOUR_DAY_COPY.viewerRegion} className="surface min-w-0">
             {children}
           </section>
           <section
@@ -90,7 +91,7 @@ export function YourDayLayout({
             className="@container/charts flex min-w-0 flex-col gap-3"
           >
             <h3 id="your-day-charts" ref={chartsTitle} tabIndex={-1} className="sr-only">
-              Biomarker charts
+              {YOUR_DAY_COPY.chartsTitle}
             </h3>
             <div
               className={`relative grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
