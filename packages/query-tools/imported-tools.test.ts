@@ -600,6 +600,67 @@ describe("imported_trend", () => {
     ]);
   });
 
+  test("a period in the person's zone: the last 7 days in Berlin, said back and audited as dates (#901)", async () => {
+    const { deps, audit } = harness();
+    const pinned: ImportedToolDeps = {
+      ...deps,
+      scope: {
+        ...SCOPE,
+        now: new Date("2026-01-06T23:30:00Z"),
+        timeZone: "Europe/Berlin",
+      },
+    };
+    const result = await runImportedTrend(pinned, {
+      dataset_id: "ds-labs",
+      loinc: "2345-7",
+      period: "last 7 days",
+    });
+    // 00:30 on 7 January in Berlin: 1 to 7 January, local midnight to local midnight.
+    expect(result).toMatchObject({ n: 3, slope_per_day: 2 });
+    expect(Reflect.get(result, "resolved_window")).toEqual({
+      period: "last 7 days",
+      start: "2025-12-31T23:00:00.000Z",
+      end: "2026-01-07T22:59:59.999Z",
+      first_day: "2026-01-01",
+      last_day: "2026-01-07",
+      time_zone: "Europe/Berlin",
+    });
+    expect(audit[0]?.args).toEqual({
+      dataset_id: "ds-labs",
+      by: "loinc",
+      start: "2025-12-31T23:00:00.000Z",
+      end: "2026-01-07T22:59:59.999Z",
+    });
+  });
+
+  test("by measure name over a period: the held code, read over the dates (#900, #901)", async () => {
+    const { deps, audit } = harness();
+    const pinned: ImportedToolDeps = {
+      ...deps,
+      scope: {
+        ...SCOPE,
+        now: new Date("2026-01-06T23:30:00Z"),
+        timeZone: "Europe/Berlin",
+      },
+    };
+    const result = await runImportedTrend(pinned, {
+      dataset_id: "ds-labs",
+      measure: "Glucose",
+      period: "last 7 days",
+    });
+    expect(result).toMatchObject({ loinc: "2345-7", n: 3, slope_per_day: 2 });
+    expect(Reflect.get(result, "resolved_window")).toMatchObject({
+      first_day: "2026-01-01",
+      last_day: "2026-01-07",
+    });
+    expect(audit[0]?.args).toEqual({
+      dataset_id: "ds-labs",
+      by: "measure",
+      start: "2025-12-31T23:00:00.000Z",
+      end: "2026-01-07T22:59:59.999Z",
+    });
+  });
+
   test("by measure name: plain glucose is the code this dataset holds (#900)", async () => {
     const { deps, audit } = harness();
     const result = await runImportedTrend(deps, {

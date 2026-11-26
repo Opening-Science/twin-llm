@@ -88,7 +88,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -107,7 +107,12 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "limit": {
             "type": "integer",
@@ -115,7 +120,7 @@
             "maximum": 500
           }
         },
-        "required": ["subject_ref", "start", "end", "limit"],
+        "required": ["subject_ref", "limit"],
         "additionalProperties": false,
         "description": "Numeric observations for a subject, measures, and time range"
       }
@@ -199,7 +204,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -218,10 +223,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "n / min / max / mean for one measure in a window"
       }
@@ -266,7 +276,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -285,10 +295,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "Least-squares trend for one measure in a window"
       }
@@ -336,7 +351,7 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "anyOf": [
@@ -355,12 +370,16 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           },
           "target": {
             "type": "object",
@@ -382,7 +401,7 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "anyOf": [
@@ -401,12 +420,16 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           }
         },
         "required": ["subject_ref", "baseline", "target"],
@@ -464,7 +487,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -483,10 +506,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "How much data there is per measure in a window"
       }
@@ -534,7 +562,7 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "anyOf": [
@@ -553,12 +581,16 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           },
           "window_b": {
             "type": "object",
@@ -580,7 +612,7 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "anyOf": [
@@ -599,12 +631,16 @@
                     "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
                   }
                 ],
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           }
         },
         "required": ["subject_ref", "window_a", "window_b"],
@@ -652,7 +688,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -671,7 +707,12 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "pick": {
             "type": "string",
@@ -693,7 +734,7 @@
             ]
           }
         },
-        "required": ["subject_ref", "start", "end", "pick"],
+        "required": ["subject_ref", "pick"],
         "additionalProperties": false,
         "description": "One reading of one measure against its Anchor v3 published range"
       }
@@ -781,7 +822,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -800,10 +841,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "A subject's latest value of one measure in a window, as a percentile among its synthetic cohort"
       }
@@ -838,7 +884,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -857,7 +903,12 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "status": {
             "description": "Only conditions with this recorded clinical status",
@@ -877,7 +928,7 @@
             "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "Recorded conditions whose span overlaps a window, oldest onset first"
       }
@@ -912,7 +963,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -931,7 +982,12 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "status": {
             "description": "Only medication requests with this recorded status",
@@ -953,7 +1009,7 @@
             "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false,
         "description": "Recorded medication requests authored in a window, oldest first"
       }
@@ -993,7 +1049,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1012,10 +1068,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false,
         "description": "Main sleep per night from wearables in a window, per source"
       }
@@ -1055,7 +1116,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1074,10 +1135,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false,
         "description": "Trend of daily HRV from wearables in a window, per source"
       }
@@ -1117,7 +1183,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1136,10 +1202,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false,
         "description": "Trend of daily resting heart rate from wearables in a window, per source"
       }
@@ -1179,7 +1250,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1198,7 +1269,12 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "sport": {
             "description": "Keep only workouts of this sport group; left out, every workout",
@@ -1211,7 +1287,7 @@
             "description": "day: one row per day; week: one row per week starting Monday (UTC)"
           }
         },
-        "required": ["source", "start", "end", "aggregation"],
+        "required": ["source", "aggregation"],
         "additionalProperties": false,
         "description": "Workout minutes per day or week from wearables in a window, per source"
       }
@@ -1255,7 +1331,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1274,10 +1350,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["measure", "source_a", "source_b", "start", "end"],
+        "required": ["measure", "source_a", "source_b"],
         "additionalProperties": false,
         "description": "How closely two linked wearables agree on one daily measure in a window"
       }
@@ -1487,10 +1568,10 @@
             "description": "week: the 7 UTC days ending on end; month: the 30 UTC days ending on end"
           },
           "end": {
+            "description": "The last UTC day, YYYY-MM-DD; default today",
             "type": "string",
             "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
-            "description": "The last UTC day, YYYY-MM-DD"
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
           },
           "profile": {
             "type": "string",
@@ -1498,7 +1579,7 @@
             "description": "Which glucose range time in range uses"
           }
         },
-        "required": ["subject_ref", "period", "end", "profile"],
+        "required": ["subject_ref", "period", "profile"],
         "additionalProperties": false,
         "description": "One synthetic subject's week or month of glucose, resting heart rate and HRV"
       }
@@ -1597,7 +1678,7 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "anyOf": [
@@ -1616,10 +1697,15 @@
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
               }
             ],
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^(?:last[ _]([1-9]\\d{0,2})[ _](day|week|month|year)s?|this[ _]year|all)$",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["dataset_id", "start", "end"],
+        "required": ["dataset_id"],
         "additionalProperties": false,
         "description": "Least-squares trend of one imported series in a window"
       }
