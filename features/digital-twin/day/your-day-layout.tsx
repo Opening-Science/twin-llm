@@ -109,7 +109,7 @@ export function YourDayLayout({
           </div>
           {personal && catalog.charts.length === 0 && (
             <p role="status" className="text-muted-foreground text-sm">
-              No imported or synced wearable readings for this date.
+              {YOUR_DAY_COPY.personal.noReadings}
             </p>
           )}
         </header>

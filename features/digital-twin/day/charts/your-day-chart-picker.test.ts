@@ -93,6 +93,17 @@ test("lists the full wearable registry even when no replay readings exist", () =
   ).toEqual([expect.objectContaining({ chartId: "heart_rate" })]);
 });
 
+test("combines category and case-insensitive search across catalogue details", () => {
+  const ids = (query: string, category: string) =>
+    search(query, category).flatMap(({ chartId }) => (chartId ? [chartId] : []));
+  expect(ids("  GLUCOSE mg/dL ", "Metabolic").sort()).toEqual([
+    "blood_glucose",
+    "glucose",
+  ]);
+  expect(ids("HEART RATE", "Cardiovascular")).toContain("heart_rate");
+  expect(ids("heart rate", "Metabolic")).toEqual([]);
+});
+
 test("discovers available series instead of listing a fixed set of charts", () => {
   expect(catalog.charts.map(({ id }) => id).sort()).toEqual([
     "blood_glucose",

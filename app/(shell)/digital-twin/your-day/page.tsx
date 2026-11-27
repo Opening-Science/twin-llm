@@ -4,6 +4,7 @@ import { yourDayReplayFixtures } from "@/features/digital-twin/day/data/your-day
 import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
 import { YourDayViewerZone } from "@/features/digital-twin/day/your-day-viewer-zone";
 import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
+import { YOUR_DAY_COPY } from "@/features/digital-twin/twin-page-copy";
 import { lockedScreen } from "@/features/vault/page-gate";
 import { findAppUserId } from "@/infrastructure/current-user";
 import { dataMode } from "@/infrastructure/data-mode";
@@ -19,21 +20,23 @@ import {
   localClock,
 } from "@/packages/query-tools/replay/local-time";
 
+const COPY = YOUR_DAY_COPY.personal;
+
 type Query = Readonly<{ date?: string | string[]; zone?: string | string[] }>;
 
 async function PersonalReplay({ date, zone }: Query) {
   const gate = await vaultDecisionForPage();
-  if (!gate.ok) return (await lockedScreen()) ?? <p>Sign in to replay your data.</p>;
-  if (!gate.actorId || !gate.keys) return <p>Unlock your vault to replay your data.</p>;
+  if (!gate.ok) return (await lockedScreen()) ?? <p>{COPY.signIn}</p>;
+  if (!gate.actorId || !gate.keys) return <p>{COPY.unlock}</p>;
   const userId = await findAppUserId(gate.actorId);
-  if (!userId) return <p>No personal data account was found.</p>;
+  if (!userId) return <p>{COPY.noAccount}</p>;
   if (zone === undefined) return <YourDayViewerZone />;
   if (
     typeof zone !== "string" ||
     !isTimeZone(zone) ||
     (date !== undefined && (typeof date !== "string" || !isCalendarDay(date)))
   ) {
-    return <p role="alert">Choose a valid date and time zone to replay your data.</p>;
+    return <p role="alert">{COPY.invalidQuery}</p>;
   }
   const timeZone = zone;
   const day = typeof date === "string" ? date : localClock(new Date(), timeZone).day;
@@ -46,12 +49,7 @@ async function PersonalReplay({ date, zone }: Query) {
       return null;
     },
   );
-  if (!replay)
-    return (
-      <p role="alert">
-        Could not load your replay data. Try another date or reload the page.
-      </p>
-    );
+  if (!replay) return <p role="alert">{COPY.loadFailed}</p>;
   return (
     <YourDayLayout
       initialDate={day}
@@ -60,10 +58,8 @@ async function PersonalReplay({ date, zone }: Query) {
       personal
     >
       <div className="p-4 text-sm">
-        <p>My Data · {timeZone}</p>
-        <p className="text-muted-foreground mt-2">
-          Imported observations and the latest synced wearable records.
-        </p>
+        <p>{COPY.heading(timeZone)}</p>
+        <p className="text-muted-foreground mt-2">{COPY.sources}</p>
       </div>
     </YourDayLayout>
   );

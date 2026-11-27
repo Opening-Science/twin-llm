@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { YOUR_DAY_COPY } from "../twin-page-copy";
+
 /** The replay URL with the viewer's zone, keeping the path and other parameters. */
 export function withViewerZone(href: string, zone: string) {
   const url = new URL(href);
@@ -23,7 +25,7 @@ export function YourDayViewerZone() {
   }, [router]);
   return (
     <p role="status" className="text-muted-foreground text-sm">
-      Finding your time zone…
+      {YOUR_DAY_COPY.personal.findingZone}
     </p>
   );
 }

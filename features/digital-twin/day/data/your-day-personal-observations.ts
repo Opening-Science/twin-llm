@@ -7,6 +7,7 @@ import {
 } from "@/packages/query-tools/imported-ports";
 import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
 
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { isDailyRecord, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
 
@@ -43,7 +44,7 @@ export function importedDayObservations(
         day,
         at,
         sourceId: `import:${row.datasetId}`,
-        source: "Imported record",
+        source: YOUR_DAY_COPY.personal.importedSource,
         label: row.display,
         timing: daily ? "day" : "observation",
         interval_min: 0,

@@ -8,6 +8,7 @@ import { storyPhases } from "@/packages/query-tools/replay/phases";
 import { bandOf } from "@/packages/query-tools/replay/nights";
 import { localInstant } from "@/packages/query-tools/replay/local-time";
 
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { replayTimeline } from "../replay/your-day-replay-events";
 import { type YourDayChartData } from "../charts/your-day-charts";
 import { type DayObservation } from "../charts/your-day-observations";
@@ -29,7 +30,7 @@ export function yourDayReplayFixtures(): readonly YourDayDemo[] {
                 {
                   id: "demo-ferritin",
                   sourceId: "demo-lab",
-                  source: "Synthetic demo lab",
+                  source: YOUR_DAY_COPY.personal.demoLabSource,
                   codeSystem: "http://loinc.org",
                   code: "2276-4",
                   label: "Ferritin",
