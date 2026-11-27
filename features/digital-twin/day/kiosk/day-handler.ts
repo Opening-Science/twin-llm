@@ -6,7 +6,7 @@ import { windowEndDate, windowStartDate } from "@/packages/query-tools/schemas";
 import { SUBJECT_SCOPE_VIOLATION } from "@/packages/query-tools/scope";
 import { demoSubjectInScope } from "@/packages/query-tools/synthetic-display";
 
-import { type CohortDeps } from "../biomarkers/cohort-handler";
+import { type CohortDeps } from "../../biomarkers/cohort-handler";
 import {
   DAY_BAD_REQUEST,
   DAY_FAILED,

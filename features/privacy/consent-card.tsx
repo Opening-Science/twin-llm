@@ -7,7 +7,8 @@ import { HoldToSubmit } from "@/infrastructure/ui-kit/hold-to-submit";
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
 import { type ConsentFormState, grantConsent, withdrawConsent } from "./consent-actions";
-import { PRIVACY_COPY, type ScopeView, type SourceChoice } from "./privacy-view";
+import { PRIVACY_COPY } from "./privacy-copy";
+import type { ScopeView, SourceChoice } from "./privacy-view";
 
 /**
  * One use on Customize · Privacy (#145): off with a choice of data and Grant,

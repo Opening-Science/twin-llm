@@ -12,7 +12,8 @@ import {
 } from "@/infrastructure/learning-consent-store";
 import { vaultRefusalForAction } from "@/infrastructure/vault-runtime";
 
-import { chosenSources, PRIVACY_COPY } from "./privacy-view";
+import { PRIVACY_COPY } from "./privacy-copy";
+import { chosenSources } from "./privacy-view";
 
 /**
  * Granting and withdrawing a learning consent on Customize · Privacy (#145).

@@ -6,6 +6,8 @@ import {
 } from "node:crypto";
 import * as nodeCrypto from "node:crypto";
 
+import { MAX_PASSPHRASE_LENGTH, MIN_PASSPHRASE_LENGTH } from "./vault-passphrase-policy";
+
 /**
  * The key material of the local unlock (#142, docs/privacy-design.md 2.2).
  *
@@ -24,9 +26,6 @@ export const DATA_KEY_BYTES = 32;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
-
-export const MIN_PASSPHRASE_LENGTH = 12;
-export const MAX_PASSPHRASE_LENGTH = 1024;
 
 export type Argon2idParams = Readonly<{
   name: "argon2id";

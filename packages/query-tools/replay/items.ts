@@ -141,6 +141,8 @@ const readingBase = {
   at: instant,
   /** How much time one reading stands for: 1 for a per-minute heart rate, 15 for a 15-minute step count. */
   interval_min: z.number().positive().max(1440),
+  /** Temporal meaning from the source; legacy readings without it are discrete in charts. */
+  timing: z.enum(["sample", "observation", "interval", "day", "night"]).optional(),
   provenance: valuedProvenance,
   source: sourceSchema,
   rule: ruleSchema.optional(),

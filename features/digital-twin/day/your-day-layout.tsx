@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
-import { useRef, useState, type ReactNode, type Ref } from "react";
+import { useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 
 import { useReducedMotion } from "@/infrastructure/ui-kit/use-reduced-motion";
 import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
@@ -9,16 +9,13 @@ import { ATLASES, DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 import { ANATOMY_CHANGES_NOTE } from "../anatomy/anatomy-copy";
 import { ReplayProvider } from "../replay/replay-provider";
 import { YOUR_DAY_COPY } from "../twin-page-copy";
-import { YourDayChart } from "./your-day-chart";
-import { YourDayChartPicker } from "./your-day-chart-picker";
-import {
-  DEFAULT_CHART_IDS,
-  MAX_YOUR_DAY_CHARTS,
-  type YourDayChartId,
-} from "./your-day-charts";
+import { YourDayChart } from "./charts/your-day-chart";
+import { YourDayChartPicker } from "./charts/your-day-chart-picker";
+import { MAX_YOUR_DAY_CHARTS, type YourDayChartId } from "./charts/your-day-charts";
 import { YourDayDatePicker } from "./your-day-date-picker";
-import { YourDayReplay, YourDayReplayClock } from "./your-day-replay";
-import { type YourDayDemo } from "./your-day-replay-demo";
+import { buildPickerCatalog } from "./charts/your-day-picker-catalog";
+import { YourDayReplay, YourDayReplayClock } from "./replay/your-day-replay";
+import { type YourDayDemo } from "./data/your-day-replay-demo";
 
 const atlas = ATLASES[DEFAULT_ATLAS_ID];
 
@@ -35,7 +32,7 @@ function AnimatedChartCard({
   return (
     <motion.div
       ref={ref}
-      className="grid min-w-0"
+      className="grid min-h-0 min-w-0 @2xl/replay:contain-size"
       inert={!isPresent}
       layout={reducedMotion ? false : "position"}
       initial={reducedMotion ? false : { opacity: 0, y: 8 }}
@@ -53,17 +50,31 @@ export function YourDayLayout({
   initialDate,
   demoDays,
   demoIdentity,
-  initialChartIds = DEFAULT_CHART_IDS,
+  initialChartIds,
+  personal = false,
 }: Readonly<{
   children: ReactNode;
   initialDate: string;
   demoDays: readonly YourDayDemo[];
   demoIdentity: Pick<YourDayDemo["selection"], "subject_ref" | "time_zone">;
   initialChartIds?: readonly YourDayChartId[];
+  personal?: boolean;
 }>) {
   const [date, setDate] = useState(initialDate);
+  const catalog = useMemo(
+    () =>
+      buildPickerCatalog(
+        demoDays.map(({ chartData }) => chartData.day),
+        undefined,
+        demoDays.flatMap(({ observations }) => observations ?? []),
+      ),
+    [demoDays],
+  );
+  const chartById = new Map(catalog.charts.map((chart) => [chart.id, chart]));
   const [chartIds, setChartIds] = useState<readonly YourDayChartId[]>(() =>
-    [...new Set(initialChartIds)].slice(0, MAX_YOUR_DAY_CHARTS),
+    [...new Set(initialChartIds ?? chartById.keys())]
+      .filter((id) => chartById.has(id))
+      .slice(0, MAX_YOUR_DAY_CHARTS),
   );
   const reducedMotion = useReducedMotion();
   const chartsTitle = useRef<HTMLHeadingElement>(null);
@@ -78,9 +89,27 @@ export function YourDayLayout({
         <header className="flex flex-wrap items-center justify-between gap-3">
           <YourDayReplayClock data={data} />
           <div className="ml-auto flex max-w-full min-w-0 items-center gap-2">
-            <YourDayDatePicker selected={date} onSelect={setDate} />
-            <YourDayChartPicker active={chartIds} onApply={setChartIds} />
+            <YourDayDatePicker
+              selected={date}
+              onSelect={(next) => {
+                if (!personal) return setDate(next);
+                const url = new URL(window.location.href);
+                // Only the date goes in the URL; the zone stays in its cookie.
+                url.search = new URLSearchParams({ date: next }).toString();
+                window.location.assign(url);
+              }}
+            />
+            <YourDayChartPicker
+              catalog={catalog}
+              active={chartIds}
+              onApply={setChartIds}
+            />
           </div>
+          {personal && catalog.charts.length === 0 && (
+            <p role="status" className="text-muted-foreground text-sm">
+              {YOUR_DAY_COPY.personal.noReadings}
+            </p>
+          )}
         </header>
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
           <section aria-label={YOUR_DAY_COPY.viewerRegion} className="surface min-w-0">
@@ -94,7 +123,7 @@ export function YourDayLayout({
               {YOUR_DAY_COPY.chartsTitle}
             </h3>
             <div
-              className={`relative grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
+              className={`relative grid min-w-0 flex-1 gap-3 overflow-x-clip @2xl/replay:auto-rows-[minmax(15.5rem,1fr)] ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
             >
               <AnimatePresence
                 initial={false}
@@ -107,18 +136,22 @@ export function YourDayLayout({
                     </p>
                   </AnimatedChartCard>
                 )}
-                {chartIds.map((id) => (
-                  <AnimatedChartCard key={id} reducedMotion={reducedMotion}>
-                    <YourDayChart
-                      id={id}
-                      data={data?.chartData ?? null}
-                      onRemove={() => {
-                        setChartIds((ids) => ids.filter((chartId) => chartId !== id));
-                        chartsTitle.current?.focus({ preventScroll: true });
-                      }}
-                    />
-                  </AnimatedChartCard>
-                ))}
+                {chartIds.flatMap((id) => {
+                  const chart = chartById.get(id);
+                  if (!chart) return [];
+                  return (
+                    <AnimatedChartCard key={id} reducedMotion={reducedMotion}>
+                      <YourDayChart
+                        chart={chart}
+                        data={data?.chartData ?? null}
+                        onRemove={() => {
+                          setChartIds((ids) => ids.filter((chartId) => chartId !== id));
+                          chartsTitle.current?.focus({ preventScroll: true });
+                        }}
+                      />
+                    </AnimatedChartCard>
+                  );
+                })}
               </AnimatePresence>
             </div>
           </section>

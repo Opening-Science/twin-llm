@@ -12,9 +12,9 @@ import {
 import { useMemo } from "react";
 
 import { localClock } from "@/packages/query-tools/replay/local-time";
-import { useReplayActions, useReplaySnapshot } from "../replay/replay-provider";
-import { stepReplayOnArrow } from "../replay/replay-seek-keys";
-import { YOUR_DAY_COPY } from "../twin-page-copy";
+import { useReplayActions, useReplaySnapshot } from "../../replay/replay-provider";
+import { stepReplayOnArrow } from "../../replay/replay-seek-keys";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import {
   activeTimelineEvents,
   EVENT_KINDS,

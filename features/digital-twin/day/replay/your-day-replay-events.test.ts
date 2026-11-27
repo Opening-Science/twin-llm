@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { yourDayReplayFixtures } from "./your-day-replay-demo";
+import { yourDayReplayFixtures } from "../data/your-day-replay-demo";
 import {
   activeTimelineEvents,
   EVENT_KINDS,

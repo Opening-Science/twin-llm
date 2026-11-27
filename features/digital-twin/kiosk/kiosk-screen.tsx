@@ -26,7 +26,7 @@ import {
   kioskHintText,
   kioskShows,
 } from "./kiosk-copy";
-import { beatFocus } from "../day/beat-focus";
+import { beatFocus } from "../day/kiosk/beat-focus";
 import { kioskHint } from "./kiosk-hint";
 import { ATTRACT, type KioskEvent, kioskSession } from "./kiosk-session";
 import { kioskTourStops, TOUR_STEP_MS, tourBeat } from "./kiosk-tour";

@@ -6,7 +6,7 @@ import {
   MY_DAY_MOCK_OPTION,
   MY_DAY_UTC,
   worthALookLine,
-} from "./day-copy";
+} from "../kiosk/day-copy";
 
 /**
  * "Show me my day" at a glance, for the Dashboard page: whose day and which,
