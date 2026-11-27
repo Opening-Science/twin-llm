@@ -37,11 +37,15 @@ export function YourDayChart({
   chart,
   data,
   vitalSeries,
+  selected = false,
+  onClick,
   onRemove,
 }: Readonly<{
   chart: YourDayChartDefinition;
   data: YourDayChartData | null;
   vitalSeries?: VitalSeries;
+  selected?: boolean;
+  onClick?: () => void;
   onRemove: () => void;
 }>) {
   const heading = useId();
@@ -143,8 +147,19 @@ export function YourDayChart({
     <article
       aria-labelledby={heading}
       data-replay-chart={presentation}
-      className="dark surface text-foreground @container flex min-h-0 min-w-0 flex-col p-4 @sm:p-5"
+      className="dark surface text-foreground data-[selected=true]:border-primary @container relative isolate flex min-h-0 min-w-0 flex-col p-4 @sm:p-5"
+      data-selected={selected}
     >
+      {onClick && (
+        <button
+          type="button"
+          className="focus-visible:outline-ring absolute inset-0 z-1 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-4"
+          aria-label={COPY.focus(label)}
+          aria-pressed={selected}
+          title={selected ? COPY.resetFocus : COPY.focus(label)}
+          onClick={onClick}
+        />
+      )}
       <header className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-1">
           <h4 id={heading} className="text-sm font-semibold">
@@ -161,7 +176,7 @@ export function YourDayChart({
         </div>
         <button
           type="button"
-          className="bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-ring grid size-8 shrink-0 place-items-center rounded-md focus-visible:outline-2"
+          className="bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-ring relative z-10 grid size-8 shrink-0 place-items-center rounded-md focus-visible:outline-2"
           aria-label={COPY.remove(label)}
           onClick={onRemove}
         >

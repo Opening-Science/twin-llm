@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { type Box3, OrthographicCamera, Vector3 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -14,6 +14,12 @@ import { type GlucoseParticlesModel } from "../anatomy/glucose-particles";
 import { ContextLossWatcher, useWebglAvailable } from "../scan-scene";
 import { YOUR_DAY_COPY } from "../twin-page-copy";
 import { YourDayVitalsEffects } from "./replay/your-day-vitals-effects";
+import {
+  applyYourDayCameraPose,
+  yourDayCameraPose,
+  yourDayRegionPose,
+  type YourDayCameraRequest,
+} from "./your-day-camera";
 
 const COPY = YOUR_DAY_COPY.viewer;
 const LAYERS = { muscle: true, skeleton: true, organs: true } as const;
@@ -25,6 +31,7 @@ type ViewerEffects = Readonly<{
   bpm?: number | null;
   glucose?: GlucoseParticlesModel | null;
   showVitals?: boolean;
+  cameraRequest?: YourDayCameraRequest;
 }>;
 
 function ReferenceAtlas({
@@ -34,6 +41,7 @@ function ReferenceAtlas({
   bpm = null,
   glucose = null,
   showVitals = false,
+  cameraRequest,
 }: ViewerEffects & Readonly<{ onLoad: (load: AnatomyLoad) => void }>) {
   const [box, setBox] = useState<Box3 | null>(null);
   const camera = useThree((state) => state.camera);
@@ -42,24 +50,38 @@ function ReferenceAtlas({
   const invalidate = useThree((state) => state.invalidate);
   const orbitRef = useRef<OrbitControls | null>(null);
   const fittedZoom = useRef<number | null>(null);
+  const appliedRequest = useRef<YourDayCameraRequest>(undefined);
+  const transition = useRef<{
+    from: ReturnType<typeof yourDayCameraPose>;
+    to: ReturnType<typeof yourDayRegionPose>;
+    elapsed: number;
+    duration: number;
+  } | null>(null);
 
   useLayoutEffect(() => {
     if (!box || box.isEmpty() || !(camera instanceof OrthographicCamera)) return;
-    const center = box.getCenter(new Vector3());
-    const size = box.getSize(new Vector3());
-    camera.position.set(center.x, center.y, box.max.z + size.y);
+    const center = new Vector3();
+    const body = yourDayRegionPose(yourDayCameraPose(camera, center, camera.zoom), box);
+    applyYourDayCameraPose(camera, center, camera.zoom, body, body, 1);
     camera.lookAt(center);
     const orbit = new OrbitControls(camera, canvas);
     orbit.target.copy(center);
     const redraw = () => invalidate();
+    const cancelTransition = () => {
+      transition.current = null;
+    };
     orbit.addEventListener("change", redraw);
+    orbit.addEventListener("start", cancelTransition);
     orbit.update();
     orbitRef.current = orbit;
     return () => {
       orbit.removeEventListener("change", redraw);
+      orbit.removeEventListener("start", cancelTransition);
       orbit.dispose();
       orbitRef.current = null;
       fittedZoom.current = null;
+      appliedRequest.current = undefined;
+      transition.current = null;
     };
   }, [box, camera, canvas, invalidate]);
 
@@ -77,6 +99,48 @@ function ReferenceAtlas({
     camera.updateProjectionMatrix();
     invalidate();
   }, [box, camera, height, invalidate, width]);
+
+  useLayoutEffect(() => {
+    const orbit = orbitRef.current;
+    const zoom = fittedZoom.current;
+    if (
+      appliedRequest.current === cameraRequest ||
+      !orbit ||
+      !box ||
+      zoom === null ||
+      width === 0 ||
+      height === 0 ||
+      !(camera instanceof OrthographicCamera)
+    )
+      return;
+    const from = yourDayCameraPose(camera, orbit.target, zoom);
+    transition.current = {
+      from,
+      to: yourDayRegionPose(from, box, cameraRequest?.region),
+      elapsed: 0,
+      duration: cameraRequest ? 0.65 : 0.85,
+    };
+    appliedRequest.current = cameraRequest;
+    invalidate();
+  }, [box, camera, cameraRequest, height, invalidate, width]);
+
+  useLayoutEffect(() => {
+    if (reducedMotion && transition.current) invalidate();
+  }, [invalidate, reducedMotion]);
+
+  useFrame((_, delta) => {
+    const next = transition.current;
+    const orbit = orbitRef.current;
+    const zoom = fittedZoom.current;
+    if (!next || !orbit || zoom === null || !(camera instanceof OrthographicCamera))
+      return;
+    next.elapsed += Math.min(delta, 0.05);
+    const progress = reducedMotion ? 1 : Math.min(next.elapsed / next.duration, 1);
+    applyYourDayCameraPose(camera, orbit.target, zoom, next.from, next.to, progress);
+    orbit.update();
+    if (progress === 1) transition.current = null;
+    else invalidate();
+  });
 
   const renderEffects = ({ atlas }: StandaloneAtlasEffects) => (
     <YourDayVitalsEffects

@@ -18,6 +18,7 @@ import { YourDayReplay, YourDayReplayClock } from "./replay/your-day-replay";
 import { YourDayVitalsPanel } from "./replay/your-day-vitals-panel";
 import { vitalSeriesForChart } from "./replay/your-day-vitals";
 import { type YourDayDemo } from "./data/your-day-replay-demo";
+import { yourDayChartFocus, type YourDayCameraRequest } from "./your-day-camera";
 
 const atlas = ATLASES[DEFAULT_ATLAS_ID];
 
@@ -63,6 +64,7 @@ export function YourDayLayout({
   personal?: boolean;
 }>) {
   const [date, setDate] = useState(initialDate);
+  const [cameraRequest, setCameraRequest] = useState<YourDayCameraRequest>();
   const catalog = useMemo(
     () =>
       buildPickerCatalog(
@@ -113,7 +115,12 @@ export function YourDayLayout({
             <YourDayChartPicker
               catalog={catalog}
               active={chartIds}
-              onApply={setChartIds}
+              onApply={(ids) => {
+                setChartIds(ids);
+                setCameraRequest((request) =>
+                  request && ids.includes(request.chartId) ? request : undefined,
+                );
+              }}
             />
           </div>
           {personal && catalog.charts.length === 0 && (
@@ -134,6 +141,7 @@ export function YourDayLayout({
               series={vitalSeries}
               reducedMotion={reducedMotion}
               personal={personal}
+              cameraRequest={cameraRequest}
             />
           </section>
           <section
@@ -160,14 +168,29 @@ export function YourDayLayout({
                 {chartIds.flatMap((id) => {
                   const chart = chartById.get(id);
                   if (!chart) return [];
+                  const region = yourDayChartFocus(chart);
                   return (
                     <AnimatedChartCard key={id} reducedMotion={reducedMotion}>
                       <YourDayChart
                         chart={chart}
                         data={data?.chartData ?? null}
                         vitalSeries={vitalSeries.get(id)}
+                        selected={cameraRequest?.chartId === id}
+                        onClick={
+                          region
+                            ? () =>
+                                setCameraRequest((request) =>
+                                  request?.chartId === id
+                                    ? undefined
+                                    : { chartId: id, region },
+                                )
+                            : undefined
+                        }
                         onRemove={() => {
                           setChartIds((ids) => ids.filter((chartId) => chartId !== id));
+                          setCameraRequest((request) =>
+                            request?.chartId === id ? undefined : request,
+                          );
                           chartsTitle.current?.focus({ preventScroll: true });
                         }}
                       />

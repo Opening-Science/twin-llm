@@ -30,6 +30,7 @@ test("selects an Anchor lab observation as a replay chart without a predefined s
     </YourDayLayout>,
   );
   expect(html).toContain(">Ferritin</h4>");
+  expect(html).not.toContain("Show anatomy for Ferritin");
   expect(html).toContain("Last recorded at 08:40");
   expect(html).toContain("measured · Synthetic demo lab");
   expect(html).toContain("Synthetic demo</p>");
@@ -63,6 +64,11 @@ test("renders replay controls and events before playback begins", () => {
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
+  expect(html).toMatch(
+    /<button[^>]*aria-label="Show anatomy for Heart rate" aria-pressed="false"[^>]*><\/button>/,
+  );
+  expect(html).toContain('aria-label="Show anatomy for Glucose"');
+  expect(html).not.toContain('aria-label="Show anatomy for Steps"');
   expect(html).toContain("mg/dL");
   expect(chartIds).toHaveLength(6);
   expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(6);

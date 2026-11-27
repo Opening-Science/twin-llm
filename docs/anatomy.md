@@ -8,6 +8,8 @@ The full viewer stays at `/digital-twin` under **Your Twin**. **Your Day** (`/di
 
 On **Your Day**, the viewport fills its card without an inset. When side by side, the viewer gets one quarter of the available width and the chart area gets three quarters, excluding the gap. Six charts can fill two rows of three when the chart area is wide enough. On narrower screens, the grid uses fewer columns, and the viewer stacks above it when there is no room to sit beside it.
 
+Click a configured chart card to move and zoom the anatomy camera. A highlighted border marks the selected card. Heart rate, resting heart rate, and HRV frame the heart; glucose frames the pancreas region. Click the selected card again or remove it to return to the full-body view. Both transitions are animated unless reduced motion is enabled. The chart scrubber still works independently. Maintain the chart mappings and atlas-relative framing in [`your-day-camera.ts`](../features/digital-twin/day/your-day-camera.ts).
+
 The Replay Clock uses a 20 px time readout at the default text size.
 
 The replay legend stays in place as the active event changes. It sits beside the active-event summary on wide layouts and below it on narrow layouts.

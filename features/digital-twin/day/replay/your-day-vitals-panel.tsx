@@ -8,6 +8,7 @@ import { localClock } from "@/packages/query-tools/replay/local-time";
 import { GLUCOSE_NOT_INSTALLED } from "../../anatomy/glucose-control";
 import { type GlucoseStatus } from "../../anatomy/glucose-flow";
 import { useReplaySnapshot } from "../../replay/replay-provider";
+import { type YourDayCameraRequest } from "../your-day-camera";
 import { YourDayViewer } from "../your-day-viewer";
 import {
   availableVitalSeries,
@@ -92,10 +93,12 @@ export function YourDayVitalsPanel({
   series,
   reducedMotion,
   personal,
+  cameraRequest,
 }: Readonly<{
   series: ReadonlyMap<string, VitalSeries>;
   reducedMotion: boolean;
   personal: boolean;
+  cameraRequest?: YourDayCameraRequest;
 }>) {
   const { cursorMs, selection, status } = useReplaySnapshot();
   const [heartId, setHeart] = useState("");
@@ -135,6 +138,7 @@ export function YourDayVitalsPanel({
         bpm={hr.state === "available" ? hr.reading.value : null}
         glucose={glucose ? glucoseModel : null}
         showVitals={heart !== undefined || glucose !== undefined}
+        cameraRequest={cameraRequest}
       />
       {personal && (
         <section aria-label="Replay vitals" className="space-y-2 px-2 pb-2">
