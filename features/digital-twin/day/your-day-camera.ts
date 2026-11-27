@@ -40,7 +40,6 @@ const MEASURE_REGIONS: Partial<Record<keyof typeof MEASURES, YourDayRegion>> = {
   hrvSdnn: "heart",
 };
 
-
 export function yourDayChartFocus({
   id,
   observations,
