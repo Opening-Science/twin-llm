@@ -63,7 +63,7 @@ describe("createMcpHttpClient", () => {
         params: {
           protocolVersion: "2024-11-05",
           capabilities: {},
-          clientInfo: { name: "twin-llm", version: "0.1.0" },
+          clientInfo: { name: "twin-llm", version: "0.2.0" },
         },
       },
       { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },

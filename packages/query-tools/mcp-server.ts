@@ -274,7 +274,7 @@ export const queryToolRunners = (
 
 export const QUERY_MCP_SERVER_INFO = {
   name: "twinllm-query-tools",
-  version: "0.1.0",
+  version: "0.2.0",
 } as const;
 
 const isQueryToolName = (name: string): name is QueryToolName =>

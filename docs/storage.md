@@ -45,6 +45,11 @@ bun run db:deploy
 
 CI and production use **deploy** only (no `migrate dev`).
 
+To upgrade an install, use `bun run db:upgrade` instead. It is a plain
+deploy, except on an install with saved chats from before the chat tables
+move, where a plain deploy stops at the switch
+([Upgrading from 0.1.0](#upgrading-from-010)). `bun run setup:local` runs it.
+
 ## Check for drift
 
 After deploy, migrations must match `prisma/schema.prisma`:
@@ -264,6 +269,47 @@ reaching the old tables, every state's status, the cascades through the
 repointed keys, a refused switch, switching back and again, and a reseal
 reaching the old copies. The release-1 tests put the database back as it
 was before the switch while they run, and switch it again after.
+
+### Upgrading from 0.1.0
+
+Release 0.2.0 holds the expand, mirror and switch migrations together, so
+there is no release in between to run the backfill on. On an install with
+saved chats `bun run db:deploy` applies expand and mirror and then stops at
+the switch, which refuses because the move is not backfilled. Use
+`bun run db:upgrade` (`scripts/db/upgrade.ts`), with a fresh backup and the
+app stopped:
+
+```bash
+bun run db:upgrade --plan   # print the steps, change nothing
+bun run db:upgrade
+```
+
+It reads `_prisma_migrations`, `schema_moves` and whether `threads` or
+`conversations` hold a row, and then (`scripts/db/upgrade-plan.ts`):
+
+1. runs `prisma migrate deploy` over a temporary copy of the migrations
+   folder that ends at `20261118120200_chat_tables_mirror`, the last
+   migration before the switch (the real schema; the URL from
+   `DATABASE_URL`);
+2. runs `bun run db:chat-backfill`, unless the move is already backfilled;
+3. runs `bun run db:chat-parity`, which must print parity OK;
+4. runs `prisma migrate deploy`, which applies the switch and anything
+   after it.
+
+A step that fails stops the upgrade with its number; fix the cause and run
+it again, as each step resumes. With no saved chats, on a new install, or
+once the move is switched, it is a plain deploy. If a plain deploy already
+failed at the switch, it backfills and checks, marks the switch rolled back
+(it is one transaction, so nothing was changed) and deploys again. Any
+other failed migration stops it before it changes anything.
+
+- Last run: 2026-11-26, Linux, Postgres 18.6 with pgvector, a throwaway
+  cluster in the server time zone Europe/Zurich: a database at the 0.1.0
+  baseline with made-up chats (30 threads, 90 turns, 180 answers, times
+  around the 29 March clock change) upgraded to switched, parity OK,
+  `migrate status` up to date and `scripts/db/verify-chat-move.sh` OK;
+  the same database after a failed plain deploy upgraded to switched; a
+  new database took a plain deploy; a second run applied nothing.
 
 ## Two-layer personal data
 

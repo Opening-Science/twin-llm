@@ -148,6 +148,7 @@ const NOT_LEARNING: Readonly<Record<string, string>> = {
   "db:deploy": DB,
   "db:push": DB,
   "db:pull": DB,
+  "db:upgrade": DB,
   "db:verify": DB,
   "db:chat-backfill": DB,
   "db:chat-parity": DB,

@@ -1,6 +1,6 @@
 {
   "name": "twin-llm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "packageManager": "bun@1.4.2",
   "engines": {
@@ -39,6 +39,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:pull": "prisma db pull",
+    "db:upgrade": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/upgrade.ts",
     "db:verify": "bash scripts/db/verify-migrations.sh",
     "db:chat-backfill": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/backfill.ts",
     "db:chat-parity": "bun --preload ./features/chat/response/preload-server-only.mjs scripts/db/chat-move/parity.ts",
