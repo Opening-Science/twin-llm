@@ -129,7 +129,7 @@ describe("aggregateWearableBundles", () => {
       subjectKey: OTHER_SYNTHETIC_SUBJECT,
     });
     expect(() => aggregateWearableBundles({ oura, whoop: other, ...options })).toThrow(
-      "Cannot reconcile across 2 different subjects",
+      "Cannot aggregate different subjects",
     );
   });
 
@@ -209,7 +209,7 @@ describe("aggregateWearableBundles with Google Health", () => {
     });
     expect(() =>
       aggregateWearableBundles({ oura, whoop: null, googleHealth: other, ...options }),
-    ).toThrow("Cannot reconcile across 2 different subjects");
+    ).toThrow("Cannot aggregate different subjects");
   });
 
   // At the pinned open-twin, Oura's and Google Health's sleep duration are

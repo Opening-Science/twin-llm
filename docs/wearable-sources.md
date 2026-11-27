@@ -70,9 +70,10 @@ For each measure and day where at least one source has a reading:
    reading is shown."). Oura, then WHOOP, then Google
    Health picks which agreeing reading is printed; since they agree, that choice says
    nothing about which device is better.
-5. **Published evidence.** They disagree. open-twin's validation table (`reliabilityFor`
-   in `@open-twin/fhir-core`) grades each source for the measure, and its selection
-   policy (`selectSource` in `@open-twin/aggregate`) picks the best-graded source: "Sources
+5. **Published evidence.** They disagree. open-twin's validation table (`reliabilityFor`,
+   kept in `infrastructure/open-twin-adapters/source-reliability.ts` as copied from
+   open-twin@2fd26911 after upstream removed it in #300) grades each source for the
+   measure, and its selection policy (`selectSource`, same file) picks the best-graded source: "Sources
    disagree (WHOOP 61 ms). Oura is used: published validation grades it good for HRV
    (WHOOP no published grade)." The citation for the grade is kept with the decision.
    TwinLLM adds no grade of its own.

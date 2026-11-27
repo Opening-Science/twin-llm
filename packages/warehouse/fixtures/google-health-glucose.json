@@ -87,7 +87,16 @@
               }
             ]
           }
-        ]
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "http://opentwin.ch/fhir/CodeSystem/connector",
+              "code": "google-health",
+              "version": "0.1.0"
+            }
+          ]
+        }
       }
     },
     {
@@ -160,7 +169,16 @@
               }
             ]
           }
-        ]
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "http://opentwin.ch/fhir/CodeSystem/connector",
+              "code": "google-health",
+              "version": "0.1.0"
+            }
+          ]
+        }
       }
     },
     {
@@ -233,7 +251,16 @@
               }
             ]
           }
-        ]
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "http://opentwin.ch/fhir/CodeSystem/connector",
+              "code": "google-health",
+              "version": "0.1.0"
+            }
+          ]
+        }
       }
     },
     {
@@ -306,7 +333,16 @@
               }
             ]
           }
-        ]
+        ],
+        "meta": {
+          "tag": [
+            {
+              "system": "http://opentwin.ch/fhir/CodeSystem/connector",
+              "code": "google-health",
+              "version": "0.1.0"
+            }
+          ]
+        }
       }
     }
   ]

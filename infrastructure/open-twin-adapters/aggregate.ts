@@ -1,5 +1,4 @@
-import { aggregate, type AggregateResult, selectSource } from "@open-twin/aggregate";
-import { reliabilityFor } from "@open-twin/fhir-core";
+import { aggregate, type AggregateResult } from "@open-twin/aggregate";
 import type { Bundle } from "fhir/r4";
 
 import type { WearableSourceId } from "@/infrastructure/wearable-provenance";
@@ -10,22 +9,19 @@ import type {
 } from "@/infrastructure/wearable-source-rules";
 
 import { mergePersonPatients } from "./person-subject";
+import { reliabilityFor, selectSource } from "./source-reliability";
 
 /**
- * One person's Oura, WHOOP and Google Health bundles as one bundle, overlaps
- * reconciled by `@open-twin/aggregate`: every source Observation is kept, and
- * a derived one is added only where published evidence prefers a source
- * (`reliabilityFor` in fhir-core), never on the order of the sources. Aggregate
- * refuses Observations under more than one subject; every builder names the
+ * One person's Oura, WHOOP and Google Health bundles as one bundle, by
+ * `@open-twin/aggregate`: every source Observation is kept. Reconciliation is
+ * opt-in upstream since #297 and is not enabled here, so no derived
+ * Observation is added and no source is preferred. Aggregate refuses Observations under more than one subject; every builder names the
  * person's shared subject (person-subject.ts), and the person's Patient is
  * carried once, with each connector's identifier.
  *
  * Nothing on screen reads this bundle yet. The screens resolve overlapping
  * summary keys with the wearable source rules (#464, `judgeByEvidence` below,
- * docs/wearable-sources.md). Aggregate takes no caller order, and at the
- * pinned open-twin it finds no
- * overlap between these connectors: sleep duration, steps and Oura's heart
- * rates sit in Observation components, which it does not read.
+ * docs/wearable-sources.md).
  */
 export const aggregateWearableBundles = (
   input: Readonly<{
@@ -55,9 +51,10 @@ export const aggregateWearableBundles = (
 };
 
 /**
- * The wearable source rules' evidence step (#464), read from open-twin: the
- * graded validation table (`reliabilityFor` in fhir-core) and its selection
- * policy (`selectSource` in aggregate). TwinLLM adds no grade of its own and
+ * The wearable source rules' evidence step (#464): the graded validation
+ * table (`reliabilityFor`) and its selection policy (`selectSource`), kept in
+ * `source-reliability.ts` as copied from open-twin@2fd26911 after upstream
+ * removed them (#300). TwinLLM adds no grade of its own and
  * never breaks a tie on the order of the sources.
  *
  * open-twin abstains in three cases, kept apart because they say different

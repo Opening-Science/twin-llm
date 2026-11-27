@@ -5,6 +5,10 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- open-twin pinned at `27ccbd40db282050c79d902c793de2863fb42332`, open-twin `main` of 27 Nov 2026 (was `2fd26911c43c3007c8b87a88bf8a3647fa90ded0`). Upstream removed its reliability grades and source selection (#300); TwinLLM keeps a copy from `2fd26911` in `infrastructure/open-twin-adapters/source-reliability.ts`, so the wearable source rules (#464) are unchanged. Docs: `docs/open-twin-pins.md`.
+
 ## [0.2.0] - 2026-11-27
 
 ### Added
