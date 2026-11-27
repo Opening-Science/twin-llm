@@ -1,8 +1,14 @@
+import { cookies } from "next/headers";
+
 import { YourDayLayout } from "@/features/digital-twin/day/your-day-layout";
 import { readPersonalReplay } from "@/features/digital-twin/day/data/your-day-personal";
 import { yourDayReplayFixtures } from "@/features/digital-twin/day/data/your-day-replay-demo";
 import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
 import { YourDayViewerZone } from "@/features/digital-twin/day/your-day-viewer-zone";
+import {
+  YOUR_DAY_ZONE_COOKIE,
+  zoneFromCookie,
+} from "@/features/digital-twin/day/your-day-zone";
 import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
 import { YOUR_DAY_COPY } from "@/features/digital-twin/twin-page-copy";
 import { lockedScreen } from "@/features/vault/page-gate";
@@ -14,31 +20,25 @@ import {
   DEMO_REFERENCE_DAY,
   DEMO_TIME_ZONE,
 } from "@/packages/query-tools/replay/demo-days";
-import {
-  isCalendarDay,
-  isTimeZone,
-  localClock,
-} from "@/packages/query-tools/replay/local-time";
+import { isCalendarDay, localClock } from "@/packages/query-tools/replay/local-time";
 
 const COPY = YOUR_DAY_COPY.personal;
 
-type Query = Readonly<{ date?: string | string[]; zone?: string | string[] }>;
+type Query = Readonly<{ date?: string | string[] }>;
 
-async function PersonalReplay({ date, zone }: Query) {
+async function PersonalReplay({ date }: Query) {
   const gate = await vaultDecisionForPage();
   if (!gate.ok) return (await lockedScreen()) ?? <p>{COPY.signIn}</p>;
   if (!gate.actorId || !gate.keys) return <p>{COPY.unlock}</p>;
   const userId = await findAppUserId(gate.actorId);
   if (!userId) return <p>{COPY.noAccount}</p>;
-  if (zone === undefined) return <YourDayViewerZone />;
-  if (
-    typeof zone !== "string" ||
-    !isTimeZone(zone) ||
-    (date !== undefined && (typeof date !== "string" || !isCalendarDay(date)))
-  ) {
+  // The zone comes from a first-party cookie, never the URL (your-day-zone.ts).
+  const stored = (await cookies()).get(YOUR_DAY_ZONE_COOKIE)?.value;
+  const timeZone = zoneFromCookie(stored);
+  if (timeZone === null) return <YourDayViewerZone fallback={stored !== undefined} />;
+  if (date !== undefined && (typeof date !== "string" || !isCalendarDay(date))) {
     return <p role="alert">{COPY.invalidQuery}</p>;
   }
-  const timeZone = zone;
   const day = typeof date === "string" ? date : localClock(new Date(), timeZone).day;
   const replay = await readPersonalReplay(gate.actorId, userId, day, timeZone).catch(
     (error: unknown) => {
@@ -72,7 +72,7 @@ export default async function YourDayPage({
   return (
     <DigitalTwinFrame extraWide>
       {dataMode() === "personal" ? (
-        <PersonalReplay date={query.date} zone={query.zone} />
+        <PersonalReplay date={query.date} />
       ) : (
         <YourDayLayout
           initialDate={DEMO_REFERENCE_DAY}

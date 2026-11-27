@@ -94,10 +94,8 @@ export function YourDayLayout({
               onSelect={(next) => {
                 if (!personal) return setDate(next);
                 const url = new URL(window.location.href);
-                url.search = new URLSearchParams({
-                  date: next,
-                  zone: demoIdentity.time_zone,
-                }).toString();
+                // Only the date goes in the URL; the zone stays in its cookie.
+                url.search = new URLSearchParams({ date: next }).toString();
                 window.location.assign(url);
               }}
             />

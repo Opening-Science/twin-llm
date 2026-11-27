@@ -206,7 +206,7 @@ export const YOUR_DAY_COPY = {
     signIn: "Sign in to replay your data.",
     unlock: "Unlock your vault to replay your data.",
     noAccount: "No personal data account was found.",
-    invalidQuery: "Choose a valid date and time zone to replay your data.",
+    invalidQuery: "Choose a valid date to replay your data.",
     loadFailed: "Could not load your replay data. Try another date or reload the page.",
     heading: (zone: string) => `My Data · ${zone}`,
     sources: "Imported observations and the latest synced wearable records.",
