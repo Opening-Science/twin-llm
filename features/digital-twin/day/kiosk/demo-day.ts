@@ -17,7 +17,7 @@ import {
 } from "@/packages/query-tools/show-my-day";
 import { utcDay } from "@/packages/query-tools/stats";
 
-import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type CohortRow } from "../../biomarkers/cohort-handler";
 import { type DayListEntry } from "./day-view";
 
 /**

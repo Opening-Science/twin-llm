@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { type AppendInput } from "@/packages/audit/append";
 import { SUBJECT_SCOPE_VIOLATION } from "@/packages/query-tools/scope";
 
-import { type CohortRow } from "../biomarkers/cohort-handler";
+import { type CohortRow } from "../../biomarkers/cohort-handler";
 import { DAY_FAILED, DAY_NOT_FOUND, DAY_REFUSED, DAY_SIGN_IN } from "./day-copy";
 import {
   createDayHandler,

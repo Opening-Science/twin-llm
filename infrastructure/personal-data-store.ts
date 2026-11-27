@@ -366,6 +366,29 @@ const OBSERVATION_SELECT = {
   effectivePrecision: true,
 } as const;
 
+export async function readPersonalDayObservations(
+  userId: string,
+  start: Date,
+  end: Date,
+  take: number,
+) {
+  const cipher = await cipherForUser(userId);
+  const rows = await database().personalObservation.findMany({
+    where: {
+      userId,
+      effectiveAt: { gte: start, lt: end },
+      effectivePrecision: { in: ["day", "instant"] },
+    },
+    orderBy: [{ effectiveAt: "asc" }, { id: "asc" }],
+    select: { ...OBSERVATION_SELECT, codeSystem: true },
+    take,
+  });
+  return rows.map((row) => ({
+    ...toObservation(cipher)(row),
+    codeSystem: openNullable(cipher, OBSERVATIONS, "code_system", row.id, row.codeSystem),
+  }));
+}
+
 const PRECISIONS: readonly EffectivePrecision[] = ["year", "month", "day", "instant"];
 
 const toObservation =

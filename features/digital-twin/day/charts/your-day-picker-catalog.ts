@@ -1,0 +1,188 @@
+import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
+import { listBiomarkers } from "@/packages/biomarkers/catalogue";
+import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
+import { MEASURES, type Measure } from "@/packages/personal-data/wearable-measure-codes";
+import { type ReplayDay } from "@/packages/query-tools/replay/replay-day";
+
+import { SYSTEM_LABEL } from "../../anatomy/anatomy-copy";
+import { VITAL_LABEL } from "../../biomarkers/biomarker-copy";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
+import { chartUnitFor } from "./your-day-chart-units";
+import { type DayObservation, observationCharts } from "./your-day-observations";
+import {
+  anchorMarkerFor,
+  discoverYourDayCharts,
+  MEASURE_SYSTEMS,
+  type YourDayChartDefinition,
+  type YourDayChartId,
+} from "./your-day-charts";
+
+const PICKER = YOUR_DAY_COPY.chartPicker;
+
+export type PickerEntry = Readonly<{
+  id: string;
+  chartId: YourDayChartId | null;
+  label: string;
+  unit: string | null;
+  category: string;
+  provider: string;
+  description: string;
+  search: string;
+  unavailableReason?: string;
+}>;
+
+const anchorId = (marker: Biomarker) => `anchor:${marker.id}`;
+const anchorSearch = (marker: Biomarker) =>
+  `${marker.nameDe} ${marker.loincCode} ${marker.id} ${marker.unitUcum}`;
+
+export function buildPickerCatalog(
+  days: readonly ReplayDay[],
+  markers: readonly Biomarker[] = listBiomarkers(),
+  observations: readonly DayObservation[] = [],
+) {
+  const charts = [
+    ...discoverYourDayCharts(days),
+    ...observationCharts(observations, markers),
+  ];
+  const chartsByMeasure = new Map<Measure, YourDayChartDefinition[]>();
+  for (const chart of charts) {
+    if (chart.measure)
+      chartsByMeasure.set(chart.measure, [
+        ...(chartsByMeasure.get(chart.measure) ?? []),
+        chart,
+      ]);
+  }
+  const matched = new Set<string>();
+  const wearableEntries: PickerEntry[] = [];
+  for (const key of Object.keys(MEASURES) as (keyof typeof MEASURES)[]) {
+    const measure: Measure = MEASURES[key];
+    const marker = anchorMarkerFor(markers, measure);
+    if (marker) matched.add(marker.id);
+    const shared = {
+      label: measure.display,
+      category: SYSTEM_LABEL[marker?.systemId ?? MEASURE_SYSTEMS[key] ?? "unassigned"],
+      search: `${measure.code ?? ""} ${measure.unit} ${marker ? anchorSearch(marker) : ""}`,
+    };
+    const measureCharts = chartsByMeasure.get(measure) ?? [];
+    if (measureCharts.length === 0) {
+      wearableEntries.push({
+        ...shared,
+        id: marker ? anchorId(marker) : `wearable:${key}`,
+        chartId: null,
+        unit: chartUnitFor(measure.unit, measure.display).label,
+        provider: PICKER.wearableProvider,
+        description: marker?.loincDisplay ?? PICKER.wearableMeasure,
+      });
+    }
+    // One entry per source, so differing values from two devices stay visible.
+    measureCharts.forEach((chart, index) =>
+      wearableEntries.push({
+        ...shared,
+        id: marker && index === 0 ? anchorId(marker) : chart.id,
+        chartId: chart.id,
+        unit: chart.view.label,
+        provider: chart.sources.join(", "),
+        description: marker?.loincDisplay ?? PICKER.replaySeries,
+      }),
+    );
+  }
+
+  const entryByChart = new Map(
+    wearableEntries.flatMap((entry) => (entry.chartId ? [[entry.chartId, entry]] : [])),
+  );
+  const replayOnlyEntry = (chart: YourDayChartDefinition): PickerEntry => ({
+    id: chart.id,
+    chartId: chart.id,
+    label: chart.label,
+    unit: chart.view.label,
+    category: SYSTEM_LABEL[chart.system],
+    provider: chart.sources.join(", "),
+    description:
+      chart.selector?.stream === "glucose" && chart.selector.specimen === "sensor"
+        ? PICKER.sensorGlucose
+        : PICKER.replaySeries,
+    search: chart.marker
+      ? anchorSearch(chart.marker)
+      : (chart.observations?.[0]?.code ?? ""),
+  });
+  const entries = charts.map(
+    (chart) => entryByChart.get(chart.id) ?? replayOnlyEntry(chart),
+  );
+  for (const chart of charts) if (chart.marker) matched.add(chart.marker.id);
+
+  const sleepSources = new Set(
+    days.flatMap(({ events }) =>
+      events.filter(({ kind }) => kind === "sleep").map(({ source }) => source.name),
+    ),
+  );
+  if (sleepSources.size > 0) {
+    entries.push({
+      id: "sleep",
+      chartId: null,
+      label: VITAL_LABEL.sleep,
+      unit: null,
+      category: SYSTEM_LABEL[VITAL_ANATOMY.sleep.system],
+      provider: [...sleepSources].sort().join(", "),
+      description: PICKER.sleepIntervals,
+      search: "timeline",
+      unavailableReason: PICKER.sleepOnTimeline,
+    });
+  }
+
+  const labs = markers
+    .filter(({ id }) => !matched.has(id))
+    .map((marker): PickerEntry => ({
+      id: anchorId(marker),
+      chartId: null,
+      label: marker.loincDisplay.split(" [")[0]!.trim() || marker.nameDe,
+      unit: chartUnitFor(marker.unitUcum, marker.loincDisplay).label,
+      category: SYSTEM_LABEL[marker.systemId],
+      provider: PICKER.labProvider,
+      description: marker.loincDisplay,
+      search: anchorSearch(marker),
+    }));
+  const catalogOnly = [
+    ...labs,
+    ...wearableEntries.filter(({ chartId }) => chartId === null),
+  ];
+  entries.push(...catalogOnly.sort((a, b) => a.label.localeCompare(b.label, "en")));
+  const categories = [...new Set(entries.map(({ category }) => category))].sort((a, b) =>
+    a.localeCompare(b, "en"),
+  );
+  return { entries, categories, charts };
+}
+
+const normalize = (text: string) =>
+  text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+export function filterPickerCatalog(
+  entries: readonly PickerEntry[],
+  query: string,
+  category: string,
+) {
+  const words = normalize(query).trim().split(/\s+/);
+  return entries.filter((entry) => {
+    if (category && entry.category !== category) return false;
+    const text = normalize(
+      `${entry.label} ${entry.provider} ${entry.description} ${entry.unit ?? ""} ${entry.search}`,
+    );
+    return words.every((word) => text.includes(word));
+  });
+}
+
+export function paginatePickerCatalog(results: readonly PickerEntry[], page: number) {
+  const pageSize = 9;
+  const pageCount = Math.ceil(results.length / pageSize);
+  const start = page * pageSize;
+  const end = Math.min(start + pageSize, results.length);
+  const windowSize = Math.min(3, pageCount);
+  const windowStart = Math.max(0, Math.min(page - 1, pageCount - windowSize));
+
+  return {
+    entries: results.slice(start, end),
+    firstResult: results.length === 0 ? 0 : start + 1,
+    lastResult: end,
+    pageCount,
+    visiblePages: Array.from({ length: windowSize }, (_, index) => windowStart + index),
+  };
+}

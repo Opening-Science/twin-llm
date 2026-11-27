@@ -1,4 +1,4 @@
-import { MIN_PASSPHRASE_LENGTH } from "@/infrastructure/vault-crypto";
+import { MIN_PASSPHRASE_LENGTH } from "@/infrastructure/vault-passphrase-policy";
 
 import { VAULT_COPY } from "./vault-copy";
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { cookieValue, VAULT_COOKIE } from "@/infrastructure/vault-gate";
-import { MAX_PASSPHRASE_LENGTH } from "@/infrastructure/vault-crypto";
+import { MAX_PASSPHRASE_LENGTH } from "@/infrastructure/vault-passphrase-policy";
 import { type VaultSessions } from "@/infrastructure/vault-session";
 
 import { VAULT_COPY } from "./vault-copy";

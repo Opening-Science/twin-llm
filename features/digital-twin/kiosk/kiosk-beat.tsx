@@ -9,7 +9,7 @@ import {
   kioskPlaceholder,
   kioskShows,
 } from "./kiosk-copy";
-import { type KioskBeat } from "../day/beat-focus";
+import { type KioskBeat } from "../day/kiosk/beat-focus";
 import { KioskDayStrip } from "./kiosk-strip-view";
 
 /**

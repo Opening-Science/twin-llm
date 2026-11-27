@@ -4,9 +4,9 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { StatusBadge } from "@/infrastructure/ui-kit/status-badge";
 
-import { loadCohortPeople } from "../biomarkers/cohort-client";
-import { type CohortPerson } from "../biomarkers/cohort-handler";
-import { MY_DAY_LOADING, WORTH_A_LOOK } from "./day-copy";
+import { loadCohortPeople } from "../../biomarkers/cohort-client";
+import { type CohortPerson } from "../../biomarkers/cohort-handler";
+import { MY_DAY_LOADING, WORTH_A_LOOK } from "../kiosk/day-copy";
 import {
   DAY_GLANCE_FAILED,
   DAY_GLANCE_NO_PEOPLE,
@@ -14,8 +14,8 @@ import {
   DAY_GLANCE_TITLE,
   dayGlance,
 } from "./day-glance";
-import { MOCK_CHOICE } from "./day-view";
-import { useMyDay } from "./use-my-day";
+import { MOCK_CHOICE } from "../kiosk/day-view";
+import { useMyDay } from "../kiosk/use-my-day";
 
 /**
  * "Show me my day" on the Dashboard page: the first synthetic person's

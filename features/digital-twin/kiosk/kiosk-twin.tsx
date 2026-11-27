@@ -22,7 +22,7 @@ import {
 import { initialAutoRotate } from "../scan-materials";
 import { BodyScan, ContextLossWatcher, ScanEnvironment } from "../scan-scene";
 import { KIOSK_BODY_MISSING, KIOSK_VIEW_LABEL } from "./kiosk-copy";
-import { type BeatFocus } from "../day/beat-focus";
+import { type BeatFocus } from "../day/kiosk/beat-focus";
 
 const NO_MARKERS: Parameters<typeof BodyScan>[0]["markers"] = [];
 const NO_MEASURES: Parameters<typeof BodyScan>[0]["measures"] = [];
