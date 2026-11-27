@@ -82,3 +82,13 @@ test("daily averages, resting heart rate, and unrecognized units never drive eff
     ]),
   ).toEqual([]);
 });
+
+test("personal rows out of time order still read the latest value at the cursor", () => {
+  const [series] = seriesFor([
+    { ...point, id: "late", at: `${day}T10:00:00Z`, value: 6000 },
+    point,
+    { ...point, id: "middle", at: `${day}T09:00:00Z`, value: 5400 },
+  ]);
+  const reading = vitalReadingAt(series, Date.parse(`${day}T09:30:00Z`));
+  expect(reading.state === "unavailable" ? null : reading.reading.id).toBe("middle");
+});
