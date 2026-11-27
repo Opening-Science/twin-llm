@@ -38,14 +38,30 @@ fi
 # (upstream uses both workspace:* and workspace:^).
 for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic; do
   python3 - <<PY
-import re
+import json
 from pathlib import Path
 p = Path("packages/${pkg}/package.json")
-text, n = re.subn(r'"workspace:[^"]*"', '"file:../fhir-core"', p.read_text())
-if n == 0:
-    raise SystemExit(0)
-p.write_text(text)
-print(f"rewrote {n} workspace: deps -> file:../fhir-core in {p}")
+synced = set("${PACKAGES[*]}".split())
+data = json.loads(p.read_text())
+changed = []
+for field in ("dependencies", "peerDependencies", "devDependencies"):
+    deps = data.get(field) or {}
+    for name, spec in list(deps.items()):
+        if not (name.startswith("@open-twin/") and spec.startswith("workspace:")):
+            continue
+        short = name.removeprefix("@open-twin/")
+        if field == "devDependencies":
+            # Upstream tests only; we build, so drop rather than fake the link.
+            del deps[name]
+            changed.append(f"dropped dev {name}")
+        elif short in synced:
+            deps[name] = f"file:../{short}"
+            changed.append(f"{name} -> file:../{short}")
+        else:
+            raise SystemExit(f"sync-open-twin FAIL: ${pkg} needs unsynced {name}")
+if changed:
+    p.write_text(json.dumps(data, indent=2) + "\n")
+    print(f"{p}: " + "; ".join(changed))
 PY
 done
 
