@@ -688,17 +688,17 @@ export const planSetup = (
     database.status === "blocked"
       ? {
           id: "migrate",
-          title: "Migrations (prisma migrate deploy)",
+          title: "Migrations (bun run db:upgrade)",
           after: ["database", "install"],
           status: "blocked",
           reason: "needs the database",
         }
       : {
           id: "migrate",
-          title: "Migrations (prisma migrate deploy)",
+          title: "Migrations (bun run db:upgrade)",
           after: ["database", "install"],
           status: "run",
-          action: { kind: "command", argv: ["bunx", "prisma", "migrate", "deploy"] },
+          action: { kind: "command", argv: ["bun", "run", "db:upgrade"] },
         };
   const cohort: Step =
     database.status === "blocked" && options.cohort !== "none"

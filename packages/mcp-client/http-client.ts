@@ -101,7 +101,7 @@ export const createMcpHttpClient = (options: McpHttpClientOptions): McpHttpClien
     const result = await rpc("initialize", {
       protocolVersion: "2024-11-05",
       capabilities: {},
-      clientInfo: { name: "twin-llm", version: "0.1.0" },
+      clientInfo: { name: "twin-llm", version: "0.2.0" },
     });
     initialized = true;
     return result;

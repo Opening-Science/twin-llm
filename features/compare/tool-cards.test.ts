@@ -38,6 +38,27 @@ describe("tool arguments in words (SPEC 5.3)", () => {
     ).toEqual(["Measure", "Baseline", "Target"]);
   });
 
+  test("a relative window reads as the period the call gave (#901)", () => {
+    expect(
+      toolArgs({ subject_ref: "29bbf012", loinc: "8867-4", period: "last 3 months" }),
+    ).toEqual([
+      { label: "Measure", value: "8867-4" },
+      { label: "Window", value: "last 3 months" },
+      { label: "Subject", value: "29bbf012" },
+    ]);
+    expect(
+      toolArgs({
+        loinc: "8867-4",
+        window_a: { start: "2026-01-01", end: "2026-02-28" },
+        window_b: { period: "last 7 days" },
+      }),
+    ).toEqual([
+      { label: "Measure", value: "8867-4" },
+      { label: "Window A", value: "1 Jan 2026 – 28 Feb 2026" },
+      { label: "Window B", value: "last 7 days" },
+    ]);
+  });
+
   test("search text is clipped at 80 characters", () => {
     const [search] = toolArgs({ query: "x".repeat(120) });
     expect(search?.value.length).toBe(80);

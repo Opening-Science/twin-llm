@@ -64,11 +64,15 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "limit": {
             "type": "integer",
@@ -76,7 +80,7 @@
             "maximum": 500
           }
         },
-        "required": ["subject_ref", "start", "end", "limit", "measure"],
+        "required": ["subject_ref", "limit", "measure"],
         "additionalProperties": false
       }
     }
@@ -130,14 +134,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end", "measure"],
+        "required": ["subject_ref", "measure"],
         "additionalProperties": false
       }
     }
@@ -162,14 +170,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end", "measure"],
+        "required": ["subject_ref", "measure"],
         "additionalProperties": false
       }
     }
@@ -197,32 +209,38 @@
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           },
           "target": {
             "type": "object",
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           }
         },
         "required": ["subject_ref", "baseline", "target", "measure"],
@@ -255,14 +273,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end", "measure"],
+        "required": ["subject_ref", "measure"],
         "additionalProperties": false
       }
     }
@@ -290,32 +312,38 @@
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           },
           "window_b": {
             "type": "object",
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
+              },
+              "period": {
+                "type": "string",
+                "description": "Or: last N days|weeks|months|years, this year, all"
               }
             },
-            "required": ["start", "end"],
             "additionalProperties": false,
-            "description": "Time window, start before end"
+            "description": "Time window: start before end, or period"
           }
         },
         "required": ["subject_ref", "window_a", "window_b", "measure"],
@@ -343,11 +371,15 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "pick": {
             "type": "string",
@@ -359,7 +391,7 @@
             "description": "With pick at only: the reading's effective_at as observations_for_subject returns it"
           }
         },
-        "required": ["subject_ref", "start", "end", "pick", "measure"],
+        "required": ["subject_ref", "pick", "measure"],
         "additionalProperties": false
       }
     }
@@ -428,14 +460,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["subject_ref", "start", "end", "measure"],
+        "required": ["subject_ref", "measure"],
         "additionalProperties": false
       }
     }
@@ -456,11 +492,15 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "status": {
             "description": "Only conditions with this recorded clinical status",
@@ -479,7 +519,7 @@
             "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false
       }
     }
@@ -500,11 +540,15 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "status": {
             "description": "Only medication requests with this recorded status",
@@ -525,7 +569,7 @@
             "description": "One code as recorded (SNOMED CT or ICD-10 for conditions, RxNorm for medications)"
           }
         },
-        "required": ["subject_ref", "start", "end"],
+        "required": ["subject_ref"],
         "additionalProperties": false
       }
     }
@@ -551,14 +595,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false
       }
     }
@@ -584,14 +632,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false
       }
     }
@@ -617,14 +669,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["source", "start", "end"],
+        "required": ["source"],
         "additionalProperties": false
       }
     }
@@ -650,11 +706,15 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           },
           "sport": {
             "description": "Keep only workouts of this sport group; left out, every workout",
@@ -667,7 +727,7 @@
             "description": "day: one row per day; week: one row per week starting Monday (UTC)"
           }
         },
-        "required": ["source", "start", "end", "aggregation"],
+        "required": ["source", "aggregation"],
         "additionalProperties": false
       }
     }
@@ -697,14 +757,18 @@
           },
           "start": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
           },
           "end": {
             "type": "string",
-            "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+            "description": "YYYY-MM-DD (whole day) or UTC datetime"
+          },
+          "period": {
+            "type": "string",
+            "description": "Or: last N days|weeks|months|years, this year, all"
           }
         },
-        "required": ["measure", "source_a", "source_b", "start", "end"],
+        "required": ["measure", "source_a", "source_b"],
         "additionalProperties": false
       }
     }
@@ -909,8 +973,8 @@
             "description": "week: the 7 UTC days ending on end; month: the 30 UTC days ending on end"
           },
           "end": {
-            "type": "string",
-            "description": "The last UTC day, YYYY-MM-DD"
+            "description": "The last UTC day, YYYY-MM-DD; default today",
+            "type": "string"
           },
           "profile": {
             "type": "string",
@@ -918,7 +982,7 @@
             "description": "Which glucose range time in range uses"
           }
         },
-        "required": ["subject_ref", "period", "end", "profile"],
+        "required": ["subject_ref", "period", "profile"],
         "additionalProperties": false
       }
     }
@@ -976,11 +1040,11 @@
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               }
             },
             "required": ["start", "end"],
@@ -998,11 +1062,11 @@
             "properties": {
               "start": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               },
               "end": {
                 "type": "string",
-                "description": "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day"
+                "description": "YYYY-MM-DD (whole day) or UTC datetime"
               }
             },
             "required": ["start", "end"],

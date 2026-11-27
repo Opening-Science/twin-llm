@@ -13,8 +13,9 @@ import { importedTrendInput } from "./imported-schemas";
 import { latestByLoincInput, summaryStatsInput } from "./schemas";
 
 const SUBJECT = "9661a432-4630-2cd9-142c-386845fae837";
-const START_TEXT = "ISO-8601 UTC datetime, or YYYY-MM-DD for the start of that day";
-const END_TEXT = "ISO-8601 UTC datetime, or YYYY-MM-DD for the end of that day";
+const START_TEXT = "YYYY-MM-DD (whole day) or UTC datetime";
+const END_TEXT = "YYYY-MM-DD (whole day) or UTC datetime";
+const PERIOD_TEXT = "Or: last N days|weeks|months|years, this year, all";
 
 describe("modelJsonSchema", () => {
   test("summary_stats before: each window bound is three regex branches", () => {
@@ -53,8 +54,10 @@ describe("modelJsonSchema", () => {
         measure: { type: "string", description: "e.g. LDL" },
         start: { type: "string", description: START_TEXT },
         end: { type: "string", description: END_TEXT },
+        period: { type: "string", description: PERIOD_TEXT },
       },
-      required: ["subject_ref", "start", "end", "measure"],
+      // start and end, or period: zod checks that (#901), the schema cannot say it.
+      required: ["subject_ref", "measure"],
       additionalProperties: false,
     });
   });
@@ -70,8 +73,9 @@ describe("modelJsonSchema", () => {
       "name",
       "start",
       "end",
+      "period",
     ]);
-    expect(imported.required).toEqual(["dataset_id", "start", "end"]);
+    expect(imported.required).toEqual(["dataset_id"]);
     // The MCP manifest keeps both: external clients may send codes.
     const full = z.toJSONSchema(latestByLoincInput);
     expect(Object.keys(Object(full.properties))).toEqual([
