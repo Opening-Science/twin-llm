@@ -44,13 +44,13 @@ See `docs/open-twin-pins.md` and `scripts/sync-open-twin.sh`. Checkout lives in 
 ### TwinLLM-only host adapters (contribute upstream when possible)
 
 - `infrastructure/open-twin-adapters/oura.ts` — `HostOuraTokenHandler.lastTokens()` (renamed from `getTokens()` because upstream now has its own); `getAuthorizationUrl` over the public barrel, adding `state`
-- `infrastructure/open-twin-adapters/oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle`, imported from the synced checkout until the barrel exports it
+- `infrastructure/open-twin-adapters/oura-bundle.ts` — `buildOuraFhirBundle` over `buildOuraBundle` from the public `@open-twin/provider-oura` barrel
 - `infrastructure/open-twin-adapters/whoop.ts` — `fetchWhoopWindow` / `buildWhoopFhirBundle` over the public barrel (`getWhoopData`, `buildWhoopBundleFromPayload`)
 - `infrastructure/open-twin-adapters/google-health.ts` — restore/persist credential helpers; `buildGoogleHealthFhirBundle` (`google-health-bundle.ts`) over `buildBundleFromResponses` with the person's shared subject
 - `infrastructure/open-twin-adapters/aggregate.ts` — `aggregateWearableBundles` over `aggregate` from the public barrel, for Oura, WHOOP and Google Health; not read by any screen yet
 - `infrastructure/open-twin-adapters/vitronic.ts` — `buildVitronicFhirBundle` over `buildBundleFromVitronicResponse` from the public barrel, for synthetic scan measurements with the person's shared subject; no upstream edits
 - `infrastructure/open-twin-adapters/source-reliability.ts` — the reliability table (`reliabilityFor`) and evidence-based source selection (`selectSource`), copied from open-twin@2fd26911 (MIT) after upstream removed them in #300
-- Sync packaging only (no upstream `*.ts` edits): `workspace:*` → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
+- Sync packaging only (no upstream `*.ts` edits): any `workspace:` spec (`workspace:*`, `workspace:^`) → `file:../fhir-core`, then peer-pin for host install; flatten nested bun redirects
 - Upgrade: `bash scripts/sync-open-twin.sh <sha>` then `bun install` (see `docs/open-twin-pins.md`)
 
 ## Reference anatomy atlases (fetched, not committed)
