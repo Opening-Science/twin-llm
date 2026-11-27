@@ -9,6 +9,7 @@ import {
   plottedValueAt,
   type YourDayChartId,
 } from "./your-day-charts";
+import { observationCharts } from "./your-day-observations";
 import { yourDayReplayFixtures } from "../data/your-day-replay-demo";
 
 const fixtures = yourDayReplayFixtures();
@@ -84,6 +85,39 @@ test("applies the unit conversion to the rendered value and range", () => {
   );
   expect(html).toContain("1.0–2.9 bpm");
   expect(html).toContain('aria-valuetext="00:00 UTC+01:00, 1.0 bpm"');
+});
+
+test("places converted observation dots on the converted axis", () => {
+  const fixture = fixtures.find(({ selection }) => selection.day === "2026-10-27")!;
+  const reading = (id: string, at: string, value: number) => ({
+    id,
+    sourceId: "test-lab",
+    source: "Test lab",
+    codeSystem: null,
+    code: null,
+    label: "An analyte",
+    unit: "g/L",
+    day: "2026-10-27",
+    at,
+    value,
+    timing: "observation" as const,
+    interval_min: 0,
+  });
+  const [chart] = observationCharts([
+    reading("first", "2026-10-27T07:00:00.000Z", 0.9),
+    reading("second", "2026-10-27T15:00:00.000Z", 1.1),
+  ]);
+  const html = renderToStaticMarkup(
+    <ReplayProvider selection={fixture.selection}>
+      <YourDayChart chart={chart!} data={fixture.chartData} onRemove={() => {}} />
+    </ReplayProvider>,
+  );
+  const tops = [...html.matchAll(/data-replay-observation[^>]*top:([\d.-]+)%/g)].map(
+    ([, top]) => Number(top),
+  );
+  expect(html).toContain("90–110.0 mg/dL");
+  expect(tops).toHaveLength(2);
+  expect(tops.every((top) => top >= 0 && top <= 100)).toBe(true);
 });
 
 test("shows nightly values and reference bands without an intraday axis", () => {

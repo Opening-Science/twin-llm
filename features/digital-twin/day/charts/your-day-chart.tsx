@@ -138,7 +138,7 @@ export function YourDayChart({
     <article
       aria-labelledby={heading}
       data-replay-chart={presentation}
-      className="dark surface text-foreground @container flex min-w-0 flex-col p-4 @sm:p-5"
+      className="dark surface text-foreground @container flex min-h-0 min-w-0 flex-col p-4 @sm:p-5"
     >
       <header className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-1">
@@ -206,8 +206,8 @@ export function YourDayChart({
         </p>
       )}
       {!summary && (
-        <div className="mt-3 flex flex-1 flex-col pl-9 text-xs tabular-nums">
-          <div className="relative min-h-24 flex-1">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col pl-9 text-xs tabular-nums">
+          <div className="relative min-h-24 flex-1 @2xl/replay:min-h-16">
             {data && (
               <input
                 type="range"
@@ -297,7 +297,7 @@ export function YourDayChart({
                 ? model.observations.map(({ id, at, value }) => ({
                     id,
                     ms: Date.parse(at),
-                    value,
+                    value: value * scale,
                   }))
                 : presentation === "line"
                   ? model.segments.flatMap((segment) =>

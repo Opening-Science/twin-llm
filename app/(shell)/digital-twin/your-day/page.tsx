@@ -2,6 +2,7 @@ import { YourDayLayout } from "@/features/digital-twin/day/your-day-layout";
 import { readPersonalReplay } from "@/features/digital-twin/day/data/your-day-personal";
 import { yourDayReplayFixtures } from "@/features/digital-twin/day/data/your-day-replay-demo";
 import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
+import { YourDayViewerZone } from "@/features/digital-twin/day/your-day-viewer-zone";
 import { DigitalTwinFrame } from "@/features/digital-twin/digital-twin-frame";
 import { lockedScreen } from "@/features/vault/page-gate";
 import { findAppUserId } from "@/infrastructure/current-user";
@@ -26,13 +27,15 @@ async function PersonalReplay({ date, zone }: Query) {
   if (!gate.actorId || !gate.keys) return <p>Unlock your vault to replay your data.</p>;
   const userId = await findAppUserId(gate.actorId);
   if (!userId) return <p>No personal data account was found.</p>;
+  if (zone === undefined) return <YourDayViewerZone />;
   if (
-    (zone !== undefined && (typeof zone !== "string" || !isTimeZone(zone))) ||
+    typeof zone !== "string" ||
+    !isTimeZone(zone) ||
     (date !== undefined && (typeof date !== "string" || !isCalendarDay(date)))
   ) {
     return <p role="alert">Choose a valid date and time zone to replay your data.</p>;
   }
-  const timeZone = typeof zone === "string" ? zone : "UTC";
+  const timeZone = zone;
   const day = typeof date === "string" ? date : localClock(new Date(), timeZone).day;
   const replay = await readPersonalReplay(gate.actorId, userId, day, timeZone).catch(
     (error: unknown) => {

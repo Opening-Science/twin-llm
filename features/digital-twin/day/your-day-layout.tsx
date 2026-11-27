@@ -32,7 +32,7 @@ function AnimatedChartCard({
   return (
     <motion.div
       ref={ref}
-      className="grid min-w-0"
+      className="grid min-h-0 min-w-0 @2xl/replay:contain-size"
       inert={!isPresent}
       layout={reducedMotion ? false : "position"}
       initial={reducedMotion ? false : { opacity: 0, y: 8 }}
@@ -125,7 +125,7 @@ export function YourDayLayout({
               {YOUR_DAY_COPY.chartsTitle}
             </h3>
             <div
-              className={`relative grid min-w-0 flex-1 gap-3 @2xl/replay:auto-rows-fr ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
+              className={`relative grid min-w-0 flex-1 gap-3 overflow-x-clip @2xl/replay:auto-rows-[minmax(15.5rem,1fr)] ${chartIds.length > 2 ? "@lg/charts:grid-cols-2" : ""} ${chartIds.length > 4 ? "@min-[48rem]/charts:grid-cols-3" : ""}`}
             >
               <AnimatePresence
                 initial={false}
