@@ -19,7 +19,7 @@ authors:
 repository-code: "https://github.com/Opening-Science/twin-llm"
 license: Apache-2.0
 version: 0.2.0
-date-released: "2026-11-26"
+date-released: "2026-11-27"
 keywords:
   - digital twin
   - open models
