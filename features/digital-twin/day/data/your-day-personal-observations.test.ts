@@ -12,6 +12,7 @@ import {
   importedDayObservations,
 } from "./your-day-personal-observations";
 
+const SYNTHETIC_SUBJECT = "synthetic-wearer-1";
 const day = "2026-10-27";
 const zone = "Europe/Zurich";
 const lab = {
@@ -92,7 +93,7 @@ test("links personal readings to their catalogue entry without hiding a source",
 });
 
 test("links vendor-coded wearable readings by the statistic they name", () => {
-  const meta = { subjectKey: "synthetic-wearer-1", timestamp: "2026-01-05T00:00:00Z" };
+  const meta = { subjectKey: SYNTHETIC_SUBJECT, timestamp: "2026-01-05T00:00:00Z" };
   const whoop = buildWhoopFhirBundle(SYNTHETIC_WHOOP_PAYLOAD, meta);
   const oura = buildOuraFhirBundle(
     SYNTHETIC_OURA_DATA,
@@ -168,7 +169,7 @@ test("plots Oura's daily records as summaries on the wearer's own date", () => {
       },
     ] as never,
     { types: ["daily_activity"], start_date: "2026-01-01", end_date: "2026-01-04" },
-    { subjectKey: "synthetic-wearer-1", timestamp: "2026-01-05T00:00:00Z" },
+    { subjectKey: SYNTHETIC_SUBJECT, timestamp: "2026-01-05T00:00:00Z" },
   );
   // Local midnight east of UTC is the previous UTC day; the record still belongs to its own.
   const rows = connectedDayObservations(oura, "Oura", "2026-01-02", "UTC");

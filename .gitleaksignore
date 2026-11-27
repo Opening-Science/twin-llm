@@ -5,3 +5,6 @@
 03c0cf6d2f3d56b077d9571e712465f29a976fe4:features/wearables/aggregate-bundles.test.ts:generic-api-key:126
 # #523: "synthetic-wearer-1", a synthetic subject key in a test, moved to a constant.
 831f6ef0c696bc3da5216f9309279bc2ad659190:features/wearables/detail-route.test.ts:generic-api-key:16
+# #962: "synthetic-wearer-1", a synthetic subject key in a test, moved to a constant.
+8878f8c6ddba4530cde361b1b29609287c0c8f43:features/digital-twin/day/data/your-day-personal-observations.test.ts:generic-api-key:95
+8878f8c6ddba4530cde361b1b29609287c0c8f43:features/digital-twin/day/data/your-day-personal-observations.test.ts:generic-api-key:171
