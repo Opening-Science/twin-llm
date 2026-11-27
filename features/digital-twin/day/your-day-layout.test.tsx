@@ -31,6 +31,8 @@ test("selects an Anchor lab observation as a replay chart without a predefined s
   );
   expect(html).toContain(">Ferritin</h4>");
   expect(html).toContain("Last recorded at 08:40");
+  expect(html).toContain("measured · Synthetic demo lab");
+  expect(html).toContain("Synthetic demo</p>");
   expect(html).toContain("data-replay-observation");
   expect(html).not.toContain("<polyline");
 });

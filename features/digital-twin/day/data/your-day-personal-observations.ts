@@ -8,8 +8,11 @@ import {
 import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
 
 import { YOUR_DAY_COPY } from "../../twin-page-copy";
-import { isDailyRecord, VENDOR_SYSTEMS } from "../charts/vendor-measures";
+import { isDailyRecord, isOuraScore, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
+
+export type ImportedDayObservation = ImportedObservationRecord &
+  Readonly<{ codeSystem: string | null }>;
 
 type Coding = Readonly<{ system?: string; code?: string; display?: string }>;
 
@@ -19,7 +22,7 @@ const identityCoding = (codings: readonly Coding[] = []) =>
   codings[0];
 
 export function importedDayObservations(
-  rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],
+  rows: readonly ImportedDayObservation[],
   day: string,
   zone: string,
 ): DayObservation[] {
@@ -54,6 +57,7 @@ export function importedDayObservations(
         at,
         sourceId: datasetKey.get(row.datasetId) ?? "import",
         source: YOUR_DAY_COPY.personal.importedSource,
+        provenance: "imported",
         label: row.display,
         timing: daily ? "day" : "observation",
         interval_min: 0,
@@ -125,15 +129,17 @@ export function connectedDayObservations(
         const term = identityCoding(code.coding);
         const label = code.text || term?.display || term?.code;
         if (!label) return [];
+        const unit = valueQuantity?.code || valueQuantity?.unit || "";
         return [
           {
             id: `${source}:${index}:${part}`,
             sourceId: `wearable:${source}`,
             source,
+            provenance: isOuraScore(term?.system, unit) ? "derived" : "measured",
             codeSystem: term?.system ?? null,
             code: term?.code ?? null,
             label,
-            unit: valueQuantity?.code || valueQuantity?.unit || "",
+            unit,
             day,
             at,
             value,

@@ -50,6 +50,9 @@ const ALIASES: Readonly<Record<string, Readonly<Record<string, keyof typeof MEAS
 export const vendorMeasureKey = (codeSystem: string | null, code: string | null) =>
   codeSystem && code ? ALIASES[codeSystem]?.[code] : undefined;
 
+export const isOuraScore = (system: string | undefined, unit: string) =>
+  system === OURA && unit === "{score}";
+
 /**
  * Whole-day records stamped with a full timestamp: Oura writes the wearer's
  * local midnight with their offset, so the record's own date is its day.

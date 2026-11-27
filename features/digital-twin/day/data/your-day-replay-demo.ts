@@ -31,6 +31,7 @@ export function yourDayReplayFixtures(): readonly YourDayDemo[] {
                   id: "demo-ferritin",
                   sourceId: "demo-lab",
                   source: YOUR_DAY_COPY.personal.demoLabSource,
+                  provenance: "measured",
                   codeSystem: "http://loinc.org",
                   code: "2276-4",
                   label: "Ferritin",

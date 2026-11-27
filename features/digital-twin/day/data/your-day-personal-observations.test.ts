@@ -162,7 +162,7 @@ test("plots Oura's daily records as summaries on the wearer's own date", () => {
               timestamp: "2026-01-02T00:00:00+01:00",
               score: 81,
               steps: 9_120,
-              contributors: {},
+              contributors: { stay_active: 88 },
             },
           ],
         },
@@ -180,6 +180,13 @@ test("plots Oura's daily records as summaries on the wearer's own date", () => {
     ]),
   );
   expect(rows.every(({ timing }) => timing === "day")).toBe(true);
+  expect(rows.map(({ value, provenance }) => [value, provenance])).toEqual(
+    expect.arrayContaining([
+      [81, "derived"],
+      [88, "derived"],
+      [9_120, "measured"],
+    ]),
+  );
   expect(connectedDayObservations(oura, "Oura", "2026-01-01", "UTC")).toEqual([]);
   expect(
     buildPickerCatalog([], [], rows).entries.find(
@@ -198,7 +205,15 @@ test("preserves date-only readings as summaries and excludes month precision", (
     day,
     "America/New_York",
   );
-  expect(rows).toEqual([expect.objectContaining({ day, timing: "day" })]);
+  expect(rows).toEqual([
+    expect.objectContaining({
+      day,
+      timing: "day",
+      provenance: "imported",
+      value: lab.value,
+      unit: lab.unit,
+    }),
+  ]);
 });
 
 test("reads stored wearable step buckets and daily totals without combining them", () => {

@@ -1,6 +1,7 @@
 import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
 import { listBiomarkers } from "@/packages/biomarkers/catalogue";
 import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
+import { type AvailableReading } from "@/packages/query-tools/replay/items";
 
 import { chartPresentation, unitIdentity } from "./your-day-chart-units";
 import {
@@ -14,6 +15,7 @@ export type DayObservation = Readonly<{
   id: string;
   sourceId: string;
   source: string;
+  provenance: AvailableReading["provenance"] | "imported";
   codeSystem: string | null;
   code: string | null;
   label: string;
