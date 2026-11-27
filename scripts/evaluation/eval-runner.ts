@@ -107,6 +107,15 @@ import {
 import { MAX_REPEATS, MIN_REPEATS, withRepeats } from "./repeats";
 
 export const EVAL_ACTOR_PREFIX = "eval-harness";
+
+/**
+ * The reference "now" a relative window (`period`, #901) counts back from in
+ * an eval turn: midday UTC on the last day of the pinned cohort's data (the
+ * wearable series' `end_day` in `evaluation/cohort-codes.v1.json`; the
+ * clinical record ends earlier, on 2026-01-01). Pinned, so "last 3 months"
+ * reads the same days in every run, whatever day the run is on.
+ */
+export const EVAL_REFERENCE_NOW = new Date("2026-10-01T12:00:00.000Z");
 export const DEFAULT_TIMEOUT_S = 300;
 
 export const MOCK_BANNER =
@@ -636,6 +645,7 @@ const runItem = async (
     actor: `${EVAL_ACTOR_PREFIX}:${runId}`,
     sessionId: sessionIdFor(runId, item.id, repeat, spec.modelId),
     mode: "synthetic",
+    now: EVAL_REFERENCE_NOW,
   };
   const label = `${item.id} r${repeat} ${spec.modelId}`;
   const context: PastedBlock | null =

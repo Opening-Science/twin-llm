@@ -168,7 +168,7 @@ const ARG_KEYS: readonly Readonly<[label: string, keys: readonly string[]]>[] = 
   ["Sport", ["sport"]],
   ["Per", ["per"]],
   ["Variant", ["variant", "variants", "rsid"]],
-  ["Window", ["window"]],
+  ["Window", ["window", "period"]],
   ["Baseline", ["baseline"]],
   ["Target", ["target"]],
   ["Window A", ["window_a"]],
@@ -197,10 +197,14 @@ const dayText = (value: unknown): string => {
   return ISO_DAY.test(text) ? formatDate(text.slice(0, 10)) : text;
 };
 
-const windowValue = (value: unknown): string | null =>
-  isRecord(value) && "start" in value && "end" in value
-    ? `${dayText(value.start)} – ${dayText(value.end)}`
-    : null;
+/** A window as its dates, or as the period the call gave (#901): "last 3 months". */
+const windowValue = (value: unknown): string | null => {
+  if (!isRecord(value)) return null;
+  if ("start" in value && "end" in value) {
+    return `${dayText(value.start)} – ${dayText(value.end)}`;
+  }
+  return typeof value.period === "string" ? value.period : null;
+};
 
 const scalarText = (value: unknown): string | null => {
   if (value === null || value === undefined) return null;

@@ -93,6 +93,7 @@ test("places converted observation dots on the converted axis", () => {
     id,
     sourceId: "test-lab",
     source: "Test lab",
+    provenance: "entered" as const,
     codeSystem: null,
     code: null,
     label: "An analyte",
@@ -116,6 +117,7 @@ test("places converted observation dots on the converted axis", () => {
     ([, top]) => Number(top),
   );
   expect(html).toContain("90–110.0 mg/dL");
+  expect(html).toContain("entered · Test lab");
   expect(tops).toHaveLength(2);
   expect(tops.every((top) => top >= 0 && top <= 100)).toBe(true);
 });

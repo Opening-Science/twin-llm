@@ -23,7 +23,9 @@ Shared behaviour:
 
 ### Local proxy
 
-`bun run oura:proxy` (`scripts/oura-oauth-proxy.mjs`) listens on `http://localhost:8787/callback` and 302s, with the query string intact, to `http://localhost:3000/api/oura/callback`. Overrides: `OURA_PROXY_HOST`, `OURA_PROXY_PORT`, `OURA_PROXY_FORWARD`.
+`scripts/oura-oauth-proxy.mjs` listens on `http://localhost:8787/callback` and 302s, with the query string intact, to `http://localhost:3000/api/oura/callback`. Overrides: `OURA_PROXY_HOST`, `OURA_PROXY_PORT`, `OURA_PROXY_FORWARD`.
+
+`bun run dev` starts it, with its lines tagged `[oura-proxy]`, when `OURA_REDIRECT_URI` is an `http://` URL at the proxy's host and port (`scripts/setup/dev-proxies.ts`). When that port is already taken, for example by a proxy started by hand, it prints one line and Next starts anyway. Ctrl-C or Next exiting stops it. `bun run oura:proxy` still runs it on its own, next to `bun run dev:http`.
 
 ### Env var names
 
@@ -55,7 +57,9 @@ Tokens, authorization codes, the state value, cookie values, response bodies and
 
 ### Local proxy
 
-Whoop only accepts `https://` redirects. `bun run whoop:proxy` (`scripts/whoop-oauth-proxy.mjs`) serves TLS on `https://localhost:8788/api/whoop/callback` and 302s, with the query string intact, to `http://localhost:3000/api/whoop/callback`. It reads the key and cert from the gitignored `certificates/` directory. Overrides: `WHOOP_PROXY_HOST`, `WHOOP_PROXY_PORT`, `WHOOP_PROXY_FORWARD`, `WHOOP_PROXY_KEY`, `WHOOP_PROXY_CERT`.
+Whoop only accepts `https://` redirects. `scripts/whoop-oauth-proxy.mjs` serves TLS on `https://localhost:8788/api/whoop/callback` and 302s, with the query string intact, to `http://localhost:3000/api/whoop/callback`. It reads the key and cert from the gitignored `certificates/` directory. Overrides: `WHOOP_PROXY_HOST`, `WHOOP_PROXY_PORT`, `WHOOP_PROXY_FORWARD`, `WHOOP_PROXY_KEY`, `WHOOP_PROXY_CERT`.
+
+`bun run dev` starts it, tagged `[whoop-proxy]`, when `WHOOP_REDIRECT_URI` is an `https://` URL at the proxy's host and port and both certificate files exist. Without them it prints one line with the `mkcert` command below and starts Next without the proxy. A taken port and stopping work as for Oura. `bun run whoop:proxy` still runs it on its own.
 
 Certificate, once per machine: create `certificates/localhost.pem` and `certificates/localhost-key.pem`, for example with `mkcert -cert-file certificates/localhost.pem -key-file certificates/localhost-key.pem localhost`. Open `https://localhost:8788/api/whoop/callback` once in the browser and accept the certificate before linking.
 

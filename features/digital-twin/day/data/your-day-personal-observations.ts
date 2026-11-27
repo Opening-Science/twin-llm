@@ -8,8 +8,12 @@ import {
 } from "@/packages/query-tools/imported-ports";
 import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
 
-import { isDailyRecord, VENDOR_SYSTEMS } from "../charts/vendor-measures";
+import { YOUR_DAY_COPY } from "../../twin-page-copy";
+import { isDailyRecord, isOuraScore, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
+
+export type ImportedDayObservation = ImportedObservationRecord &
+  Readonly<{ codeSystem: string | null }>;
 
 type Coding = Readonly<{ system?: string; code?: string; display?: string }>;
 
@@ -30,12 +34,21 @@ const isSensorGlucose = (observation: Observation, coding: Coding | undefined) =
   ) === true;
 
 export function importedDayObservations(
-  rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],
+  rows: readonly ImportedDayObservation[],
   day: string,
   zone: string,
 ): DayObservation[] {
   const bounds = localDayBounds(day, zone);
-  return rows.flatMap((row) => {
+  // The browser gets opaque keys scoped to this response, never database ids:
+  // `id` is the row's position in this read, and `sourceId` numbers each
+  // dataset in the order it first appears, which keeps two imports apart.
+  const datasetKey = new Map(
+    [...new Set(rows.map(({ datasetId }) => datasetId))].map((id, index) => [
+      id,
+      `import-set:${index}`,
+    ]),
+  );
+  return rows.flatMap((row, index) => {
     if (!Number.isFinite(row.value)) return [];
     const at = row.effectiveAt.toISOString();
     const daily = row.effectivePrecision === "day";
@@ -47,15 +60,16 @@ export function importedDayObservations(
       return [];
     return [
       {
-        id: row.id,
+        id: `import-row:${index}`,
         codeSystem: row.codeSystem,
         code: row.code,
         unit: row.unit,
         value: row.value,
         day,
         at,
-        sourceId: `import:${row.datasetId}`,
-        source: "Imported record",
+        sourceId: datasetKey.get(row.datasetId) ?? "import",
+        source: YOUR_DAY_COPY.personal.importedSource,
+        provenance: "imported",
         label: row.display,
         timing: daily ? "day" : "observation",
         interval_min: 0,
@@ -132,15 +146,17 @@ export function connectedDayObservations(
           ? "Sensor glucose"
           : code.text || term?.display || term?.code;
         if (!label) return [];
+        const unit = valueQuantity?.code || valueQuantity?.unit || "";
         return [
           {
             id: `${source}:${index}:${part}`,
             sourceId: `wearable:${source}`,
             source,
+            provenance: isOuraScore(term?.system, unit) ? "derived" : "measured",
             codeSystem: term?.system ?? null,
             code: term?.code ?? null,
             label,
-            unit: valueQuantity?.code || valueQuantity?.unit || "",
+            unit,
             day,
             at,
             value,

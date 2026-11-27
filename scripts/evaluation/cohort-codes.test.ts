@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 import { cohortCodesFrom } from "./build-cohort-codes";
 import { COHORT_CODES_PATH, cohortCodesSchema } from "./cohort-codes";
+import { EVAL_REFERENCE_NOW } from "./eval-runner";
 import { answerKeySchema } from "./question-set";
 import { isValidLoinc } from "./score/call-accuracy";
 
@@ -66,5 +67,11 @@ describe(COHORT_CODES_PATH, () => {
       });
     expect(read.length).toBeGreaterThan(0);
     expect(read.filter((code) => !file.codes.includes(String(code)))).toEqual([]);
+  });
+
+  test("the eval's reference now is midday UTC on its last day of data (#901)", () => {
+    expect(EVAL_REFERENCE_NOW.toISOString()).toBe(
+      `${file.wearables.end_day}T12:00:00.000Z`,
+    );
   });
 });

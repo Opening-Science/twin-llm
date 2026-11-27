@@ -100,6 +100,13 @@ export type SessionScope = {
   readonly actor: string;
   readonly sessionId: string;
   readonly mode: "synthetic" | "personal";
+  /**
+   * The reference "now" a relative window (`period`, #901) is counted back
+   * from; the eval pins it, otherwise the real time.
+   */
+  readonly now?: Date;
+  /** The subject's IANA time zone for relative windows; UTC when not known. */
+  readonly timeZone?: string;
 };
 
 export const cohortInScope = (scope: SessionScope, cohortId: string): boolean =>

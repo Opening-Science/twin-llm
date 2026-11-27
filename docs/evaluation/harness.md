@@ -436,7 +436,12 @@ tool call of the turn gets one class, in this order:
 | wrong window  | Every matching call with the right subject reads another window: by UTC day, each bound within one day; every key window (`start`/`end`, `window_a`, `window_b`, `baseline`, `target`, `date`) needs a match in the call.   |
 | right call    | Otherwise. The tool may differ: `observations_for_subject` over the key's code, subject and window reads the same rows as `trend`.                                                                                          |
 
-A `values_around_event` call must also name the same event and day counts.
+A call that gives a `period` (#901) is compared by the dates the tool said it
+read (`resolved_window`, or `resolved_windows` per window). Eval turns run on a
+pinned reference now, midday UTC on 2026-10-01, the last day of the pinned
+cohort's data (`EVAL_REFERENCE_NOW` in `eval-runner.ts`), so a period reads
+the same days in every run. A `values_around_event` call must also name the
+same event and day counts.
 `source` (which wearable) is not compared. A line is "all right" with at least
 one right call and no invented code, wrong code, wrong subject or wrong
 window; extra calls are allowed. "No call" is a line with no tool call at all.

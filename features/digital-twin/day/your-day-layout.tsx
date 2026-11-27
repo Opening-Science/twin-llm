@@ -105,10 +105,8 @@ export function YourDayLayout({
               onSelect={(next) => {
                 if (!personal) return setDate(next);
                 const url = new URL(window.location.href);
-                url.search = new URLSearchParams({
-                  date: next,
-                  zone: demoIdentity.time_zone,
-                }).toString();
+                // Only the date goes in the URL; the zone stays in its cookie.
+                url.search = new URLSearchParams({ date: next }).toString();
                 window.location.assign(url);
               }}
             />
@@ -120,7 +118,7 @@ export function YourDayLayout({
           </div>
           {personal && catalog.charts.length === 0 && (
             <p role="status" className="text-muted-foreground text-sm">
-              No imported or synced wearable readings for this date.
+              {YOUR_DAY_COPY.personal.noReadings}
             </p>
           )}
         </header>

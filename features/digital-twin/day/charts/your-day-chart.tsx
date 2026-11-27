@@ -69,7 +69,6 @@ export function YourDayChart({
           .map((row) => ({
             ...row,
             source: { name: row.source },
-            provenance: data.day.origin === "synthetic_demo" ? "synthetic" : "recorded",
           }));
     const plot = selector && !summary && !points ? chartSeries(data.day, selector) : null;
     const segments =

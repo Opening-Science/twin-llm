@@ -1,3 +1,5 @@
+import "server-only";
+
 import { formatDate } from "@/infrastructure/format-measure";
 import {
   isActiveAt,
@@ -87,5 +89,3 @@ export const privacyView = (
 /** The sources ticked in a grant form, in the fixed order; unknown values are ignored. */
 export const chosenSources = (values: readonly string[]): readonly LearningSource[] =>
   LEARNING_SOURCES.filter((source) => values.includes(source));
-
-import "server-only";

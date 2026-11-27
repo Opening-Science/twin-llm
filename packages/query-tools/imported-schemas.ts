@@ -16,8 +16,9 @@ import {
   someMeasuresGiven,
   START_BEFORE_END,
   startBeforeEnd,
-  windowEnd,
-  windowStart,
+  WINDOW_GIVEN,
+  windowFields,
+  windowGiven,
 } from "./schemas";
 
 /**
@@ -68,14 +69,14 @@ export const importedTrendInput = z
     loinc: loincSchema.optional(),
     measure: measureNameSchema.optional(),
     name: seriesNameSchema.optional(),
-    start: windowStart,
-    end: windowEnd,
+    ...windowFields,
   })
   .strict()
   .refine(oneSeriesGiven, { message: "give measure, loinc or name" })
   .refine((input) => input.loinc === undefined || input.measure === undefined, {
     message: "give measure (a name) or loinc, not both",
   })
+  .refine(windowGiven, WINDOW_GIVEN)
   .refine(startBeforeEnd, START_BEFORE_END)
   .describe("Least-squares trend of one imported series in a window");
 

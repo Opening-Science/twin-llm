@@ -25,6 +25,7 @@ import type {
 import { windowEndDate, windowStartDate } from "./schemas";
 import { type WindowSummary } from "./stats";
 import { eventWindows, firstDated } from "./event-windows";
+import { withWindow } from "./window-input";
 import { withMeasure } from "./measure-input";
 import type { z } from "zod";
 import {
@@ -97,23 +98,25 @@ export const runConditionsTimeline = (
   input: ConditionsTimelineInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<ConditionsTimelineResult | ToolRefusal> =>
-  audited<ConditionsTimelineResult | ToolRefusal>(
-    scope,
-    "conditions_timeline",
-    input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const find = ports.findConditions ?? findConditionsInDatabase;
-      const rows = await find(clinicalQuery(input));
-      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
-      if (rows.length === 0) return noRecords("condition", input);
-      return { ...echo(input), ...conditionsTimeline(rows) };
-    },
-    (result) => ("n" in result ? result.n : 0),
-    ports,
+  withWindow(scope, input, (input) =>
+    audited<ConditionsTimelineResult | ToolRefusal>(
+      scope,
+      "conditions_timeline",
+      input,
+      input.subject_ref,
+      async () => {
+        if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+          return SUBJECT_SCOPE_VIOLATION;
+        }
+        const find = ports.findConditions ?? findConditionsInDatabase;
+        const rows = await find(clinicalQuery(input));
+        if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+        if (rows.length === 0) return noRecords("condition", input);
+        return { ...echo(input), ...conditionsTimeline(rows) };
+      },
+      (result) => ("n" in result ? result.n : 0),
+      ports,
+    ),
   );
 
 /**
@@ -127,23 +130,25 @@ export const runMedicationsTimeline = (
   input: MedicationsTimelineInput,
   ports: QueryToolPorts = defaultQueryToolPorts(),
 ): Promise<MedicationsTimelineResult | ToolRefusal> =>
-  audited<MedicationsTimelineResult | ToolRefusal>(
-    scope,
-    "medications_timeline",
-    input,
-    input.subject_ref,
-    async () => {
-      if (!(await subjectInScope(scope, input.subject_ref, ports))) {
-        return SUBJECT_SCOPE_VIOLATION;
-      }
-      const find = ports.findMedicationRequests ?? findMedicationRequestsInDatabase;
-      const rows = await find(clinicalQuery(input));
-      if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
-      if (rows.length === 0) return noRecords("medication request", input);
-      return { ...echo(input), ...medicationsTimeline(rows) };
-    },
-    (result) => ("n" in result ? result.n : 0),
-    ports,
+  withWindow(scope, input, (input) =>
+    audited<MedicationsTimelineResult | ToolRefusal>(
+      scope,
+      "medications_timeline",
+      input,
+      input.subject_ref,
+      async () => {
+        if (!(await subjectInScope(scope, input.subject_ref, ports))) {
+          return SUBJECT_SCOPE_VIOLATION;
+        }
+        const find = ports.findMedicationRequests ?? findMedicationRequestsInDatabase;
+        const rows = await find(clinicalQuery(input));
+        if (rows.length > CLINICAL_ROW_CAP) return recordCapExceeded(CLINICAL_ROW_CAP);
+        if (rows.length === 0) return noRecords("medication request", input);
+        return { ...echo(input), ...medicationsTimeline(rows) };
+      },
+      (result) => ("n" in result ? result.n : 0),
+      ports,
+    ),
   );
 
 export type ValuesAroundEventInput = z.infer<typeof valuesAroundEventInput>;

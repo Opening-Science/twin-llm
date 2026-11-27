@@ -58,6 +58,7 @@ import {
 import type { WearableSummaries } from "@/infrastructure/offered-keys";
 import type { z } from "zod";
 import { audited, subjectInScope, type TimeWindow, readWindow } from "./tool-core";
+import { withWindow } from "./window-input";
 
 /** The wearable tools: sleep, HRV, resting heart rate, training load and two sources compared. */
 export type SleepSummaryInput = z.infer<typeof sleepSummaryInput>;
@@ -143,42 +144,44 @@ export const wearableTrendTool =
     ports: QueryToolPorts = defaultQueryToolPorts(),
     wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
   ): Promise<WearableTrendResult | ToolRefusal> =>
-    audited<WearableTrendResult | ToolRefusal>(
-      scope,
-      tool,
-      input,
-      input.subject_ref ?? null,
-      async () => {
-        const plan = await planWearableRead(scope, input, wearables, ports);
-        if (isToolRefusal(plan)) return plan;
-        const span = spanOf(input);
-        const endDay = utcDay(span.to);
-        const config = TREND_MEASURES[measure];
-        if (plan.kind === "snapshots") {
-          const series = plan.sources.map((source) => ({
-            source,
-            key: config.snapshot[source] ?? "",
-            readings: snapshotReadings(wearables, source, config.snapshot[source]),
-          }));
-          return wearableTrend(measure, input.source, input, span, endDay, series);
-        }
-        const rows = await readWindow(
-          ports,
-          plan.subjectRef,
-          [config.synthetic],
-          comparedRead(input),
-        );
-        if (isToolRefusal(rows)) return rows;
-        return wearableTrend(measure, input.source, input, span, endDay, [
-          {
-            source: "synthetic",
-            key: config.synthetic,
-            readings: syntheticReadings(rows, config.synthetic),
-          },
-        ]);
-      },
-      wearableRowCount,
-      ports,
+    withWindow(scope, input, (input) =>
+      audited<WearableTrendResult | ToolRefusal>(
+        scope,
+        tool,
+        input,
+        input.subject_ref ?? null,
+        async () => {
+          const plan = await planWearableRead(scope, input, wearables, ports);
+          if (isToolRefusal(plan)) return plan;
+          const span = spanOf(input);
+          const endDay = utcDay(span.to);
+          const config = TREND_MEASURES[measure];
+          if (plan.kind === "snapshots") {
+            const series = plan.sources.map((source) => ({
+              source,
+              key: config.snapshot[source] ?? "",
+              readings: snapshotReadings(wearables, source, config.snapshot[source]),
+            }));
+            return wearableTrend(measure, input.source, input, span, endDay, series);
+          }
+          const rows = await readWindow(
+            ports,
+            plan.subjectRef,
+            [config.synthetic],
+            comparedRead(input),
+          );
+          if (isToolRefusal(rows)) return rows;
+          return wearableTrend(measure, input.source, input, span, endDay, [
+            {
+              source: "synthetic",
+              key: config.synthetic,
+              readings: syntheticReadings(rows, config.synthetic),
+            },
+          ]);
+        },
+        wearableRowCount,
+        ports,
+      ),
     );
 
 /** `hrv_trend`: daily HRV per source, the maths in `wearableTrend` (wearable-analytics.ts). */
@@ -194,39 +197,46 @@ export const runSleepSummary = (
   ports: QueryToolPorts = defaultQueryToolPorts(),
   wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
 ): Promise<SleepSummaryResult | ToolRefusal> =>
-  audited<SleepSummaryResult | ToolRefusal>(
-    scope,
-    "sleep_summary",
-    input,
-    input.subject_ref ?? null,
-    async () => {
-      const plan = await planWearableRead(scope, input, wearables, ports);
-      if (isToolRefusal(plan)) return plan;
-      const span = spanOf(input);
-      if (plan.kind === "snapshots") {
-        const series = plan.sources.map((source) => ({
-          source,
-          fields: Object.fromEntries(
-            Object.entries(SLEEP_SOURCES[source].fields).map(([field, family]) => [
-              field,
-              snapshotReadings(wearables, source, family),
-            ]),
-          ),
-        }));
-        return sleepSummary(input.source, input, span, series);
-      }
-      const rows = await readWindow(ports, plan.subjectRef, SYNTHETIC_SLEEP_CODES, input);
-      if (isToolRefusal(rows)) return rows;
-      const fields = Object.fromEntries(
-        Object.entries(SLEEP_SOURCES.synthetic.fields).map(([field, code]) => [
-          field,
-          syntheticReadings(rows, code),
-        ]),
-      );
-      return sleepSummary(input.source, input, span, [{ source: "synthetic", fields }]);
-    },
-    wearableRowCount,
-    ports,
+  withWindow(scope, input, (input) =>
+    audited<SleepSummaryResult | ToolRefusal>(
+      scope,
+      "sleep_summary",
+      input,
+      input.subject_ref ?? null,
+      async () => {
+        const plan = await planWearableRead(scope, input, wearables, ports);
+        if (isToolRefusal(plan)) return plan;
+        const span = spanOf(input);
+        if (plan.kind === "snapshots") {
+          const series = plan.sources.map((source) => ({
+            source,
+            fields: Object.fromEntries(
+              Object.entries(SLEEP_SOURCES[source].fields).map(([field, family]) => [
+                field,
+                snapshotReadings(wearables, source, family),
+              ]),
+            ),
+          }));
+          return sleepSummary(input.source, input, span, series);
+        }
+        const rows = await readWindow(
+          ports,
+          plan.subjectRef,
+          SYNTHETIC_SLEEP_CODES,
+          input,
+        );
+        if (isToolRefusal(rows)) return rows;
+        const fields = Object.fromEntries(
+          Object.entries(SLEEP_SOURCES.synthetic.fields).map(([field, code]) => [
+            field,
+            syntheticReadings(rows, code),
+          ]),
+        );
+        return sleepSummary(input.source, input, span, [{ source: "synthetic", fields }]);
+      },
+      wearableRowCount,
+      ports,
+    ),
   );
 
 /** `training_load`: workouts per day or week per source (`trainingLoad`, wearable-analytics.ts). */
@@ -236,36 +246,38 @@ export const runTrainingLoad = (
   ports: QueryToolPorts = defaultQueryToolPorts(),
   wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
 ): Promise<TrainingLoadResult | ToolRefusal> =>
-  audited<TrainingLoadResult | ToolRefusal>(
-    scope,
-    "training_load",
-    input,
-    input.subject_ref ?? null,
-    async () => {
-      const plan = await planWearableRead(scope, input, wearables, ports);
-      if (isToolRefusal(plan)) return plan;
-      const span = spanOf(input);
-      const endDay = utcDay(span.to);
-      if (plan.kind === "snapshots") {
-        const sources = plan.sources.map((source) => ({
-          source,
-          parts: snapshotWorkouts(wearables, source),
-        }));
-        return trainingLoad(input.source, input, span, endDay, sources);
-      }
-      const rows = await readWindow(
-        ports,
-        plan.subjectRef,
-        SYNTHETIC_WORKOUT_CODES,
-        comparedRead(input),
-      );
-      if (isToolRefusal(rows)) return rows;
-      return trainingLoad(input.source, input, span, endDay, [
-        { source: "synthetic", parts: syntheticWorkouts(rows) },
-      ]);
-    },
-    wearableRowCount,
-    ports,
+  withWindow(scope, input, (input) =>
+    audited<TrainingLoadResult | ToolRefusal>(
+      scope,
+      "training_load",
+      input,
+      input.subject_ref ?? null,
+      async () => {
+        const plan = await planWearableRead(scope, input, wearables, ports);
+        if (isToolRefusal(plan)) return plan;
+        const span = spanOf(input);
+        const endDay = utcDay(span.to);
+        if (plan.kind === "snapshots") {
+          const sources = plan.sources.map((source) => ({
+            source,
+            parts: snapshotWorkouts(wearables, source),
+          }));
+          return trainingLoad(input.source, input, span, endDay, sources);
+        }
+        const rows = await readWindow(
+          ports,
+          plan.subjectRef,
+          SYNTHETIC_WORKOUT_CODES,
+          comparedRead(input),
+        );
+        if (isToolRefusal(rows)) return rows;
+        return trainingLoad(input.source, input, span, endDay, [
+          { source: "synthetic", parts: syntheticWorkouts(rows) },
+        ]);
+      },
+      wearableRowCount,
+      ports,
+    ),
   );
 
 export type CrossSourceCompareInput = z.infer<typeof crossSourceCompareInput>;
@@ -310,66 +322,69 @@ export const runCrossSourceCompare = (
   ports: QueryToolPorts = defaultQueryToolPorts(),
   wearables: WearableSummaries = NO_WEARABLE_SNAPSHOTS,
 ): Promise<CrossSourceCompareResult | ToolRefusal> =>
-  audited<CrossSourceCompareResult | ToolRefusal>(
-    scope,
-    "cross_source_compare",
-    input,
-    null,
-    async () => {
-      if (scope.mode !== "personal") {
-        return sourceNotConnected(input.source_a, ["synthetic"]);
-      }
-      const linked = linkedSources(wearables);
-      for (const source of [input.source_a, input.source_b]) {
-        if (!linked.includes(source)) return sourceNotConnected(source, linked);
-      }
-      const span = spanOf(input);
-      const sides = [input.source_a, input.source_b].map((source) => {
-        const key = compareKey(input.measure, source);
-        return {
-          source,
-          key: key ?? "",
-          readings: snapshotReadings(wearables, source, key).filter((reading) =>
-            inSpan(reading.at, span),
-          ),
-        };
-      });
-      for (const side of sides) {
-        if (side.readings.length === 0) return noWearableRows(input.measure, side.source);
-        const units = [...new Set(side.readings.map((reading) => reading.unit))];
-        if (units.length > 1) {
-          return wearableMixedUnits(
-            input.measure,
-            side.source,
-            units.map((unit) => unit ?? "none"),
-          );
+  withWindow(scope, input, (input) =>
+    audited<CrossSourceCompareResult | ToolRefusal>(
+      scope,
+      "cross_source_compare",
+      input,
+      null,
+      async () => {
+        if (scope.mode !== "personal") {
+          return sourceNotConnected(input.source_a, ["synthetic"]);
         }
-      }
-      const [a, b] = sides as [(typeof sides)[number], (typeof sides)[number]];
-      const unitA = a.readings[0]?.unit ?? null;
-      const unitB = b.readings[0]?.unit ?? null;
-      if (unitA !== unitB) {
-        return sourcesUnitMismatch(input.measure, [
-          { source: a.source, unit: unitA },
-          { source: b.source, unit: unitB },
-        ]);
-      }
-      const agreement = sourceAgreement(a.readings, b.readings);
-      if (agreement.n_pairs < AGREEMENT_MINIMUM) {
-        return tooFewPairedDays(input.measure, AGREEMENT_MINIMUM, agreement.n_pairs);
-      }
-      return {
-        measure: input.measure,
-        source_a: a.source,
-        source_b: b.source,
-        key_a: a.key,
-        key_b: b.key,
-        unit: unitA,
-        start: input.start,
-        end: input.end,
-        ...agreement,
-      };
-    },
-    (result) => ("n_pairs" in result ? result.n_pairs : 0),
-    ports,
+        const linked = linkedSources(wearables);
+        for (const source of [input.source_a, input.source_b]) {
+          if (!linked.includes(source)) return sourceNotConnected(source, linked);
+        }
+        const span = spanOf(input);
+        const sides = [input.source_a, input.source_b].map((source) => {
+          const key = compareKey(input.measure, source);
+          return {
+            source,
+            key: key ?? "",
+            readings: snapshotReadings(wearables, source, key).filter((reading) =>
+              inSpan(reading.at, span),
+            ),
+          };
+        });
+        for (const side of sides) {
+          if (side.readings.length === 0)
+            return noWearableRows(input.measure, side.source);
+          const units = [...new Set(side.readings.map((reading) => reading.unit))];
+          if (units.length > 1) {
+            return wearableMixedUnits(
+              input.measure,
+              side.source,
+              units.map((unit) => unit ?? "none"),
+            );
+          }
+        }
+        const [a, b] = sides as [(typeof sides)[number], (typeof sides)[number]];
+        const unitA = a.readings[0]?.unit ?? null;
+        const unitB = b.readings[0]?.unit ?? null;
+        if (unitA !== unitB) {
+          return sourcesUnitMismatch(input.measure, [
+            { source: a.source, unit: unitA },
+            { source: b.source, unit: unitB },
+          ]);
+        }
+        const agreement = sourceAgreement(a.readings, b.readings);
+        if (agreement.n_pairs < AGREEMENT_MINIMUM) {
+          return tooFewPairedDays(input.measure, AGREEMENT_MINIMUM, agreement.n_pairs);
+        }
+        return {
+          measure: input.measure,
+          source_a: a.source,
+          source_b: b.source,
+          key_a: a.key,
+          key_b: b.key,
+          unit: unitA,
+          start: input.start,
+          end: input.end,
+          ...agreement,
+        };
+      },
+      (result) => ("n_pairs" in result ? result.n_pairs : 0),
+      ports,
+    ),
   );

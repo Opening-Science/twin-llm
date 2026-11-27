@@ -12,6 +12,7 @@ import {
   importedDayObservations,
 } from "./your-day-personal-observations";
 
+const SYNTHETIC_SUBJECT = "synthetic-wearer-1";
 const day = "2026-10-27";
 const zone = "Europe/Zurich";
 const lab = {
@@ -126,7 +127,7 @@ test("links personal readings to their catalogue entry without hiding a source",
 });
 
 test("links vendor-coded wearable readings by the statistic they name", () => {
-  const meta = { subjectKey: "synthetic-wearer-1", timestamp: "2026-01-05T00:00:00Z" };
+  const meta = { subjectKey: SYNTHETIC_SUBJECT, timestamp: "2026-01-05T00:00:00Z" };
   const whoop = buildWhoopFhirBundle(SYNTHETIC_WHOOP_PAYLOAD, meta);
   const oura = buildOuraFhirBundle(
     SYNTHETIC_OURA_DATA,
@@ -195,14 +196,14 @@ test("plots Oura's daily records as summaries on the wearer's own date", () => {
               timestamp: "2026-01-02T00:00:00+01:00",
               score: 81,
               steps: 9_120,
-              contributors: {},
+              contributors: { stay_active: 88 },
             },
           ],
         },
       },
     ] as never,
     { types: ["daily_activity"], start_date: "2026-01-01", end_date: "2026-01-04" },
-    { subjectKey: "synthetic-wearer-1", timestamp: "2026-01-05T00:00:00Z" },
+    { subjectKey: SYNTHETIC_SUBJECT, timestamp: "2026-01-05T00:00:00Z" },
   );
   // Local midnight east of UTC is the previous UTC day; the record still belongs to its own.
   const rows = connectedDayObservations(oura, "Oura", "2026-01-02", "UTC");
@@ -213,6 +214,13 @@ test("plots Oura's daily records as summaries on the wearer's own date", () => {
     ]),
   );
   expect(rows.every(({ timing }) => timing === "day")).toBe(true);
+  expect(rows.map(({ value, provenance }) => [value, provenance])).toEqual(
+    expect.arrayContaining([
+      [81, "derived"],
+      [88, "derived"],
+      [9_120, "measured"],
+    ]),
+  );
   expect(connectedDayObservations(oura, "Oura", "2026-01-01", "UTC")).toEqual([]);
   expect(
     buildPickerCatalog([], [], rows).entries.find(
@@ -231,7 +239,15 @@ test("preserves date-only readings as summaries and excludes month precision", (
     day,
     "America/New_York",
   );
-  expect(rows).toEqual([expect.objectContaining({ day, timing: "day" })]);
+  expect(rows).toEqual([
+    expect.objectContaining({
+      day,
+      timing: "day",
+      provenance: "imported",
+      value: lab.value,
+      unit: lab.unit,
+    }),
+  ]);
 });
 
 test("reads stored wearable step buckets and daily totals without combining them", () => {
@@ -267,4 +283,31 @@ test("reads stored wearable step buckets and daily totals without combining them
   expect(
     buildPickerCatalog([], [], rows).charts.map(({ view }) => view.presentation),
   ).toEqual(["intervals", "daily-summary"]);
+});
+
+test("sends opaque per-response keys, never row or dataset ids", () => {
+  const rows = importedDayObservations(
+    [
+      { ...lab, id: "row-ferritin-db", datasetId: "dataset-lab-db" },
+      { ...lab, id: "row-ferritin-db-2", datasetId: "dataset-lab-db", value: 47 },
+      { ...lab, id: "row-other-db", datasetId: "dataset-other-db", value: 50 },
+    ],
+    day,
+    zone,
+  );
+  const payload = JSON.stringify(rows);
+  for (const id of [
+    "row-ferritin-db",
+    "row-other-db",
+    "dataset-lab-db",
+    "dataset-other-db",
+  ])
+    expect(payload).not.toContain(id);
+  expect(rows.map(({ id, sourceId }) => [id, sourceId])).toEqual([
+    ["import-row:0", "import-set:0"],
+    ["import-row:1", "import-set:0"],
+    ["import-row:2", "import-set:1"],
+  ]);
+  // Two imports of the same measure still chart apart.
+  expect(buildPickerCatalog([], [], rows).charts).toHaveLength(2);
 });

@@ -206,6 +206,48 @@ describe("show_my_period over a month", () => {
   });
 });
 
+describe("show_my_period windows (#901)", () => {
+  const { end: _end, ...noEnd } = WEEK;
+
+  test("end left out is today on the pinned clock, and the audit records it", async () => {
+    const { ports, audits } = fakePorts();
+    const pinned: SessionScope = { ...synthetic, now: new Date(`${END}T21:00:00Z`) };
+    const result = asResult(await runShowMyPeriod(pinned, noEnd, ports));
+    expect([result.start, result.end]).toEqual(["2026-11-10", END]);
+    expect(result.glucose.n).toBe(16);
+    expect(audits[0]?.args).toEqual(WEEK);
+  });
+
+  test("a pinned now a day later reads another week: the window check can fail", async () => {
+    const pinned: SessionScope = {
+      ...synthetic,
+      now: new Date("2026-11-17T00:00:00Z"),
+    };
+    const result = asResult(await runShowMyPeriod(pinned, noEnd, fakePorts().ports));
+    expect([result.start, result.end]).toEqual(["2026-11-11", "2026-11-17"]);
+    // The first day of the week (90 and 110 on 10 November) is no longer in it.
+    expect(result.glucose.n).toBe(14);
+  });
+
+  test("a month ending on 1 March starts on 31 January", async () => {
+    const result = asResult(
+      await runShowMyPeriod(
+        synthetic,
+        { ...WEEK, period: "month", end: "2026-03-01" },
+        fakePorts().ports,
+      ),
+    );
+    expect([result.start, result.end]).toEqual(["2026-01-31", "2026-03-01"]);
+  });
+
+  test("a week ending on 3 January starts on 28 December", async () => {
+    const result = asResult(
+      await runShowMyPeriod(synthetic, { ...WEEK, end: "2027-01-03" }, fakePorts().ports),
+    );
+    expect([result.start, result.end]).toEqual(["2026-12-28", "2027-01-03"]);
+  });
+});
+
 describe("show_my_period refusals", () => {
   test("scope first: personal mode and an unlisted cohort read nothing", async () => {
     for (const [scope, subject] of [

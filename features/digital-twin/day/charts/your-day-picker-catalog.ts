@@ -17,6 +17,8 @@ import {
   type YourDayChartId,
 } from "./your-day-charts";
 
+const PICKER = YOUR_DAY_COPY.chartPicker;
+
 export type PickerEntry = Readonly<{
   id: string;
   chartId: YourDayChartId | null;
@@ -68,8 +70,8 @@ export function buildPickerCatalog(
         id: marker ? anchorId(marker) : `wearable:${key}`,
         chartId: null,
         unit: chartUnitFor(measure.unit, measure.display).label,
-        provider: "Wearable measurement catalog",
-        description: marker?.loincDisplay ?? "Wearable measurement.",
+        provider: PICKER.wearableProvider,
+        description: marker?.loincDisplay ?? PICKER.wearableMeasure,
       });
     }
     // One entry per source, so differing values from two devices stay visible.
@@ -80,7 +82,7 @@ export function buildPickerCatalog(
         chartId: chart.id,
         unit: chart.view.label,
         provider: chart.sources.join(", "),
-        description: marker?.loincDisplay ?? "Time series in Day Replay.",
+        description: marker?.loincDisplay ?? PICKER.replaySeries,
       }),
     );
   }
@@ -97,8 +99,8 @@ export function buildPickerCatalog(
     provider: chart.sources.join(", "),
     description:
       chart.selector?.stream === "glucose" && chart.selector.specimen === "sensor"
-        ? "Glucose readings from a continuous sensor."
-        : "Time series in Day Replay.",
+        ? PICKER.sensorGlucose
+        : PICKER.replaySeries,
     search: chart.marker
       ? anchorSearch(chart.marker)
       : (chart.observations?.[0]?.code ?? ""),
@@ -121,9 +123,9 @@ export function buildPickerCatalog(
       unit: null,
       category: SYSTEM_LABEL[VITAL_ANATOMY.sleep.system],
       provider: [...sleepSources].sort().join(", "),
-      description: "Sleep intervals in Day Replay.",
+      description: PICKER.sleepIntervals,
       search: "timeline",
-      unavailableReason: "Sleep is shown on the replay timeline, not as a chart.",
+      unavailableReason: PICKER.sleepOnTimeline,
     });
   }
 
@@ -135,7 +137,7 @@ export function buildPickerCatalog(
       label: marker.loincDisplay.split(" [")[0]!.trim() || marker.nameDe,
       unit: chartUnitFor(marker.unitUcum, marker.loincDisplay).label,
       category: SYSTEM_LABEL[marker.systemId],
-      provider: YOUR_DAY_COPY.chartPicker.labProvider,
+      provider: PICKER.labProvider,
       description: marker.loincDisplay,
       search: anchorSearch(marker),
     }));
