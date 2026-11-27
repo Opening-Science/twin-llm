@@ -201,6 +201,7 @@ test("personal replay shows the atlas and does not display a future chart readin
               at: `${day}T08:00:00Z`,
               source: "Imported record",
               sourceId: "import:apple",
+              provenance: "imported",
               label: "Heart rate",
               timing: "observation",
               interval_min: 0,

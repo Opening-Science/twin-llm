@@ -21,6 +21,7 @@ const point: DayObservation = {
   codeSystem: "http://loinc.org",
   sourceId: "import:apple",
   source: "Imported record",
+  provenance: "imported",
   label: "Heart rate",
   unit: "/h",
   day,
