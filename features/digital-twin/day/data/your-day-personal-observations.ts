@@ -24,7 +24,16 @@ export function importedDayObservations(
   zone: string,
 ): DayObservation[] {
   const bounds = localDayBounds(day, zone);
-  return rows.flatMap((row) => {
+  // The browser gets opaque keys scoped to this response, never database ids:
+  // `id` is the row's position in this read, and `sourceId` numbers each
+  // dataset in the order it first appears, which keeps two imports apart.
+  const datasetKey = new Map(
+    [...new Set(rows.map(({ datasetId }) => datasetId))].map((id, index) => [
+      id,
+      `import-set:${index}`,
+    ]),
+  );
+  return rows.flatMap((row, index) => {
     if (!Number.isFinite(row.value)) return [];
     const at = row.effectiveAt.toISOString();
     const daily = row.effectivePrecision === "day";
@@ -36,14 +45,14 @@ export function importedDayObservations(
       return [];
     return [
       {
-        id: row.id,
+        id: `import-row:${index}`,
         codeSystem: row.codeSystem,
         code: row.code,
         unit: row.unit,
         value: row.value,
         day,
         at,
-        sourceId: `import:${row.datasetId}`,
+        sourceId: datasetKey.get(row.datasetId) ?? "import",
         source: YOUR_DAY_COPY.personal.importedSource,
         label: row.display,
         timing: daily ? "day" : "observation",

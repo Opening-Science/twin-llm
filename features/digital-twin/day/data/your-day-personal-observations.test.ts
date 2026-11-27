@@ -235,3 +235,30 @@ test("reads stored wearable step buckets and daily totals without combining them
     buildPickerCatalog([], [], rows).charts.map(({ view }) => view.presentation),
   ).toEqual(["intervals", "daily-summary"]);
 });
+
+test("sends opaque per-response keys, never row or dataset ids", () => {
+  const rows = importedDayObservations(
+    [
+      { ...lab, id: "row-ferritin-db", datasetId: "dataset-lab-db" },
+      { ...lab, id: "row-ferritin-db-2", datasetId: "dataset-lab-db", value: 47 },
+      { ...lab, id: "row-other-db", datasetId: "dataset-other-db", value: 50 },
+    ],
+    day,
+    zone,
+  );
+  const payload = JSON.stringify(rows);
+  for (const id of [
+    "row-ferritin-db",
+    "row-other-db",
+    "dataset-lab-db",
+    "dataset-other-db",
+  ])
+    expect(payload).not.toContain(id);
+  expect(rows.map(({ id, sourceId }) => [id, sourceId])).toEqual([
+    ["import-row:0", "import-set:0"],
+    ["import-row:1", "import-set:0"],
+    ["import-row:2", "import-set:1"],
+  ]);
+  // Two imports of the same measure still chart apart.
+  expect(buildPickerCatalog([], [], rows).charts).toHaveLength(2);
+});
