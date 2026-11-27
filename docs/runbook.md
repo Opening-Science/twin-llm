@@ -199,7 +199,7 @@ bun run anchor:rotate -- --without-old-key   # the old key is lost or exposed
 Checks out open-twin at `<sha>` into the gitignored `.open-twin/`, builds `fhir-core`, `fhir-r4`, `aggregate`, `anchor-layer` and the three providers, and pins their `fhir-core` peer. It never edits upstream `*.ts`. `@open-twin/interpreter` is not synced. Upgrade procedure: `docs/open-twin-pins.md`.
 
 ```sh
-bash scripts/sync-open-twin.sh 2fd26911c43c3007c8b87a88bf8a3647fa90ded0
+bash scripts/sync-open-twin.sh 27ccbd40db282050c79d902c793de2863fb42332
 git -C .open-twin rev-parse HEAD
 git -C .open-twin status --porcelain -- '*.ts' | wc -l
 ```

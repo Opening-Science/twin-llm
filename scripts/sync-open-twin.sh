@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-2fd26911c43c3007c8b87a88bf8a3647fa90ded0}}"
+OPEN_TWIN_SHA="${1:-${OPEN_TWIN_SHA:-27ccbd40db282050c79d902c793de2863fb42332}}"
 OPEN_TWIN_REPO="${OPEN_TWIN_REPO:-https://github.com/Opening-Science/open-twin.git}"
 DEST="${ROOT}/.open-twin"
 PACKAGES=(fhir-core fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic anchor-layer)
@@ -34,16 +34,18 @@ if [[ "${GOT}" != "${OPEN_TWIN_SHA}" ]]; then
   exit 1
 fi
 
-# Standalone installs cannot resolve monorepo workspace:* protocol.
+# Standalone installs cannot resolve the monorepo workspace: protocol
+# (upstream uses both workspace:* and workspace:^).
 for pkg in fhir-r4 aggregate provider-oura provider-google-health provider-whoop provider-vitronic; do
   python3 - <<PY
+import re
 from pathlib import Path
 p = Path("packages/${pkg}/package.json")
-text = p.read_text()
-if '"workspace:*"' not in text and "'workspace:*'" not in text:
+text, n = re.subn(r'"workspace:[^"]*"', '"file:../fhir-core"', p.read_text())
+if n == 0:
     raise SystemExit(0)
-p.write_text(text.replace('"workspace:*"', '"file:../fhir-core"'))
-print(f"rewrote workspace:* -> file:../fhir-core in {p}")
+p.write_text(text)
+print(f"rewrote {n} workspace: deps -> file:../fhir-core in {p}")
 PY
 done
 
