@@ -97,7 +97,14 @@ export const readingInSeriesAt = (
       text: "Not recorded on this day.",
     };
   }
-  const latest = series.findLast((reading) => Date.parse(reading.at) <= cursorMs);
+  let low = 0;
+  let high = series.length;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (Date.parse(series[mid]!.at) <= cursorMs) low = mid + 1;
+    else high = mid;
+  }
+  const latest = series[low - 1];
   if (latest === undefined) {
     return { state: "unavailable", why: "not_yet", text: "No reading yet at this time." };
   }

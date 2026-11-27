@@ -30,6 +30,7 @@ test("selects an Anchor lab observation as a replay chart without a predefined s
     </YourDayLayout>,
   );
   expect(html).toContain(">Ferritin</h4>");
+  expect(html).not.toContain("Show anatomy for Ferritin");
   expect(html).toContain("Last recorded at 08:40");
   expect(html).toContain("measured · Synthetic demo lab");
   expect(html).toContain("Synthetic demo</p>");
@@ -63,6 +64,11 @@ test("renders replay controls and events before playback begins", () => {
   expect(html.indexOf("Biomarker charts")).toBeLessThan(html.indexOf("Daily replay"));
   expect(html).toContain(">Heart rate</h4>");
   expect(html).toContain(">Glucose</h4>");
+  expect(html).toMatch(
+    /<button[^>]*aria-label="Show anatomy for Heart rate" aria-pressed="false"[^>]*><\/button>/,
+  );
+  expect(html).toContain('aria-label="Show anatomy for Glucose"');
+  expect(html).not.toContain('aria-label="Show anatomy for Steps"');
   expect(html).toContain("mg/dL");
   expect(chartIds).toHaveLength(6);
   expect(html.match(/<p>Synthetic demo<\/p>/g)).toHaveLength(6);
@@ -89,6 +95,10 @@ test("renders replay controls and events before playback begins", () => {
     );
   }
   expect(html).toContain(">Demo data</span>");
+  expect(html).not.toContain('aria-label="Replay vitals"');
+  expect(html).not.toContain("Demo readings");
+  expect(html).not.toContain("illustrative paths baked along");
+  expect(html).toContain('docs/glucose-particles.md#attribution"');
   expect(html).not.toMatch(/Event details|Synthetic demonstration/);
   expect(html).toContain('aria-label="Remove Heart rate chart"');
   expect(html).toMatch(
@@ -153,4 +163,56 @@ test("the atlas viewport has an accessible name and no on-screen controls", () =
   expect(html).toContain('role="img" aria-label="Organ-level 3D reference anatomy"');
   expect(html).not.toMatch(/<(button|select|input|summary|h[1-6])\b/);
   expect(html).not.toContain("tabindex=");
+});
+
+test("personal replay shows the atlas and does not display a future chart reading", () => {
+  const [fixture] = demoDays;
+  const day = fixture!.selection.day;
+  const selection = { ...fixture!.selection, subject_ref: "personal" };
+  const html = renderToStaticMarkup(
+    <YourDayLayout
+      initialDate={day}
+      demoIdentity={selection}
+      personal
+      demoDays={[
+        {
+          selection,
+          notice: null,
+          events: [],
+          phases: [],
+          chartData: {
+            day: {
+              ...selection,
+              origin: "recorded",
+              notice: null,
+              readings: [],
+              events: [],
+              narrations: [],
+            },
+          },
+          observations: [
+            {
+              id: "apple-heart",
+              codeSystem: "http://loinc.org",
+              code: "8867-4",
+              unit: "/min",
+              value: 83,
+              day,
+              at: `${day}T08:00:00Z`,
+              source: "Imported record",
+              sourceId: "import:apple",
+              provenance: "imported",
+              label: "Heart rate",
+              timing: "observation",
+              interval_min: 0,
+            },
+          ],
+        },
+      ]}
+    />,
+  );
+  expect(html).toContain('role="img" aria-label="Organ-level 3D reference anatomy"');
+  expect(html).toContain("Personal readings");
+  expect(html.match(/No reading yet at this time\./g)).toHaveLength(2);
+  expect(html).not.toContain(">83");
 });

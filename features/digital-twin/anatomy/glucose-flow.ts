@@ -1,7 +1,17 @@
-import { AnimationMixer, LoopRepeat, type AnimationClip, type Object3D } from "three";
+import {
+  AnimationMixer,
+  LoopRepeat,
+  Mesh,
+  type AnimationClip,
+  type BufferGeometry,
+  type Material,
+  type Object3D,
+} from "three";
 
 import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
 import { type AtlasId } from "@/packages/anatomy/manifest";
+
+import { SCAN_RENDER_ORDER } from "./depth-prepass";
 
 /** `missing`: the file is not fetched here, which is a setup step, not a failure. */
 export type GlucoseStatus = "idle" | "loading" | "ready" | "missing" | "error";
@@ -18,7 +28,11 @@ export const glucoseUnavailable = (
 };
 
 /** Typed implementation of the handoff's metadata/name and visibility contract. */
-export const createGlucoseFlow = (root: Object3D, clips: readonly AnimationClip[]) => {
+export const createGlucoseFlow = (
+  root: Object3D,
+  clips: readonly AnimationClip[],
+  presentation: "authored" | "replay-markers" = "authored",
+) => {
   const particles: { node: Object3D; rank: number }[] = [];
   root.traverse((node) => {
     const match = /^GlucoseParticle_(\d{3})$/.exec(node.name);
@@ -47,6 +61,25 @@ export const createGlucoseFlow = (root: Object3D, clips: readonly AnimationClip[
   }
   const clip = clips.find((candidate) => candidate.name === GLUCOSE_EFFECT.clip);
   if (!clip) throw new Error("GlucoseFlow animation is missing.");
+  if (presentation === "replay-markers") {
+    const geometries = new Set<BufferGeometry>();
+    const materials = new Set<Material>();
+    for (const { node } of particles) {
+      if (!(node instanceof Mesh)) continue;
+      geometries.add(node.geometry);
+      for (const material of Array.isArray(node.material)
+        ? node.material
+        : [node.material]) {
+        materials.add(material);
+      }
+      Object.assign(node, { renderOrder: SCAN_RENDER_ORDER + 1 });
+    }
+    // Keep authored paths and keyframes; draw legible markers over the atlas depth passes.
+    for (const geometry of geometries) geometry.scale(4.5, 4.5, 4.5);
+    for (const material of materials) {
+      Object.assign(material, { depthTest: false, depthWrite: false, transparent: true });
+    }
+  }
   const mixer = new AnimationMixer(root);
   const action = mixer.clipAction(clip);
   action.setLoop(LoopRepeat, Infinity);

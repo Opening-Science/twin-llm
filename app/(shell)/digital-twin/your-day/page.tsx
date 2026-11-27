@@ -3,7 +3,6 @@ import { cookies } from "next/headers";
 import { YourDayLayout } from "@/features/digital-twin/day/your-day-layout";
 import { readPersonalReplay } from "@/features/digital-twin/day/data/your-day-personal";
 import { yourDayReplayFixtures } from "@/features/digital-twin/day/data/your-day-replay-demo";
-import { YourDayViewer } from "@/features/digital-twin/day/your-day-viewer";
 import { YourDayViewerZone } from "@/features/digital-twin/day/your-day-viewer-zone";
 import {
   YOUR_DAY_ZONE_COOKIE,
@@ -78,9 +77,7 @@ export default async function YourDayPage({
           initialDate={DEMO_REFERENCE_DAY}
           demoDays={yourDayReplayFixtures()}
           demoIdentity={{ subject_ref: DEMO_PERSON_A, time_zone: DEMO_TIME_ZONE }}
-        >
-          <YourDayViewer />
-        </YourDayLayout>
+        />
       )}
     </DigitalTwinFrame>
   );

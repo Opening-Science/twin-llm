@@ -124,6 +124,8 @@ export const YOUR_DAY_COPY = {
     lastObservation: "Last recorded at",
     cursor: "replay cursor",
     remove: (label: string) => `Remove ${label} chart`,
+    focus: (label: string) => `Show anatomy for ${label}`,
+    resetFocus: "Return to full-body view",
     stale: "Stale · last reading",
     band: "Derived reference band:",
     gaps: (count: number) => `${count} data ${count === 1 ? "gap" : "gaps"}`,

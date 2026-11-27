@@ -41,10 +41,14 @@ export const GlucoseParticles = ({
   model,
   reducedMotion,
   vesselsVisible,
+  playing = true,
+  presentation = "authored",
 }: Readonly<{
   model: GlucoseParticlesModel;
   reducedMotion: boolean;
   vesselsVisible: () => boolean;
+  playing?: boolean;
+  presentation?: Parameters<typeof createGlucoseFlow>[2];
 }>) => {
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);
@@ -69,7 +73,7 @@ export const GlucoseParticles = ({
           return;
         }
         try {
-          owned = createGlucoseFlow(gltf.scene, gltf.animations);
+          owned = createGlucoseFlow(gltf.scene, gltf.animations, presentation);
           setFlow(owned);
           onStatus("ready");
           invalidate();
@@ -94,12 +98,12 @@ export const GlucoseParticles = ({
       }
       onStatus("idle");
     };
-  }, [retry, onStatus, invalidate]);
+  }, [retry, onStatus, invalidate, presentation]);
 
   useEffect(() => {
     flow?.setDensity(density);
     invalidate();
-  }, [flow, density, reducedMotion, invalidate]);
+  }, [flow, density, playing, reducedMotion, invalidate]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -127,9 +131,14 @@ export const GlucoseParticles = ({
     if (!flow) return;
     const visible = density > 0 && vesselsVisible();
     Object.assign(flow.root, { visible });
-    const running = visible && !reducedMotion && visibleRef.current && !document.hidden;
+    const running =
+      playing && visible && !reducedMotion && visibleRef.current && !document.hidden;
     if (!running) {
       lastFrameRef.current = null;
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       return;
     }
     const now = performance.now();

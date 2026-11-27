@@ -1,3 +1,4 @@
+import { SYSTEMS } from "@open-twin/fhir-core";
 import { type Bundle, type Observation } from "fhir/r4";
 
 import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
@@ -10,6 +11,7 @@ import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-
 import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { isDailyRecord, isOuraScore, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
+import { BLOOD_GLUCOSE_LOINC, SENSOR_GLUCOSE_LOINC } from "../glucose-codes";
 
 export type ImportedDayObservation = ImportedObservationRecord &
   Readonly<{ codeSystem: string | null }>;
@@ -20,6 +22,17 @@ const identityCoding = (codings: readonly Coding[] = []) =>
   codings.find(({ system }) => system && VENDOR_SYSTEMS.has(system)) ??
   codings.find(({ system }) => system === LOINC_SYSTEM) ??
   codings[0];
+
+const isSensorGlucose = (observation: Observation, coding: Coding | undefined) =>
+  coding?.system === LOINC_SYSTEM &&
+  coding.code === BLOOD_GLUCOSE_LOINC &&
+  observation.component?.some(
+    ({ code, valueString }) =>
+      valueString === "INTERSTITIAL_FLUID" &&
+      code.coding?.some(
+        ({ system, code }) => system === SYSTEMS.GOOGLE_HEALTH && code === "specimen",
+      ),
+  ) === true;
 
 export function importedDayObservations(
   rows: readonly ImportedDayObservation[],
@@ -126,8 +139,13 @@ export function connectedDayObservations(
         const { valueQuantity, code } = record;
         const value = valueQuantity?.value;
         if (value === undefined || !Number.isFinite(value)) return [];
-        const term = identityCoding(code.coding);
-        const label = code.text || term?.display || term?.code;
+        const sensor = part === 0 && isSensorGlucose(resource, coding);
+        const term = sensor
+          ? { system: LOINC_SYSTEM, code: SENSOR_GLUCOSE_LOINC }
+          : identityCoding(code.coding);
+        const label = sensor
+          ? "Sensor glucose"
+          : code.text || term?.display || term?.code;
         if (!label) return [];
         const unit = valueQuantity?.code || valueQuantity?.unit || "";
         return [

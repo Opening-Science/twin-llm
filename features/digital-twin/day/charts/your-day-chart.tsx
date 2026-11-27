@@ -15,6 +15,7 @@ import { localClock } from "@/packages/query-tools/replay/local-time";
 import { useReplayActions, useReplaySnapshot } from "../../replay/replay-provider";
 import { stepReplayOnArrow } from "../../replay/replay-seek-keys";
 import { YOUR_DAY_COPY } from "../../twin-page-copy";
+import { vitalReadingAt, type VitalSeries } from "../replay/your-day-vitals";
 import styles from "../replay/your-day-replay.module.css";
 import {
   intervalEndMs,
@@ -35,10 +36,16 @@ const timestamp = (ms: number, zone: string) => {
 export function YourDayChart({
   chart,
   data,
+  vitalSeries,
+  selected = false,
+  onClick,
   onRemove,
 }: Readonly<{
   chart: YourDayChartDefinition;
   data: YourDayChartData | null;
+  vitalSeries?: VitalSeries;
+  selected?: boolean;
+  onClick?: () => void;
   onRemove: () => void;
 }>) {
   const heading = useId();
@@ -109,8 +116,12 @@ export function YourDayChart({
         const from = Date.parse(at);
         return cursorMs >= from && cursorMs < intervalEndMs(from, interval_min);
       }) ?? null);
-  const reading =
-    summary || points
+  const vital = vitalSeries ? vitalReadingAt(vitalSeries, cursorMs) : null;
+  const reading = vital
+    ? vital.state === "available"
+      ? vital.reading
+      : null
+    : summary || points
       ? (model?.observations.at(-1) ?? null)
       : intervals &&
           currentReading &&
@@ -123,22 +134,32 @@ export function YourDayChart({
   const cursorTime = timestamp(cursorMs, zone);
   const observationTime =
     points && reading ? timestamp(Date.parse(reading.at), zone) : null;
-  const value = reading ? valueText(reading.value * scale) : null;
+  const value = reading ? valueText(reading.value * (vital ? 1 : scale)) : null;
+  const readingDetail = vital ?? (!selector || summary || points ? null : current);
   const detail =
-    !selector || summary || points
-      ? null
-      : current?.state === "stale"
-        ? `${COPY.stale} ${timestamp(Date.parse(current.reading.at), zone)}`
-        : current?.state === "unavailable"
-          ? current.text
-          : null;
+    readingDetail?.state === "stale"
+      ? `${COPY.stale} ${timestamp(Date.parse(readingDetail.reading.at), zone)}`
+      : readingDetail?.state === "unavailable"
+        ? readingDetail.text
+        : null;
 
   return (
     <article
       aria-labelledby={heading}
       data-replay-chart={presentation}
-      className="dark surface text-foreground @container flex min-h-0 min-w-0 flex-col p-4 @sm:p-5"
+      className="dark surface text-foreground data-[selected=true]:border-primary @container relative isolate flex min-h-0 min-w-0 flex-col p-4 @sm:p-5"
+      data-selected={selected}
     >
+      {onClick && (
+        <button
+          type="button"
+          className="focus-visible:outline-ring absolute inset-0 z-1 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-4"
+          aria-label={COPY.focus(label)}
+          aria-pressed={selected}
+          title={selected ? COPY.resetFocus : COPY.focus(label)}
+          onClick={onClick}
+        />
+      )}
       <header className="flex items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-1">
           <h4 id={heading} className="text-sm font-semibold">
@@ -155,7 +176,7 @@ export function YourDayChart({
         </div>
         <button
           type="button"
-          className="bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-ring grid size-8 shrink-0 place-items-center rounded-md focus-visible:outline-2"
+          className="bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-ring relative z-10 grid size-8 shrink-0 place-items-center rounded-md focus-visible:outline-2"
           aria-label={COPY.remove(label)}
           onClick={onRemove}
         >
@@ -168,7 +189,7 @@ export function YourDayChart({
             ? presentation === "daily-summary"
               ? COPY.dailySummary
               : COPY.nightlySummary
-            : `${COPY.lastObservation} ${observationTime}`}
+            : `${vital ? "Reading at cursor:" : COPY.lastObservation} ${observationTime}`}
         </p>
       )}
       <p className="mt-3 text-3xl leading-none font-semibold tabular-nums">
@@ -185,7 +206,7 @@ export function YourDayChart({
               : timestamp(Date.parse(reading.at), zone)}
           </p>
         )}
-        {detail && <p>{detail}</p>}
+        {!vital && detail && <p>{detail}</p>}
         {!data && <p>{COPY.noReadings}</p>}
         {bandState?.state === "unavailable" && <p>{bandState.text}</p>}
         {model && model.gaps.length > 0 && (
@@ -198,6 +219,7 @@ export function YourDayChart({
           </p>
         )}
       </div>
+      {vital && detail && <p className="text-muted-foreground mt-1 text-xs">{detail}</p>}
       {summary && band && (
         <p className="text-muted-foreground mt-3 text-xs">
           {COPY.band} {valueText(band.low * scale)}–{valueText(band.high * scale)} {unit}.
@@ -212,7 +234,7 @@ export function YourDayChart({
                 type="range"
                 aria-label={`${label} ${COPY.cursor}`}
                 aria-valuetext={
-                  points
+                  points && !vital
                     ? cursorTime
                     : `${cursorTime}, ${value === null ? COPY.noDataLower : `${value} ${unit}`}`
                 }

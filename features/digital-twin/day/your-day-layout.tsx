@@ -15,7 +15,10 @@ import { MAX_YOUR_DAY_CHARTS, type YourDayChartId } from "./charts/your-day-char
 import { YourDayDatePicker } from "./your-day-date-picker";
 import { buildPickerCatalog } from "./charts/your-day-picker-catalog";
 import { YourDayReplay, YourDayReplayClock } from "./replay/your-day-replay";
+import { YourDayVitalsPanel } from "./replay/your-day-vitals-panel";
+import { vitalSeriesForChart } from "./replay/your-day-vitals";
 import { type YourDayDemo } from "./data/your-day-replay-demo";
+import { yourDayChartFocus, type YourDayCameraRequest } from "./your-day-camera";
 
 const atlas = ATLASES[DEFAULT_ATLAS_ID];
 
@@ -53,7 +56,7 @@ export function YourDayLayout({
   initialChartIds,
   personal = false,
 }: Readonly<{
-  children: ReactNode;
+  children?: ReactNode;
   initialDate: string;
   demoDays: readonly YourDayDemo[];
   demoIdentity: Pick<YourDayDemo["selection"], "subject_ref" | "time_zone">;
@@ -61,6 +64,7 @@ export function YourDayLayout({
   personal?: boolean;
 }>) {
   const [date, setDate] = useState(initialDate);
+  const [cameraRequest, setCameraRequest] = useState<YourDayCameraRequest>();
   const catalog = useMemo(
     () =>
       buildPickerCatalog(
@@ -80,6 +84,15 @@ export function YourDayLayout({
   const chartsTitle = useRef<HTMLHeadingElement>(null);
   const data = demoDays.find(({ selection }) => selection.day === date) ?? null;
   const selection = data?.selection ?? { ...demoIdentity, day: date };
+  const activeDay = data?.chartData.day;
+  const vitalSeries = new Map(
+    activeDay
+      ? catalog.charts.flatMap((chart) => {
+          const series = vitalSeriesForChart(chart, activeDay, activeDay);
+          return series ? [[series.id, series] as const] : [];
+        })
+      : [],
+  );
   return (
     <ReplayProvider selection={selection} story={data}>
       <section
@@ -102,7 +115,12 @@ export function YourDayLayout({
             <YourDayChartPicker
               catalog={catalog}
               active={chartIds}
-              onApply={setChartIds}
+              onApply={(ids) => {
+                setChartIds(ids);
+                setCameraRequest((request) =>
+                  request && ids.includes(request.chartId) ? request : undefined,
+                );
+              }}
             />
           </div>
           {personal && catalog.charts.length === 0 && (
@@ -114,6 +132,17 @@ export function YourDayLayout({
         <div className="grid gap-4 @2xl/replay:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
           <section aria-label={YOUR_DAY_COPY.viewerRegion} className="surface min-w-0">
             {children}
+            <YourDayVitalsPanel
+              key={JSON.stringify([
+                selection.subject_ref,
+                selection.day,
+                selection.time_zone,
+              ])}
+              series={vitalSeries}
+              reducedMotion={reducedMotion}
+              personal={personal}
+              cameraRequest={cameraRequest}
+            />
           </section>
           <section
             aria-labelledby="your-day-charts"
@@ -139,13 +168,29 @@ export function YourDayLayout({
                 {chartIds.flatMap((id) => {
                   const chart = chartById.get(id);
                   if (!chart) return [];
+                  const region = yourDayChartFocus(chart);
                   return (
                     <AnimatedChartCard key={id} reducedMotion={reducedMotion}>
                       <YourDayChart
                         chart={chart}
                         data={data?.chartData ?? null}
+                        vitalSeries={vitalSeries.get(id)}
+                        selected={cameraRequest?.chartId === id}
+                        onClick={
+                          region
+                            ? () =>
+                                setCameraRequest((request) =>
+                                  request?.chartId === id
+                                    ? undefined
+                                    : { chartId: id, region },
+                                )
+                            : undefined
+                        }
                         onRemove={() => {
                           setChartIds((ids) => ids.filter((chartId) => chartId !== id));
+                          setCameraRequest((request) =>
+                            request?.chartId === id ? undefined : request,
+                          );
                           chartsTitle.current?.focus({ preventScroll: true });
                         }}
                       />
@@ -161,6 +206,13 @@ export function YourDayLayout({
           {atlas.attribution} {ANATOMY_CHANGES_NOTE}{" "}
           <a href={atlas.licenceUrl} className="underline">
             CC BY 4.0
+          </a>
+          {" · "}
+          <a
+            href="https://github.com/Opening-Science/twin-llm/blob/main/docs/glucose-particles.md#attribution"
+            className="underline"
+          >
+            Particle credits
           </a>
         </p>
       </section>
