@@ -207,6 +207,8 @@ const SCRIPTS: Readonly<Record<string, string>> = {
   "scripts/release/pinned-fetch.ts": "downloads pinned release artefacts",
   "scripts/setup/cohort-load.ts": "downloads the pinned synthetic cohort",
   "scripts/setup/detect.ts": "asks the local Ollama which models it has",
+  "scripts/setup/dev.ts":
+    "briefly listens on the redirect proxies' local ports to see they are free; sends nothing",
   "scripts/setup/voice-probe.ts":
     "asks the speech sidecar on loopback for its health; never an address elsewhere",
   "scripts/setup/prompt-size.ts":
