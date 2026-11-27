@@ -1,8 +1,14 @@
+import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
 import { listBiomarkers } from "@/packages/biomarkers/catalogue";
-import { LOINC_SYSTEM } from "@/packages/query-tools/imported-ports";
+import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
 
-import { chartPresentation } from "./your-day-chart-units";
-import { type YourDayChartDefinition } from "./your-day-charts";
+import { chartPresentation, unitIdentity } from "./your-day-chart-units";
+import {
+  anchorMarkerFor,
+  MEASURE_SYSTEMS,
+  measureKeyFor,
+  type YourDayChartDefinition,
+} from "./your-day-charts";
 
 export type DayObservation = Readonly<{
   id: string;
@@ -21,12 +27,17 @@ export type DayObservation = Readonly<{
 
 export function observationCharts(
   rows: readonly DayObservation[],
+  markers: readonly Biomarker[] = listBiomarkers(),
 ): YourDayChartDefinition[] {
-  const markers = listBiomarkers();
   const groups = new Map<string, DayObservation[]>();
   for (const row of rows) {
     const identity = row.code === null ? row.label : [row.codeSystem, row.code];
-    const id = JSON.stringify([row.sourceId, identity, row.unit, row.timing]);
+    const id = JSON.stringify([
+      row.sourceId,
+      identity,
+      unitIdentity(row.unit),
+      row.timing,
+    ]);
     const group = groups.get(id);
     if (group) group.push(row);
     else groups.set(id, [row]);
@@ -34,25 +45,18 @@ export function observationCharts(
   return [...groups].flatMap(([key, observations]) => {
     const first = observations[0];
     if (!first) return [];
-    const matches =
-      first.codeSystem === LOINC_SYSTEM
-        ? markers.filter(
-            (marker) =>
-              marker.loincCode === first.code &&
-              marker.unitUcum === first.unit &&
-              !marker.blocked,
-          )
-        : [];
-    const marker = matches.length === 1 ? matches[0] : undefined;
+    const marker = anchorMarkerFor(markers, first);
+    const measureKey = measureKeyFor(first);
     return [
       {
         id: `observations:${key}`,
         selector: null,
         label: first.label,
         view: chartPresentation(first.unit, first.label, first.timing),
-        system: marker?.systemId ?? "unassigned",
+        system:
+          marker?.systemId ?? (measureKey && MEASURE_SYSTEMS[measureKey]) ?? "unassigned",
         sources: [first.source],
-        measure: null,
+        measure: measureKey ? MEASURES[measureKey] : null,
         marker,
         observations: observations.sort((a, b) => a.at.localeCompare(b.at)),
       },

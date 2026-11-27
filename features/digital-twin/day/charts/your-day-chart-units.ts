@@ -22,6 +22,15 @@ const CHART_UNITS = new Map<string, UnitRule>([
   ["g/L", { canonical: "mg/dL", scale: 100, accent: "warm" }],
 ]);
 
+// UCUM spellings of one unit: matching on them needs no numeric conversion.
+const SAME_UNIT = new Map([
+  ["ug/L", "ng/mL"],
+  ["ng/L", "pg/mL"],
+  ["mg/L", "ug/mL"],
+]);
+
+export const unitIdentity = (unit: string) => SAME_UNIT.get(unit) ?? unit;
+
 export function chartUnitFor(unit: string, label: string) {
   const rule = CHART_UNITS.get(unit);
   const canonical = rule?.canonical ?? unit;

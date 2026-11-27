@@ -2,6 +2,7 @@ import { type OrganSystem, type SystemId } from "@/packages/anatomy/systems";
 import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
 import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
 import { MEASURES, type Measure } from "@/packages/personal-data/wearable-measure-codes";
+import { LOINC_SYSTEM } from "@/packages/query-tools/imported-ports";
 import { type SeriesSelector } from "@/packages/query-tools/replay/at-time";
 import { isAvailable, type ReplayReading } from "@/packages/query-tools/replay/items";
 import { type ReplayDay } from "@/packages/query-tools/replay/replay-day";
@@ -11,8 +12,60 @@ import {
 } from "@/packages/query-tools/replay/nights";
 
 import { YOUR_DAY_COPY } from "../../twin-page-copy";
-import { chartPresentation } from "./your-day-chart-units";
+import { vendorMeasureKey } from "./vendor-measures";
+import { chartPresentation, unitIdentity } from "./your-day-chart-units";
 import { type DayObservation } from "./your-day-observations";
+
+type MeasureKey = keyof typeof MEASURES;
+type Identity = Readonly<{
+  codeSystem: string | null;
+  code: string | null;
+  unit: string;
+}>;
+
+export const MEASURE_SYSTEMS: Partial<Record<MeasureKey, SystemId>> = {
+  heartRate: VITAL_ANATOMY.heartRate.system,
+  restingHeartRate: VITAL_ANATOMY.rhr.system,
+  hrvSdnn: VITAL_ANATOMY.hrv.system,
+  hrvRmssd: VITAL_ANATOMY.hrv.system,
+  steps: VITAL_ANATOMY.steps.system,
+  stepsPerDay: VITAL_ANATOMY.steps.system,
+  oxygenSaturation: VITAL_ANATOMY.spo2.system,
+  respiratoryRate: VITAL_ANATOMY.respiration.system,
+  sleepDuration: VITAL_ANATOMY.sleep.system,
+  lowestSleepHeartRate: VITAL_ANATOMY.heartRate.system,
+  workoutHeartRate: VITAL_ANATOMY.heartRate.system,
+};
+
+/** The registry measure a reading records: same code (or name, when uncoded) and unit. */
+export function measureKeyFor(row: Identity & Readonly<{ label: string }>) {
+  const alias = vendorMeasureKey(row.codeSystem, row.code);
+  if (alias) {
+    return unitIdentity(row.unit) === unitIdentity(MEASURES[alias].unit)
+      ? alias
+      : undefined;
+  }
+  return (Object.keys(MEASURES) as MeasureKey[]).find((key) => {
+    const measure: Measure = MEASURES[key];
+    const sameCode =
+      measure.code === null
+        ? row.code === null && row.label === measure.display
+        : row.codeSystem === measure.codeSystem && row.code === measure.code;
+    return sameCode && unitIdentity(row.unit) === unitIdentity(measure.unit);
+  });
+}
+
+/** The one unblocked Anchor marker with this LOINC code and unit, if exactly one exists. */
+export function anchorMarkerFor(markers: readonly Biomarker[], row: Identity) {
+  if (row.codeSystem !== LOINC_SYSTEM || !row.code) return undefined;
+  const matches = markers.filter(
+    (marker) =>
+      marker.loincCode === row.code &&
+      unitIdentity(marker.unitUcum) === unitIdentity(row.unit) &&
+      !marker.blocked,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
 
 const wearable = {
   heart_rate: { measure: MEASURES.heartRate, system: VITAL_ANATOMY.heartRate.system },

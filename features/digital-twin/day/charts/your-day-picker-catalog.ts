@@ -1,4 +1,3 @@
-import { type SystemId } from "@/packages/anatomy/systems";
 import { type Biomarker } from "@/packages/biomarkers/anchor-layer";
 import { listBiomarkers } from "@/packages/biomarkers/catalogue";
 import { VITAL_ANATOMY } from "@/packages/biomarkers/vitals";
@@ -11,7 +10,9 @@ import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { chartUnitFor } from "./your-day-chart-units";
 import { type DayObservation, observationCharts } from "./your-day-observations";
 import {
+  anchorMarkerFor,
   discoverYourDayCharts,
+  MEASURE_SYSTEMS,
   type YourDayChartDefinition,
   type YourDayChartId,
 } from "./your-day-charts";
@@ -32,58 +33,61 @@ const anchorId = (marker: Biomarker) => `anchor:${marker.id}`;
 const anchorSearch = (marker: Biomarker) =>
   `${marker.nameDe} ${marker.loincCode} ${marker.id} ${marker.unitUcum}`;
 
-const wearableSystems: Partial<Record<keyof typeof MEASURES, SystemId>> = {
-  heartRate: VITAL_ANATOMY.heartRate.system,
-  restingHeartRate: VITAL_ANATOMY.rhr.system,
-  hrvSdnn: VITAL_ANATOMY.hrv.system,
-  hrvRmssd: VITAL_ANATOMY.hrv.system,
-  steps: VITAL_ANATOMY.steps.system,
-  stepsPerDay: VITAL_ANATOMY.steps.system,
-  oxygenSaturation: VITAL_ANATOMY.spo2.system,
-  respiratoryRate: VITAL_ANATOMY.respiration.system,
-  sleepDuration: VITAL_ANATOMY.sleep.system,
-  lowestSleepHeartRate: VITAL_ANATOMY.heartRate.system,
-  workoutHeartRate: VITAL_ANATOMY.heartRate.system,
-};
-
 export function buildPickerCatalog(
   days: readonly ReplayDay[],
   markers: readonly Biomarker[] = listBiomarkers(),
   observations: readonly DayObservation[] = [],
 ) {
-  const charts = [...discoverYourDayCharts(days), ...observationCharts(observations)];
-  const chartsByMeasure = new Map(charts.map((chart) => [chart.measure, chart]));
+  const charts = [
+    ...discoverYourDayCharts(days),
+    ...observationCharts(observations, markers),
+  ];
+  const chartsByMeasure = new Map<Measure, YourDayChartDefinition[]>();
+  for (const chart of charts) {
+    if (chart.measure)
+      chartsByMeasure.set(chart.measure, [
+        ...(chartsByMeasure.get(chart.measure) ?? []),
+        chart,
+      ]);
+  }
   const matched = new Set<string>();
   const wearableEntries: PickerEntry[] = [];
   for (const key of Object.keys(MEASURES) as (keyof typeof MEASURES)[]) {
     const measure: Measure = MEASURES[key];
-    const chart = chartsByMeasure.get(measure);
-    const matches =
-      measure.codeSystem === "http://loinc.org" && measure.code
-        ? markers.filter(
-            (marker) =>
-              marker.loincCode === measure.code &&
-              marker.unitUcum === measure.unit &&
-              !marker.blocked,
-          )
-        : [];
-    const marker = matches.length === 1 ? matches[0] : undefined;
+    const marker = anchorMarkerFor(markers, measure);
     if (marker) matched.add(marker.id);
-    wearableEntries.push({
-      id: marker ? anchorId(marker) : (chart?.id ?? `wearable:${key}`),
-      chartId: chart?.id ?? null,
+    const shared = {
       label: measure.display,
-      unit: chart?.view.label ?? chartUnitFor(measure.unit, measure.display).label,
-      category: SYSTEM_LABEL[marker?.systemId ?? wearableSystems[key] ?? "unassigned"],
-      provider: chart?.sources.join(", ") ?? "Wearable measurement catalog",
-      description:
-        marker?.loincDisplay ??
-        (chart ? "Time series in Day Replay." : "Wearable measurement."),
+      category: SYSTEM_LABEL[marker?.systemId ?? MEASURE_SYSTEMS[key] ?? "unassigned"],
       search: `${measure.code ?? ""} ${measure.unit} ${marker ? anchorSearch(marker) : ""}`,
-    });
+    };
+    const measureCharts = chartsByMeasure.get(measure) ?? [];
+    if (measureCharts.length === 0) {
+      wearableEntries.push({
+        ...shared,
+        id: marker ? anchorId(marker) : `wearable:${key}`,
+        chartId: null,
+        unit: chartUnitFor(measure.unit, measure.display).label,
+        provider: "Wearable measurement catalog",
+        description: marker?.loincDisplay ?? "Wearable measurement.",
+      });
+    }
+    // One entry per source, so differing values from two devices stay visible.
+    measureCharts.forEach((chart, index) =>
+      wearableEntries.push({
+        ...shared,
+        id: marker && index === 0 ? anchorId(marker) : chart.id,
+        chartId: chart.id,
+        unit: chart.view.label,
+        provider: chart.sources.join(", "),
+        description: marker?.loincDisplay ?? "Time series in Day Replay.",
+      }),
+    );
   }
 
-  const entryByChart = new Map(wearableEntries.map((entry) => [entry.chartId, entry]));
+  const entryByChart = new Map(
+    wearableEntries.flatMap((entry) => (entry.chartId ? [[entry.chartId, entry]] : [])),
+  );
   const replayOnlyEntry = (chart: YourDayChartDefinition): PickerEntry => ({
     id: chart.id,
     chartId: chart.id,

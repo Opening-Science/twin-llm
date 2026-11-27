@@ -7,7 +7,15 @@ import {
 } from "@/packages/query-tools/imported-ports";
 import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-time";
 
+import { isDailyRecord, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
+
+type Coding = Readonly<{ system?: string; code?: string; display?: string }>;
+
+const identityCoding = (codings: readonly Coding[] = []) =>
+  codings.find(({ system }) => system && VENDOR_SYSTEMS.has(system)) ??
+  codings.find(({ system }) => system === LOINC_SYSTEM) ??
+  codings[0];
 
 export function importedDayObservations(
   rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],
@@ -74,6 +82,15 @@ export function connectedDayObservations(
       coding.code === MEASURES.steps.code;
     const time = resource.effectiveDateTime;
     const dateOnly = time !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(time);
+    const identity = identityCoding(resource.code.coding);
+    const localDay = dateOnly
+      ? time
+      : !hasPeriod &&
+          time &&
+          /^\d{4}-\d{2}-\d{2}T/.test(time) &&
+          isDailyRecord(identity?.system, identity?.code)
+        ? time.slice(0, 10)
+        : null;
     const instant = new Date(
       hasPeriod
         ? interval
@@ -85,18 +102,17 @@ export function connectedDayObservations(
     );
     const belongs = interval
       ? from < bounds.end.getTime() && to > bounds.start.getTime()
-      : dateOnly
-        ? time === day
+      : localDay
+        ? localDay === day
         : inLocalDay(instant, bounds);
     if (!belongs) return [];
-    const at = dateOnly && time ? `${time}T00:00:00.000Z` : instant.toISOString();
+    const at = localDay ? `${localDay}T00:00:00.000Z` : instant.toISOString();
     return [resource, ...(resource.component ?? [])].flatMap(
       (record, part): DayObservation[] => {
         const { valueQuantity, code } = record;
         const value = valueQuantity?.value;
         if (value === undefined || !Number.isFinite(value)) return [];
-        const term =
-          code.coding?.find(({ system }) => system === LOINC_SYSTEM) ?? code.coding?.[0];
+        const term = identityCoding(code.coding);
         const label = code.text || term?.display || term?.code;
         if (!label) return [];
         return [
@@ -114,7 +130,7 @@ export function connectedDayObservations(
             timing:
               interval && part === 0
                 ? "interval"
-                : hasPeriod || dateOnly
+                : hasPeriod || localDay
                   ? "day"
                   : "observation",
             interval_min: interval && part === 0 ? duration : 0,
