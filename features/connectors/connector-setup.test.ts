@@ -49,8 +49,8 @@ describe("connectorSetupView", () => {
           command: "openssl rand -hex 32",
         },
         {
-          text: "Keep the local redirect proxy running while you link",
-          command: "bun run oura:proxy",
+          text: "Start TwinLLM with bun run dev, which also starts the local redirect proxy (bun run oura:proxy runs it on its own)",
+          command: "bun run dev",
         },
         {
           text: "Open TwinLLM at http://localhost:3000 (not 127.0.0.1) before linking, so the sign-in return finds this browser session.",
@@ -73,7 +73,7 @@ describe("connectorSetupView", () => {
     expect(view.steps.map((step) => step.command ?? null)).toEqual([
       "openssl rand -hex 32",
       "mkcert -cert-file certificates/localhost.pem -key-file certificates/localhost-key.pem localhost",
-      "bun run whoop:proxy",
+      "bun run dev",
       null,
       null,
     ]);
