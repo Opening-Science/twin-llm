@@ -5,6 +5,7 @@ import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
 import { LOINC_SYSTEM } from "@/packages/query-tools/imported-ports";
 
 import { type YourDayChartDefinition } from "../charts/your-day-charts";
+import { BLOOD_GLUCOSE_LOINCS, SENSOR_GLUCOSE_LOINC } from "../glucose-codes";
 
 type VitalMetric = "heart" | "blood" | "sensor";
 type VitalGroup = "heart" | "glucose";
@@ -22,8 +23,8 @@ const personalMetric = (code: string | null, unit: string): VitalMetric | null =
     return "heart";
   }
   if (unit !== "mg/dL" && unit !== "g/L") return null;
-  if (code === "99504-3") return "sensor";
-  return code === "2339-0" || code === "2345-7" ? "blood" : null;
+  if (code === SENSOR_GLUCOSE_LOINC) return "sensor";
+  return code !== null && BLOOD_GLUCOSE_LOINCS.includes(code) ? "blood" : null;
 };
 
 export function vitalSeriesForChart(

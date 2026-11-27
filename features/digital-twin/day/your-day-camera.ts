@@ -10,6 +10,7 @@ import { type MEASURES } from "@/packages/personal-data/wearable-measure-codes";
 import { LOINC_SYSTEM } from "@/packages/query-tools/imported-ports";
 
 import { measureKeyFor, type YourDayChartId } from "./charts/your-day-charts";
+import { GLUCOSE_LOINCS } from "./glucose-codes";
 
 // The standalone BodyParts3D atlas merges meshes by system. Frame each region
 // using fractions of its body bounds (left to right, feet to head, back to front).
@@ -39,7 +40,6 @@ const MEASURE_REGIONS: Partial<Record<keyof typeof MEASURES, YourDayRegion>> = {
   hrvSdnn: "heart",
 };
 
-const GLUCOSE_LOINC = ["99504-3", "2339-0", "2345-7"];
 
 export function yourDayChartFocus({
   id,
@@ -55,7 +55,7 @@ export function yourDayChartFocus({
   if (
     row.codeSystem === LOINC_SYSTEM &&
     row.code &&
-    GLUCOSE_LOINC.includes(row.code) &&
+    GLUCOSE_LOINCS.includes(row.code) &&
     (row.unit === "mg/dL" || row.unit === "g/L")
   ) {
     return "pancreas";

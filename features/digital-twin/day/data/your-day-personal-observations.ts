@@ -11,6 +11,7 @@ import { inLocalDay, localDayBounds } from "@/packages/query-tools/replay/local-
 import { YOUR_DAY_COPY } from "../../twin-page-copy";
 import { isDailyRecord, isOuraScore, VENDOR_SYSTEMS } from "../charts/vendor-measures";
 import { type DayObservation } from "../charts/your-day-observations";
+import { BLOOD_GLUCOSE_LOINC, SENSOR_GLUCOSE_LOINC } from "../glucose-codes";
 
 export type ImportedDayObservation = ImportedObservationRecord &
   Readonly<{ codeSystem: string | null }>;
@@ -24,7 +25,7 @@ const identityCoding = (codings: readonly Coding[] = []) =>
 
 const isSensorGlucose = (observation: Observation, coding: Coding | undefined) =>
   coding?.system === LOINC_SYSTEM &&
-  coding.code === "2339-0" &&
+  coding.code === BLOOD_GLUCOSE_LOINC &&
   observation.component?.some(
     ({ code, valueString }) =>
       valueString === "INTERSTITIAL_FLUID" &&
@@ -140,7 +141,7 @@ export function connectedDayObservations(
         if (value === undefined || !Number.isFinite(value)) return [];
         const sensor = part === 0 && isSensorGlucose(resource, coding);
         const term = sensor
-          ? { system: LOINC_SYSTEM, code: "99504-3" }
+          ? { system: LOINC_SYSTEM, code: SENSOR_GLUCOSE_LOINC }
           : identityCoding(code.coding);
         const label = sensor
           ? "Sensor glucose"
