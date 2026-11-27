@@ -3,7 +3,15 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { AnimationClip, Group, Mesh, NumberKeyframeTrack, type Object3D } from "three";
+import {
+  AnimationClip,
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  NumberKeyframeTrack,
+  type Object3D,
+} from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { GLUCOSE_EFFECT } from "@/packages/anatomy/effects";
@@ -36,6 +44,32 @@ const pool = () => {
 };
 
 describe("glucose flow", () => {
+  test("replay markers gain size and contrast without changing shared routes or authored mode", () => {
+    for (const presentation of ["authored", "replay-markers"] as const) {
+      const { root, clips } = pool();
+      const geometry = new BoxGeometry();
+      const material = new MeshBasicMaterial();
+      const [a, b] = [new Mesh(geometry, material), new Mesh(geometry, material)];
+      const names = root.children.slice(0, 2).map(({ name }) => name);
+      root.remove(...root.children.slice(0, 2));
+      a.name = names[0]!;
+      b.name = names[1]!;
+      root.add(a, b);
+      const flow = createGlucoseFlow(root, clips, presentation);
+      const overlay = presentation === "replay-markers";
+      geometry.computeBoundingBox();
+      expect(geometry.boundingBox?.max.x).toBe(overlay ? 2.25 : 0.5);
+      expect(material.depthTest).toBe(!overlay);
+      expect(material.transparent).toBe(overlay);
+      expect(flow.setDensity(0.5)).toBe(90);
+      flow.update(1);
+      expect(a.position.x).toBe(1);
+      flow.dispose();
+      geometry.dispose();
+      material.dispose();
+    }
+  });
+
   test("density changes visibility, never playback phase or the fixed 1x rate", () => {
     const { root, clips } = pool();
     const flow = createGlucoseFlow(root, clips);

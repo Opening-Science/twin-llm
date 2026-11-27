@@ -1,23 +1,40 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { type Box3, OrthographicCamera, Vector3 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { DEPTH_MAX } from "@/packages/anatomy/layers";
 import { DEFAULT_ATLAS_ID } from "@/packages/anatomy/manifest";
 
-import { AnatomyLayers } from "../anatomy/anatomy-layers";
+import { AnatomyLayers, type StandaloneAtlasEffects } from "../anatomy/anatomy-layers";
 import { type AnatomyLoad } from "../anatomy/anatomy-state";
+import { type GlucoseParticlesModel } from "../anatomy/glucose-particles";
 import { ContextLossWatcher, useWebglAvailable } from "../scan-scene";
 import { YOUR_DAY_COPY } from "../twin-page-copy";
+import { YourDayVitalsEffects } from "./replay/your-day-vitals-effects";
 
 const COPY = YOUR_DAY_COPY.viewer;
 const LAYERS = { muscle: true, skeleton: true, organs: true } as const;
 const NO_HIDDEN_SYSTEMS = [] as const;
 
-function ReferenceAtlas({ onLoad }: Readonly<{ onLoad: (load: AnatomyLoad) => void }>) {
+type ViewerEffects = Readonly<{
+  playing?: boolean;
+  reducedMotion?: boolean;
+  bpm?: number | null;
+  glucose?: GlucoseParticlesModel | null;
+  showVitals?: boolean;
+}>;
+
+function ReferenceAtlas({
+  onLoad,
+  playing = false,
+  reducedMotion = false,
+  bpm = null,
+  glucose = null,
+  showVitals = false,
+}: ViewerEffects & Readonly<{ onLoad: (load: AnatomyLoad) => void }>) {
   const [box, setBox] = useState<Box3 | null>(null);
   const camera = useThree((state) => state.camera);
   const canvas = useThree((state) => state.gl.domElement);
@@ -61,6 +78,15 @@ function ReferenceAtlas({ onLoad }: Readonly<{ onLoad: (load: AnatomyLoad) => vo
     invalidate();
   }, [box, camera, height, invalidate, width]);
 
+  const renderEffects = ({ atlas }: StandaloneAtlasEffects) => (
+    <YourDayVitalsEffects
+      atlas={atlas}
+      playing={playing}
+      reducedMotion={reducedMotion}
+      bpm={bpm}
+      glucose={glucose}
+    />
+  );
   return (
     <AnatomyLayers
       atlasId={DEFAULT_ATLAS_ID}
@@ -76,11 +102,12 @@ function ReferenceAtlas({ onLoad }: Readonly<{ onLoad: (load: AnatomyLoad) => vo
       onLoad={onLoad}
       frame="standalone"
       onStandaloneBounds={setBox}
+      standaloneEffects={showVitals ? renderEffects : undefined}
     />
   );
 }
 
-export function YourDayViewer() {
+export const YourDayViewer = memo(function YourDayViewer(effects: ViewerEffects) {
   const webgl = useWebglAvailable();
   const [status, setStatus] = useState<AnatomyLoad["kind"]>("loading");
   const [contextLost, setContextLost] = useState(false);
@@ -108,7 +135,7 @@ export function YourDayViewer() {
             <ContextLossWatcher onLost={onLost} onFresh={onFresh} />
             <hemisphereLight intensity={1.6} />
             <directionalLight position={[1, 2, 3]} intensity={2} />
-            <ReferenceAtlas onLoad={onLoad} />
+            <ReferenceAtlas onLoad={onLoad} {...effects} />
           </Canvas>
         ) : null}
       </div>
@@ -122,4 +149,4 @@ export function YourDayViewer() {
       ) : null}
     </div>
   );
-}
+});

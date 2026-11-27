@@ -1,3 +1,4 @@
+import { SYSTEMS } from "@open-twin/fhir-core";
 import { type Bundle, type Observation } from "fhir/r4";
 
 import { MEASURES } from "@/packages/personal-data/wearable-measure-codes";
@@ -16,6 +17,17 @@ const identityCoding = (codings: readonly Coding[] = []) =>
   codings.find(({ system }) => system && VENDOR_SYSTEMS.has(system)) ??
   codings.find(({ system }) => system === LOINC_SYSTEM) ??
   codings[0];
+
+const isSensorGlucose = (observation: Observation, coding: Coding | undefined) =>
+  coding?.system === LOINC_SYSTEM &&
+  coding.code === "2339-0" &&
+  observation.component?.some(
+    ({ code, valueString }) =>
+      valueString === "INTERSTITIAL_FLUID" &&
+      code.coding?.some(
+        ({ system, code }) => system === SYSTEMS.GOOGLE_HEALTH && code === "specimen",
+      ),
+  ) === true;
 
 export function importedDayObservations(
   rows: readonly (ImportedObservationRecord & { codeSystem: string | null })[],
@@ -112,8 +124,13 @@ export function connectedDayObservations(
         const { valueQuantity, code } = record;
         const value = valueQuantity?.value;
         if (value === undefined || !Number.isFinite(value)) return [];
-        const term = identityCoding(code.coding);
-        const label = code.text || term?.display || term?.code;
+        const sensor = part === 0 && isSensorGlucose(resource, coding);
+        const term = sensor
+          ? { system: LOINC_SYSTEM, code: "99504-3" }
+          : identityCoding(code.coding);
+        const label = sensor
+          ? "Sensor glucose"
+          : code.text || term?.display || term?.code;
         if (!label) return [];
         return [
           {

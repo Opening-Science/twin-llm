@@ -45,7 +45,9 @@ Ranks are unique from 0 to 179. Node names `GlucoseParticle_000` to `GlucosePart
 
 For density `d` in `[0, 1]`, show only nodes with `rank < floor(d * 180 + 0.5)`: 0%, 25%, 50% and 100% give 0, 45, 90 and 180 particles. This is a fraction of the authored pool, not particles per volume. Toggle node visibility only, never the animated transforms, opacity, clip time or playback rate. Visibility is not keyed, so hidden particles keep moving and reappear in phase. At 25% all 21 routes are already covered.
 
-No glucose-to-density clinical rule is set here; #865 owns any mapping. Heart rate and timeline speed must not change this clip's rate.
+In **Your Day** replay, the current reading from the selected blood or sensor glucose series controls density: `clamp(glucose in mg/dL / 300, 0, 1)`. This is a fixed visual scale, not a clinical threshold. If the replay cursor has no current reading, the effect is hidden; it does not switch specimens to fill gaps. The clip runs at 1x during playback and stops while paused or with reduced motion. Heart rate and timeline speed do not change the clip's rate. This mapping does not change the manual density control in Your Twin.
+
+The full-body replay draws larger gold markers over the anatomy so they remain visible at overview scale. The overlay changes display size and occlusion only, not the authored vessel paths, timing, or particle count. Your Twin retains the authored appearance.
 
 Explanation shown to users: **"Illustrative particles, not measured glucose particles or blood velocity."**
 
@@ -63,6 +65,8 @@ Particles use an opaque warm-gold emissive material.
 - The clip loads and plays with the stock Three.js `GLTFLoader` and `AnimationMixer`.
 
 ## Attribution
+
+Your Day links to these credits below the replay rather than displaying them inside the viewer.
 
 BodyParts3D, (c) The Database Center for Life Science, licensed under CC Attribution 4.0 International: https://creativecommons.org/licenses/by/4.0/
 

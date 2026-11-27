@@ -26,6 +26,40 @@ const lab = {
   effectivePrecision: "instant",
 } as const;
 
+test("personal Google Health charts distinguish blood from interstitial glucose", () => {
+  const glucose = (specimen: string) => ({
+    resourceType: "Observation",
+    code: { text: "Glucose", coding: [{ system: "http://loinc.org", code: "2339-0" }] },
+    valueQuantity: { value: 100, code: "mg/dL" },
+    effectiveDateTime: `${day}T08:00:00Z`,
+    component: [
+      {
+        code: {
+          coding: [
+            {
+              system: "http://opentwin.ch/fhir/CodeSystem/google-health",
+              code: "specimen",
+            },
+          ],
+        },
+        valueString: specimen,
+      },
+    ],
+  });
+  const rows = connectedDayObservations(
+    {
+      resourceType: "Bundle",
+      entry: ["CAPILLARY_BLOOD", "INTERSTITIAL_FLUID"].map((specimen) => ({
+        resource: glucose(specimen),
+      })),
+    },
+    "Google Health",
+    day,
+    zone,
+  );
+  expect(rows.map(({ code }) => code)).toEqual(["2339-0", "99504-3"]);
+});
+
 test("discovers an Anchor chart by measurement identity without a replay stream", () => {
   const rows = importedDayObservations([lab], day, zone);
   const { entries, charts } = buildPickerCatalog([], undefined, rows);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type Box3,
   Color,
@@ -59,6 +59,10 @@ const TRIANGLE_WARNING = 2_500_000;
 
 type ScanSurface = Readonly<{ material: Material; uniforms: LayerUniforms }>;
 
+export type StandaloneAtlasEffects = Readonly<{
+  atlas: PreparedAtlas;
+}>;
+
 const NO_PARTS: PreparedAtlas["parts"] = [];
 const NO_GROUPS: PreparedAtlas["groups"] = [];
 const ignorePick = (): void => undefined;
@@ -93,6 +97,7 @@ export const AnatomyLayers = ({
   onHeartFocus,
   frame = "scan",
   onStandaloneBounds,
+  standaloneEffects,
   visualization = null,
   moving = false,
 }: Readonly<{
@@ -124,6 +129,7 @@ export const AnatomyLayers = ({
   frame?: "scan" | "standalone";
   /** In the standalone frame, the atlas bounds once it is ready, to fit a camera to. */
   onStandaloneBounds?: (box: Box3) => void;
+  standaloneEffects?: (context: StandaloneAtlasEffects) => ReactNode;
   visualization?: AtlasVisualization | null;
   moving?: boolean;
 }>) => {
@@ -143,7 +149,9 @@ export const AnatomyLayers = ({
     fitted: fittedBody !== null,
     moving,
   });
-  const organFocusOn = activeVisualization?.focus === "heart";
+  const organFocusOn =
+    activeVisualization?.focus === "heart" ||
+    (frame === "standalone" && standaloneEffects !== undefined);
   const vesselsVisible = useCallback(
     () =>
       preparedRef.current?.parts.some(
@@ -382,6 +390,7 @@ export const AnatomyLayers = ({
         scale={transform.scale}
       >
         <primitive object={prepared.root} />
+        {frame === "standalone" && standaloneEffects?.({ atlas: prepared })}
         {activeVisualization ? (
           <AtlasVisualizationEffect
             visualization={activeVisualization.effect}
